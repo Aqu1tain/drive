@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { ArrowDown, ArrowUp, EllipsisVertical, FolderPlus, Star, Upload } from '@lucide/vue'
+import type { HTMLAttributes } from 'vue'
 import type { ResourceItem } from '#shared/types/api'
 
 const props = withDefaults(defineProps<{
@@ -122,7 +123,7 @@ const activeDescendant = computed(() => {
 })
 
 /** An empty list is not a grid: its message and actions are plain content. */
-const gridAttrs = computed(() => ({
+const gridAttrs = computed<HTMLAttributes>(() => ({
   'role': 'grid',
   'tabindex': 0,
   'aria-label': props.label,

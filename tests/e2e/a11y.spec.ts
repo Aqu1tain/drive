@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { OWNER, ownerApi, signIn } from './helpers'
+import { OWNER, createFolder, ownerApi, removeFolder, signIn, unique } from './helpers'
 
 async function audit(page: Page, label: string) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()
@@ -32,16 +32,19 @@ for (const scheme of ['light', 'dark'] as const) {
       }
     })
 
-    test('share dialog and preview', async ({ page }) => {
+    test('share dialog', async ({ page }) => {
+      const owner = await ownerApi()
+      const folder = await createFolder(owner, unique('a11y'))
       await signIn(page, OWNER.email, OWNER.password)
       await page.goto('/drive')
       await page.waitForLoadState('networkidle')
-      const row = page.getByRole('row').nth(1)
-      await row.click({ button: 'right' })
+      await page.getByRole('row', { name: new RegExp(folder.name) }).click({ button: 'right' })
       await page.getByRole('menuitem', { name: 'Partager' }).click()
       await page.getByRole('dialog').waitFor()
       await page.waitForTimeout(400)
-      expect(await audit(page, `${scheme} share`)).toEqual([])
+      const violations = await audit(page, `${scheme} share`)
+      await removeFolder(owner, folder.id)
+      expect(violations).toEqual([])
     })
 
     test('public link page', async ({ page }) => {
