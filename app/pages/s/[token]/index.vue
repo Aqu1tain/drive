@@ -41,15 +41,8 @@ onMounted(async () => {
   }
 })
 
+const downloadAllUrl = (items: ResourceItem[]) => `/api/s/${token}/downloads?ids=${items.filter(item => item.canDownload).map(item => item.id).join(',')}`
 const baseName = computed(() => root.value?.name.replace(/\.[^.]+$/, '') ?? '')
-
-function download() {
-  if (!root.value) return
-  const anchor = document.createElement('a')
-  anchor.href = `${apiBase}/resources/${root.value.id}/download`
-  anchor.download = root.value.name
-  anchor.click()
-}
 </script>
 
 <template>
@@ -59,10 +52,10 @@ function download() {
     <h1 class="sr-only">{{ root.name }}</h1>
     <PreviewHtml v-if="preview?.frameUrl" :src="preview.frameUrl" :scripts="preview.scripts" :title="root.name" class="flex-1">
       <template #actions>
-        <button v-if="root.canDownload" type="button" class="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-ink hover:bg-hover" @click="download">
+        <a v-if="root.canDownload" :href="`${apiBase}/resources/${root.id}/download`" :download="root.name" class="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-ink hover:bg-hover">
           <Download class="size-4" aria-hidden="true" />
           <span class="max-sm:sr-only">Télécharger</span>
-        </button>
+        </a>
       </template>
     </PreviewHtml>
     <div v-else-if="previewError" class="flex flex-1 items-center justify-center p-8 text-center text-ink-weak">Aperçu indisponible pour le moment.</div>
@@ -88,19 +81,24 @@ function download() {
           <p class="truncate text-base font-medium text-ink">{{ root.name }}</p>
           <p class="text-sm text-ink-weak">{{ formatSize(root.size) }}</p>
         </div>
-        <UiButton v-if="root.canDownload" variant="primary" :icon="Download" @click="download">Télécharger</UiButton>
+        <UiButton v-if="root.canDownload" variant="primary" :icon="Download" :href="`${apiBase}/resources/${root.id}/download`" :download="root.name">Télécharger</UiButton>
         <span v-else class="text-sm text-ink-weak">Consultation seule</span>
       </div>
     </footer>
   </template>
 
   <div v-else class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-    <h1 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-      {{ data.kind === 'invitation' ? `Bonjour${data.recipient?.name ? ` ${data.recipient.name}` : ''}` : root?.name }}
-    </h1>
-    <p class="mt-1 mb-6 text-base text-ink-weak">
-      {{ data.kind === 'invitation' ? `${data.sharedBy} a partagé ces documents avec vous.` : `Partagé par ${data.sharedBy}` }}
-    </p>
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div class="min-w-0">
+        <h1 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+          {{ data.kind === 'invitation' ? `Bonjour${data.recipient?.name ? ` ${data.recipient.name}` : ''}` : root?.name }}
+        </h1>
+        <p class="mt-1 text-base text-ink-weak">
+          {{ data.kind === 'invitation' ? `${data.sharedBy} a partagé ces documents avec vous.` : `Partagé par ${data.sharedBy}` }}
+        </p>
+      </div>
+      <UiButton v-if="data.items.some(item => item.canDownload)" :icon="Download" :href="downloadAllUrl(data.items)">Tout télécharger</UiButton>
+    </div>
     <PublicListing v-if="data.items.length" :items="data.items" :token="token" />
     <p v-else class="rounded-xl bg-canvas p-8 text-center text-base text-ink-weak shadow-norm">Ce dossier est vide pour le moment.</p>
     <p v-if="data.kind === 'invitation'" class="mt-6 text-center text-xs text-ink-hint">Ce lien vous est personnel : vos consultations sont associées à votre invitation.</p>

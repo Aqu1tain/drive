@@ -24,12 +24,7 @@ function close() {
   else router.replace({ query })
 }
 
-function download(item: ResourceItem) {
-  const anchor = document.createElement('a')
-  anchor.href = `${apiBase.value}/resources/${item.id}/download`
-  anchor.download = item.name
-  anchor.click()
-}
+
 </script>
 
 <template>
@@ -46,7 +41,15 @@ function download(item: ResourceItem) {
         </span>
         <ChevronRight v-if="item.type === 'folder'" class="size-4 shrink-0 text-ink-hint" aria-hidden="true" />
       </button>
-      <UiIconButton v-if="item.type === 'file' && item.canDownload" :icon="Download" :label="`Télécharger ${item.name}`" class="mr-2 shrink-0" @click="download(item)" />
+      <a
+        v-if="item.type === 'file' && item.canDownload"
+        :href="`${apiBase}/resources/${item.id}/download`"
+        :download="item.name"
+        :aria-label="`Télécharger ${item.name}`"
+        class="mr-2 inline-flex size-9 shrink-0 items-center justify-center rounded-md text-ink-weak transition-colors hover:bg-hover hover:text-ink"
+      >
+        <Download class="size-[18px]" aria-hidden="true" />
+      </a>
     </li>
   </ul>
   <PreviewFull
