@@ -43,7 +43,6 @@ export function createAuth(options: AuthOptions) {
       updateAge: 60 * 60 * 24,
     },
     rateLimit: {
-      enabled: true,
       window: 60,
       max: 100,
       customRules: {

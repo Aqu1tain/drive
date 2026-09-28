@@ -75,7 +75,7 @@ export async function sendResourceContent(event: H3Event, resource: Resource, di
     return streamBody(event, await storage.get(resource.storageKey, range))
   }
 
-  setResponseHeader(event, 'Content-Length', String(size))
+  setResponseHeader(event, 'Content-Length', size)
   if (event.method === 'HEAD') return null
   return streamBody(event, await storage.get(resource.storageKey))
 }
