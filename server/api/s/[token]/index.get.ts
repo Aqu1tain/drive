@@ -13,7 +13,6 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 410, statusMessage: 'Ce contenu n’est plus disponible', data: { reason: 'gone' } })
     })
     const listing = resource.type === 'folder' ? await listFolder(viewer, resource.id) : null
-    if (resource.type === 'folder') await logAccess(event, viewer, resource, 'view')
     return {
       kind: 'link' as const,
       sharedBy,
