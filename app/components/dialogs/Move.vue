@@ -11,7 +11,9 @@ const open = ref(true)
 watch(open, value => !value && emit('close'))
 
 const startId = props.items.every(item => item.parentId === props.items[0]?.parentId) ? props.items[0]?.parentId ?? null : null
-const currentId = ref<string | null>(startId)
+const current = ref<{ id: string | null, name: string | null }>({ id: startId, name: startId ? null : 'Mon Drive' })
+const currentId = computed(() => current.value.id)
+const go = (id: string | null, name: string | null) => (current.value = { id, name })
 const movingIds = new Set(props.items.map(item => item.id))
 
 const { data, isPending } = useQuery({
@@ -21,7 +23,7 @@ const { data, isPending } = useQuery({
 
 const folders = computed(() => (data.value?.items ?? []).toSorted((a, b) => a.name.localeCompare(b.name, 'fr', { numeric: true })))
 const crumbs = computed(() => data.value?.breadcrumbs ?? [{ id: null, name: 'Mon Drive' }])
-const here = computed(() => crumbs.value.at(-1)!)
+const here = computed(() => ({ id: current.value.id, name: current.value.name ?? crumbs.value.at(-1)!.name }))
 const alreadyHere = computed(() => props.items.every(item => item.parentId === currentId.value))
 const highlighted = ref<string | null>(null)
 
@@ -35,7 +37,7 @@ async function createFolder() {
     const folder = await api<ResourceItem>('/api/folders', { method: 'POST', body: { name, parentId: currentId.value } })
     creating.value = false
     newName.value = ''
-    currentId.value = folder.id
+    go(folder.id, folder.name)
     actions.refresh()
   }
   catch (error) {
@@ -56,10 +58,10 @@ const title = props.items.length === 1 ? `Déplacer « ${props.items[0]!.name} �
 <template>
   <UiDialog v-model:open="open" :title="title" size="md">
     <div class="-mx-1 mb-2 flex items-center gap-1 text-base">
-      <UiIconButton v-if="crumbs.length > 1" :icon="ChevronLeft" label="Dossier parent" size="sm" @click="currentId = crumbs.at(-2)!.id" />
+      <UiIconButton v-if="crumbs.length > 1" :icon="ChevronLeft" label="Dossier parent" size="sm" @click="go(crumbs.at(-2)!.id, crumbs.at(-2)!.name)" />
       <nav aria-label="Emplacement" class="min-w-0 truncate">
         <template v-for="(crumb, index) in crumbs" :key="String(crumb.id)">
-          <button v-if="index < crumbs.length - 1" type="button" class="rounded px-1 text-ink-weak hover:bg-hover hover:text-ink" @click="currentId = crumb.id">{{ crumb.name }}</button>
+          <button v-if="index < crumbs.length - 1" type="button" class="rounded px-1 text-ink-weak hover:bg-hover hover:text-ink" @click="go(crumb.id, crumb.name)">{{ crumb.name }}</button>
           <span v-else class="px-1 font-semibold text-ink">{{ crumb.name }}</span>
           <span v-if="index < crumbs.length - 1" class="text-ink-hint">/</span>
         </template>
@@ -78,12 +80,12 @@ const title = props.items.length === 1 ? `Déplacer « ${props.items[0]!.name} �
         class="flex h-10 items-center gap-3 rounded-md px-2.5 outline-none select-none"
         :class="movingIds.has(folder.id) ? 'opacity-40' : 'cursor-default hover:bg-hover focus-visible:bg-hover'"
         @click="highlighted = folder.id"
-        @dblclick="!movingIds.has(folder.id) && (currentId = folder.id)"
-        @keydown.enter="!movingIds.has(folder.id) && (currentId = folder.id)"
+        @dblclick="!movingIds.has(folder.id) && go(folder.id, folder.name)"
+        @keydown.enter="!movingIds.has(folder.id) && go(folder.id, folder.name)"
       >
         <FilesFileIcon kind="folder" />
         <span class="flex-1 truncate text-base text-ink">{{ folder.name }}</span>
-        <button v-if="!movingIds.has(folder.id)" type="button" tabindex="-1" class="rounded p-1 text-ink-weak hover:bg-hover" :aria-label="`Ouvrir ${folder.name}`" @click.stop="currentId = folder.id">
+        <button v-if="!movingIds.has(folder.id)" type="button" tabindex="-1" class="rounded p-1 text-ink-weak hover:bg-hover" :aria-label="`Ouvrir ${folder.name}`" @click.stop="go(folder.id, folder.name)">
           <ChevronRight class="size-4" aria-hidden="true" />
         </button>
       </li>
