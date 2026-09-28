@@ -42,6 +42,9 @@ const room = computed(() => {
   return { wide: w >= 520, size: w >= 600, access: w >= 700, location: w >= 860, viewed: w >= 980 }
 })
 const rowHeight = computed(() => !room.value.wide ? 56 : preferences.density === 'compact' ? 36 : 44)
+const showHeader = computed(() => !isGrid.value && room.value.wide && (props.items.length > 0 || props.loading))
+const headerOffset = computed(() => showHeader.value ? 41 : 0)
+const isEmpty = computed(() => !props.loading && props.items.length === 0)
 
 type SortKey = typeof preferences.sortBy
 const COMPARE: Record<SortKey, (a: ResourceItem, b: ResourceItem) => number> = {
@@ -69,7 +72,6 @@ const focusIndex = ref(-1)
 const anchorIndex = ref(-1)
 const keyboardFocus = ref(false)
 const scroller = useTemplateRef<HTMLElement>('scroller')
-const grid = useTemplateRef<HTMLElement>('grid')
 
 const columns = computed(() => isGrid.value ? Math.max(1, Math.floor((width.value - 24 + 12) / ((breakpoints.sm ? 196 : 150) + 12))) : 1)
 const cardHeight = computed(() => breakpoints.sm ? 212 : 180)
@@ -79,6 +81,8 @@ const virtualizer = useVirtualizer(computed(() => ({
   getScrollElement: () => scroller.value,
   estimateSize: () => isGrid.value ? cardHeight.value + 12 : rowHeight.value,
   overscan: isGrid.value ? 3 : 12,
+  scrollMargin: headerOffset.value,
+  scrollPaddingStart: headerOffset.value,
   paddingStart: isGrid.value ? 4 : 0,
   paddingEnd: 96,
   getItemKey: (index: number) => isGrid.value ? `row-${index}` : sorted.value[index]?.id ?? index,
@@ -117,6 +121,17 @@ const activeDescendant = computed(() => {
   return keyboardFocus.value && item ? rowId(item) : undefined
 })
 
+/** An empty list is not a grid: its message and actions are plain content. */
+const gridAttrs = computed(() => ({
+  'role': 'grid',
+  'tabindex': 0,
+  'aria-label': props.label,
+  'aria-multiselectable': 'true',
+  'aria-rowcount': sorted.value.length + 1,
+  'aria-activedescendant': activeDescendant.value,
+  'aria-busy': props.loading || undefined,
+}))
+
 function setSelection(ids: string[]) {
   selection.value = ids
 }
@@ -149,7 +164,7 @@ let lastPointer: string = 'mouse'
 function onClick(event: MouseEvent, index: number) {
   const item = sorted.value[index]!
   keyboardFocus.value = false
-  grid.value?.focus({ preventScroll: true })
+  scroller.value?.focus({ preventScroll: true })
   if (lastPointer === 'touch' && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
     emit('open', item)
     return
@@ -395,47 +410,20 @@ function onDragLeave(event: DragEvent) {
 const rowItems = (row: number) => sorted.value.slice(row * columns.value, (row + 1) * columns.value)
 const dateOf = (item: ResourceItem) => props.trash ? item.deletedAt : item.updatedAt
 
-defineExpose({ focus: () => grid.value?.focus(), selectAll: () => setSelection(sorted.value.map(item => item.id)) })
+defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelection(sorted.value.map(item => item.id)) })
 </script>
 
 <template>
-  <div
-    ref="grid"
-    role="grid"
-    tabindex="0"
-    :aria-label="label"
-    aria-multiselectable="true"
-    :aria-rowcount="sorted.length + 1"
-    :aria-activedescendant="activeDescendant"
-    :aria-busy="loading || undefined"
-    class="flex min-h-0 flex-1 flex-col focus:outline-none"
-    @keydown="onKeydown"
-    @focus="keyboardFocus = focusIndex >= 0"
-    @blur="keyboardFocus = false"
-  >
-    <div v-if="!isGrid && room.wide && (items.length || loading)" role="rowgroup" class="shrink-0 overflow-hidden border-b border-line-weak [scrollbar-gutter:stable]">
-      <div
-        role="row"
-        aria-rowindex="1"
-        class="grid h-10 items-center gap-x-4 pr-2 pl-4 text-sm font-semibold text-ink-weak"
-        :style="{ gridTemplateColumns: gridTemplate }"
-      >
-        <FilesSortHeader label="Nom" :sort="ariaSort('name')" :disabled="!sortable" @click="toggleSort('name')" />
-        <div v-if="show.location" role="columnheader">Emplacement</div>
-        <div v-if="show.access" role="columnheader">Accès</div>
-        <FilesSortHeader :label="trash ? 'Supprimé' : 'Modifié'" :sort="ariaSort('updatedAt')" :disabled="!sortable || trash" @click="toggleSort('updatedAt')" />
-        <FilesSortHeader v-if="show.size" label="Taille" align="end" :sort="ariaSort('size')" :disabled="!sortable" @click="toggleSort('size')" />
-        <FilesSortHeader v-if="show.viewed" label="Consulté" :sort="ariaSort('lastExternalViewAt')" :disabled="!sortable" @click="toggleSort('lastExternalViewAt')" />
-        <div role="columnheader"><span class="sr-only">Actions</span></div>
-      </div>
-    </div>
-
+  <div class="flex min-h-0 flex-1 flex-col">
     <UiContextMenu :entries="menuEntries" :disabled="mode === 'share' && !items.length">
       <div
         ref="scroller"
-        role="rowgroup"
-        class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]"
+        v-bind="isEmpty ? {} : gridAttrs"
+        class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] focus:outline-none"
         :class="isGrid ? 'px-3' : ''"
+        @keydown="onKeydown"
+        @focus="keyboardFocus = focusIndex >= 0"
+        @blur="keyboardFocus = false"
         @click="onBackgroundClick"
         @contextmenu="onContextMenu"
         @pointerdown="lastPointer = $event.pointerType"
@@ -444,6 +432,23 @@ defineExpose({ focus: () => grid.value?.focus(), selectAll: () => setSelection(s
         @drop="onDrop"
         @dragend="onDragEnd"
       >
+        <div v-if="showHeader" role="rowgroup" class="sticky top-0 z-(--z-sticky) border-b border-line-weak bg-canvas">
+          <div
+            role="row"
+            aria-rowindex="1"
+            class="grid h-10 items-center gap-x-4 pr-2 pl-4 text-sm font-semibold text-ink-weak"
+            :style="{ gridTemplateColumns: gridTemplate }"
+          >
+            <FilesSortHeader label="Nom" :sort="ariaSort('name')" :disabled="!sortable" @click="toggleSort('name')" />
+            <div v-if="show.location" role="columnheader">Emplacement</div>
+            <div v-if="show.access" role="columnheader">Accès</div>
+            <FilesSortHeader :label="trash ? 'Supprimé' : 'Modifié'" :sort="ariaSort('updatedAt')" :disabled="!sortable || trash" @click="toggleSort('updatedAt')" />
+            <FilesSortHeader v-if="show.size" label="Taille" align="end" :sort="ariaSort('size')" :disabled="!sortable" @click="toggleSort('size')" />
+            <FilesSortHeader v-if="show.viewed" label="Consulté" :sort="ariaSort('lastExternalViewAt')" :disabled="!sortable" @click="toggleSort('lastExternalViewAt')" />
+            <div role="columnheader"><span class="sr-only">Actions</span></div>
+          </div>
+        </div>
+
         <div v-if="loading && !items.length" class="px-4 pt-1" aria-hidden="true">
           <div v-for="n in 8" :key="n" class="flex items-center gap-3 border-b border-line-weak" :style="{ height: `${rowHeight}px` }">
             <UiSkeleton width="1.25rem" height="1.25rem" />
@@ -455,7 +460,7 @@ defineExpose({ focus: () => grid.value?.focus(), selectAll: () => setSelection(s
           <slot name="empty" />
         </div>
 
-        <div v-else class="relative w-full" :style="{ height: `${virtualizer.getTotalSize()}px` }">
+        <div v-else role="rowgroup" class="relative w-full" :style="{ height: `${virtualizer.getTotalSize()}px` }">
           <template v-if="!isGrid">
             <div
               v-for="row in virtualizer.getVirtualItems()"
@@ -475,7 +480,7 @@ defineExpose({ focus: () => grid.value?.focus(), selectAll: () => setSelection(s
                 keyboardFocus && focusIndex === row.index && 'outline-2 -outline-offset-2 outline-focus',
                 draggingIds.includes(sorted[row.index]!.id) && 'opacity-50',
               ]"
-              :style="{ transform: `translateY(${row.start}px)`, height: `${row.size}px`, gridTemplateColumns: gridTemplate }"
+              :style="{ transform: `translateY(${row.start - headerOffset}px)`, height: `${row.size}px`, gridTemplateColumns: gridTemplate }"
               @click.stop="onClick($event, row.index)"
               @dblclick="emit('open', sorted[row.index]!)"
               @dragstart="onDragStart($event, sorted[row.index]!, row.index)"
@@ -529,7 +534,7 @@ defineExpose({ focus: () => grid.value?.focus(), selectAll: () => setSelection(s
               :key="String(row.key)"
               role="row"
               class="absolute inset-x-0 top-0 grid gap-3"
-              :style="{ transform: `translateY(${row.start}px)`, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }"
+              :style="{ transform: `translateY(${row.start - headerOffset}px)`, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }"
             >
               <FilesFileCard
                 v-for="(item, offset) in rowItems(row.index)"

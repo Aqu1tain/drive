@@ -28,7 +28,7 @@ const tooltip = computed(() => {
 
 <template>
   <UiTooltip :label="tooltip">
-    <span class="inline-flex min-w-0 items-center gap-1.5 text-sm" :class="access?.level === 'private' || !access ? 'text-ink-hint' : 'text-ink-weak'">
+    <span class="inline-flex max-w-full min-w-0 items-center gap-1.5 text-sm" :class="access?.level === 'private' || !access ? 'text-ink-hint' : 'text-ink-weak'">
       <Lock v-if="!access || access.level === 'private'" class="size-3.5 shrink-0" aria-hidden="true" />
       <Globe v-else-if="access.hasLink" class="size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
       <span v-else class="flex shrink-0 -space-x-1">
