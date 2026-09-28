@@ -47,7 +47,7 @@ jobs:
         run: |
           node scripts/migrate.mjs
           node .output/server/index.mjs > server.log 2>&1 &
-          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/api/setup && exit 0; sleep 1; done
+          for i in $(seq 1 60); do curl -fsS http://localhost:3000/api/setup && exit 0; sleep 1; done
           cat server.log && exit 1
       - run: pnpm test:integration
       - run: pnpm exec playwright install --with-deps chromium
