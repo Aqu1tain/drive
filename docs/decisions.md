@@ -90,3 +90,7 @@ Pré-démarrage en production (`scripts/migrate.mjs`) : Nitro 2 n'attend pas les
 
 - Node coupe une requête au bout de 5 min (`requestTimeout`) : un très gros fichier sur une connexion lente échouera. Upload par morceaux (tus ou multipart S3) en phase 2.
 - « Téléchargement désactivé » est une dissuasion, pas un DRM : un aperçu transmet forcément le contenu au navigateur.
+
+## Performance
+
+Un dossier est chargé en une requête (tri et sélection instantanés côté client) et affiché en liste virtualisée. Mesures sur 10 000 fichiers en développement : API 170 ms, premier affichage 550 ms, 29 lignes dans le DOM, saut à la fin 60 ms, tout sélectionner 210 ms, tri 220 ms. Au-delà de quelques dizaines de milliers d'éléments par dossier, il faudra paginer côté serveur.
