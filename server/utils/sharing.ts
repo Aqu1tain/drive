@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import type { AccessEntry, Crumb, LinkInfo, ResourceAccess } from '#shared/types/api'
+import { kindOf } from '#shared/utils/search'
 import { generateToken, hashToken, openToken, sealToken } from '../lib/crypto'
 import type { AccessRule, Invitation, Resource } from '../database/schema'
 
@@ -14,15 +15,17 @@ export function newSecretToken() {
 
 export const shareUrl = (tokenSealed: string) => appUrl(`/s/${openToken(tokenSealed, secret())}`)
 
-export function invitationUrl(invitation: Invitation) {
+export function invitationUrl(invitation: Pick<Invitation, 'mode' | 'tokenSealed'>) {
   const token = openToken(invitation.tokenSealed, secret())
   return appUrl(invitation.mode === 'account' ? `/invite/${token}` : `/s/${token}`)
 }
 
-function linkInfo(rule: AccessRule): LinkInfo {
+function linkInfo(rule: AccessRule, resource: Resource): LinkInfo {
+  const token = openToken(rule.tokenSealed!, secret())
   return {
     ruleId: rule.id,
-    url: shareUrl(rule.tokenSealed!),
+    url: appUrl(`/s/${token}`),
+    publishedUrl: kindOf(resource.type, resource.mimeType) === 'html' ? usercontentUrl(`/p/${token}/`) : null,
     allowDownload: rule.allowDownload,
     expiresAt: rule.expiresAt?.toISOString() ?? null,
     createdAt: rule.createdAt.toISOString(),
@@ -52,6 +55,9 @@ export async function resourceAccess(resource: Resource): Promise<ResourceAccess
       expiresAt: row.rule.expiresAt?.toISOString() ?? null,
       inheritedFrom: crumb(row.inheritedFrom),
       createdAt: row.rule.createdAt.toISOString(),
+      inviteUrl: row.invitationTokenSealed && row.invitationMode && row.status !== 'expired'
+        ? invitationUrl({ mode: row.invitationMode, tokenSealed: row.invitationTokenSealed })
+        : null,
     }))
 
   const ownLink = effective.find(row => row.rule.kind === 'link' && !row.inheritedFrom)
@@ -59,11 +65,12 @@ export async function resourceAccess(resource: Resource): Promise<ResourceAccess
   const parent = chain[1]
   return {
     resourceId: resource.id,
+    resourceName: resource.name,
     inheritAccess: resource.inheritAccess,
     parent: parent ? { id: parent.id, name: parent.name } : null,
     entries,
-    link: ownLink ? linkInfo(ownLink.rule) : null,
-    inheritedLink: inheritedLink ? { ...linkInfo(inheritedLink.rule), inheritedFrom: crumb(inheritedLink.inheritedFrom)! } : null,
+    link: ownLink ? linkInfo(ownLink.rule, resource) : null,
+    inheritedLink: inheritedLink ? { ...linkInfo(inheritedLink.rule, resource), inheritedFrom: crumb(inheritedLink.inheritedFrom)! } : null,
   }
 }
 

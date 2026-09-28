@@ -37,6 +37,7 @@ export interface ResourceItem {
   updatedAt: string
   thumbnailUrl: string | null
   starred?: boolean
+  allowScripts?: boolean
   access?: AccessSummary
   lastExternalViewAt?: string | null
   ownerOpenedAt?: string | null
@@ -67,11 +68,13 @@ export interface AccessEntry {
   expiresAt: string | null
   inheritedFrom: Crumb | null
   createdAt: string
+  inviteUrl: string | null
 }
 
 export interface LinkInfo {
   ruleId: string
   url: string
+  publishedUrl: string | null
   allowDownload: boolean
   expiresAt: string | null
   createdAt: string
@@ -79,6 +82,7 @@ export interface LinkInfo {
 
 export interface ResourceAccess {
   resourceId: string
+  resourceName: string
   inheritAccess: boolean
   parent: Crumb | null
   entries: AccessEntry[]
@@ -113,7 +117,9 @@ export interface ResourceDetails {
 }
 
 export interface PreviewInfo {
+  item: ResourceItem
   kind: FileKind
+  scripts: boolean
   contentUrl: string
   downloadUrl: string | null
   frameUrl: string | null

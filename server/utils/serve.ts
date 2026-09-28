@@ -57,7 +57,9 @@ export async function openResource(event: H3Event, viewer: Viewer, id: string): 
   await logAccess(event, viewer, resource, 'view')
   const kind = kindOf(resource.type, resource.mimeType)
   return {
+    item: toItem(resource, { viewer, access }),
     kind,
+    scripts: kind === 'html' && resource.allowScripts,
     contentUrl: `${viewer.apiBase}/resources/${resource.id}/content`,
     downloadUrl: access.download && resource.type === 'file' ? `${viewer.apiBase}/resources/${resource.id}/download` : null,
     frameUrl: kind === 'html' ? usercontentUrl(`/c/${frameTokenFor(viewer, resource.id)}/`) : null,

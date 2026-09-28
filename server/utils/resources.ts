@@ -14,6 +14,7 @@ export interface RuleRow {
   active: boolean
   status: RuleStatus
   invitationMode: 'account' | 'link' | null
+  invitationTokenSealed: string | null
 }
 
 export async function findResource(id: string) {
@@ -53,6 +54,7 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
       invitationName: invitations.name,
       invitationStatus: invitations.status,
       invitationMode: invitations.mode,
+      invitationTokenSealed: invitations.tokenSealed,
       invitationExpiresAt: invitations.expiresAt,
     })
     .from(accessRules)
@@ -71,6 +73,7 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
         active: status === 'active',
         status,
         invitationMode: null,
+        invitationTokenSealed: null,
       }
     }
     if (row.rule.kind === 'invitation') {
@@ -83,9 +86,10 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
         active: status === 'active' || status === 'pending',
         status,
         invitationMode: row.invitationMode,
+        invitationTokenSealed: row.invitationTokenSealed,
       }
     }
-    return { rule: row.rule, person: null, active: !expired, status: expired ? 'expired' : 'active', invitationMode: null }
+    return { rule: row.rule, person: null, active: !expired, status: expired ? 'expired' : 'active', invitationMode: null, invitationTokenSealed: null }
   })
 }
 
@@ -174,6 +178,7 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
   return {
     ...item,
     starred: resource.starred,
+    allowScripts: resource.allowScripts,
     access: options.summary,
     lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null,
     ownerOpenedAt: resource.ownerOpenedAt?.toISOString() ?? null,
