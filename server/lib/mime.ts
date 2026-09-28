@@ -24,7 +24,7 @@ const GENERIC_SNIFFS = new Set(['application/zip', 'application/x-cfb', 'applica
 
 /**
  * Binary signatures win over the extension: a renamed executable never becomes an "image".
- * Text formats have no signature, so the extension decides — they are always served inertly anyway.
+ * Text formats have no signature, so the extension decides: they are always served inertly anyway.
  */
 export async function detectMimeType(head: Uint8Array, extension: string | null) {
   const byExtension = extension ? BY_EXTENSION[extension] : undefined

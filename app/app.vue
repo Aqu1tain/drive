@@ -4,7 +4,7 @@ import { Toaster } from 'vue-sonner'
 import 'vue-sonner/style.css'
 
 const { public: config } = useRuntimeConfig()
-useHead({ titleTemplate: title => title ? `${title} — ${config.appName}` : config.appName })
+useHead({ titleTemplate: title => title ? `${title} · ${config.appName}` : config.appName })
 
 const toastClasses = {
   toast: 'flex w-full items-center gap-3 rounded-lg bg-inverse px-4 py-3 text-ink-inverse shadow-lifted sm:w-[380px]',

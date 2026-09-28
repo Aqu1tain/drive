@@ -502,10 +502,10 @@ defineExpose({ focus: () => grid.value?.focus(), selectAll: () => setSelection(s
                 {{ formatShortDate(dateOf(sorted[row.index]!)) }}
               </div>
               <div v-if="show.size" role="gridcell" class="tabular text-right text-sm text-ink-weak">
-                {{ sorted[row.index]!.type === 'folder' ? '—' : formatSize(sorted[row.index]!.size) }}
+                {{ sorted[row.index]!.type === 'folder' ? '' : formatSize(sorted[row.index]!.size) }}
               </div>
               <div v-if="show.viewed" role="gridcell" class="tabular truncate text-sm text-ink-weak">
-                {{ sorted[row.index]!.lastExternalViewAt ? formatShortDate(sorted[row.index]!.lastExternalViewAt) : '—' }}
+                {{ sorted[row.index]!.lastExternalViewAt ? formatShortDate(sorted[row.index]!.lastExternalViewAt) : '' }}
               </div>
               <div role="gridcell" class="flex justify-end" @click.stop @dblclick.stop>
                 <UiDropdownMenu :entries="rowMenu(sorted[row.index]!)" align="end" @update:open="(open: boolean) => open && onRowMenuOpen(sorted[row.index]!, row.index)">

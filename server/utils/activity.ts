@@ -99,7 +99,7 @@ export async function logInvitationAccepted(event: H3Event, resourceIds: string[
   })))
 }
 
-/** Views and downloads of a resource — for a folder, of everything inside it too. */
+/** Views and downloads of a resource; for a folder, of everything inside it too. */
 export function activityScope(resource: Resource) {
   return resource.type === 'folder'
     ? sql`${accessEvents.resourceId} in (select id from ${resources} where id = ${resource.id} or ancestor_ids @> array[${resource.id}::uuid])`

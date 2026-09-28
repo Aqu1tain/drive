@@ -22,7 +22,7 @@ async function submit() {
   try {
     await api('/api/people', { method: 'POST', body: { name: name.value, email: email.value, password: password.value } })
     await navigator.clipboard.writeText(`${email.value.trim()}\n${password.value}`).catch(() => {})
-    toast('Compte créé — identifiants copiés')
+    toast('Compte créé, identifiants copiés')
     emit('created')
     open.value = false
   }

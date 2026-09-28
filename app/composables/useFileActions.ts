@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 import {
-  ArchiveRestore, Download, Eye, FolderInput, FolderOpen, History, Info, Link, Pencil, Share2, Star, StarOff, Trash2,
+  ArchiveRestore, Download, ExternalLink, Eye, FolderInput, FolderOpen, History, Info, Link, Pencil, Share2, Star, StarOff, Trash2,
 } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
@@ -49,6 +49,22 @@ export function useFileActions() {
       toast.error(errorMessage(error, fallback))
       refresh()
       throw error
+    }
+  }
+
+  /** HTML pages open in a tab of their own, on the isolated origin, taking the whole window. */
+  async function openInTab(item: ResourceItem, apiBase = '/api') {
+    const tab = window.open('about:blank', '_blank')
+    try {
+      const info = await api<{ frameUrl: string | null }>(`${apiBase}/resources/${item.id}/open`, { method: 'POST' })
+      if (tab && info.frameUrl) {
+        tab.opener = null
+        tab.location.href = info.frameUrl
+      }
+    }
+    catch (error) {
+      tab?.close()
+      toast.error(errorMessage(error, 'Impossible d’ouvrir la page'))
     }
   }
 
@@ -151,7 +167,7 @@ export function useFileActions() {
 
   async function copyLink(item: ResourceItem) {
     let url = `${location.origin}/open/${item.id}`
-    let message = 'Lien copié — accessible aux personnes ayant accès'
+    let message = 'Lien copié, accessible aux personnes ayant accès'
     if (item.access?.hasLink) {
       const access = await api<{ link: { url: string } | null, inheritedLink: { url: string } | null }>(`/api/resources/${item.id}/access`)
       const link = access.link ?? access.inheritedLink
@@ -165,7 +181,7 @@ export function useFileActions() {
       toast(message)
     }
     catch {
-      toast(`Copie impossible — lien : ${url}`, { duration: 10000 })
+      toast(`Copie impossible. Lien : ${url}`, { duration: 10000 })
     }
   }
 
@@ -210,6 +226,7 @@ export function useFileActions() {
       ? [
           { id: 'open', label: 'Ouvrir', icon: single.type === 'folder' ? FolderOpen : Eye, shortcut: 'Entrée', onSelect: () => context.open?.(single) },
           ...(single.type === 'file' ? [{ id: 'preview', label: 'Aperçu rapide', icon: Eye, shortcut: 'Espace', onSelect: () => preview(single) }] : []),
+          ...(single.kind === 'html' ? [{ id: 'open-tab', label: 'Ouvrir en pleine fenêtre', icon: ExternalLink, onSelect: () => openInTab(single, context.apiBase) }] : []),
         ]
       : []
 
@@ -242,5 +259,5 @@ export function useFileActions() {
     ])
   }
 
-  return { refresh, preview, star, trash, restore, deleteForever, emptyTrash, moveTo, copyLink, download, showDetails, menuFor, patchInCaches }
+  return { refresh, preview, openInTab, star, trash, restore, deleteForever, emptyTrash, moveTo, copyLink, download, showDetails, menuFor, patchInCaches }
 }

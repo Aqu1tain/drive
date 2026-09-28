@@ -84,7 +84,7 @@ export function resolveAccess(ctx: AccessContext, chain: AccessNode[], rules: Ac
   return accessFromGrants(grants)
 }
 
-/** Access of a direct child when the parent's access is already known — avoids reloading the chain for every row of a listing. */
+/** Access of a direct child when the parent's access is already known: avoids reloading the chain for every row of a listing. */
 export function resolveChildAccess(ctx: AccessContext, parentAccess: Access, child: AccessNode, childRules: AccessRuleLike[], now = new Date()): Access {
   if (ctx.isOwner) return OWNER_ACCESS
   if (child.deletedAt) return NO_ACCESS

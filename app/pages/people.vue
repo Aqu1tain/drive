@@ -74,7 +74,7 @@ async function regenerate(person: Person) {
   try {
     const { url } = await api<{ url: string }>(`/api/invitations/${person.id}/link`, { method: 'POST' })
     await navigator.clipboard.writeText(url)
-    toast('Nouveau lien copié — l’ancien ne fonctionne plus')
+    toast('Nouveau lien copié. L’ancien ne fonctionne plus.')
   }
   catch (error) {
     toast.error(errorMessage(error))

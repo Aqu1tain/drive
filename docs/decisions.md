@@ -13,7 +13,7 @@ Alternatives considérées : Next.js (équivalent, mais l'écosystème Vue/Reka 
 
 ## Authentification
 
-Décision : Better Auth 1.7 — email + mot de passe (scrypt), passkeys, TOTP, code de connexion par email. Inscription publique désactivée : les comptes ne sont créés que par le serveur (installation, acceptation d'invitation, action du propriétaire).
+Décision : Better Auth 1.7 : email + mot de passe (scrypt), passkeys, TOTP, code de connexion par email. Inscription publique désactivée : les comptes ne sont créés que par le serveur (installation, acceptation d'invitation, action du propriétaire).
 
 Pourquoi : sessions en base révocables, rate limiting, contrôle d'origine, plugins maintenus. Aucune primitive cryptographique réimplémentée.
 

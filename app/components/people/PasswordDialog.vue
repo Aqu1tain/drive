@@ -15,7 +15,7 @@ async function submit() {
   error.value = null
   try {
     await api(`/api/people/${props.person.id}`, { method: 'PATCH', body: { password: password.value } })
-    toast('Mot de passe modifié — ses sessions ont été fermées')
+    toast('Mot de passe modifié. Ses sessions ont été fermées.')
     open.value = false
   }
   catch (e) {

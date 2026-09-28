@@ -72,10 +72,10 @@ const markdown = `# Programme du camp 2026
 Du **12 au 19 juillet**, au bord du lac d’Annecy.
 
 ## Chaque jour
-- 8h — petit-déjeuner
-- 9h30 — activités nautiques
-- 14h — randonnée ou atelier
-- 20h30 — veillée
+- 8h : petit-déjeuner
+- 9h30 : activités nautiques
+- 14h : randonnée ou atelier
+- 20h30 : veillée
 
 ## À prévoir
 1. Sac de couchage
@@ -121,18 +121,18 @@ async function main() {
   }
 
   const devis = await upload('Clients/Dupont', 'Devis rénovation cuisine.pdf', pdf('Devis n° 2026-014', ['Client : M. et Mme Dupont', 'Rénovation complète de la cuisine', 'Montant HT : 12 400 EUR', 'Validité : 30 jours']), 'application/pdf')
-  await upload('Clients/Dupont', 'Contrat signé.pdf', pdf('Contrat de prestation', ['Entre les soussignés…', 'Article 1 — Objet', 'Article 2 — Durée', 'Fait à Lyon, le 3 février 2026']), 'application/pdf')
-  await upload('Clients/Dupont', 'Plan cuisine.jpg', await photo(28, 'Plan cuisine — v3'), 'image/jpeg')
-  await upload('Clients/ACME/Design', 'Maquette accueil.jpg', await photo(250, 'ACME — Accueil'), 'image/jpeg')
-  await upload('Clients/ACME/Design', 'Maquette tableau de bord.jpg', await photo(200, 'ACME — Tableau de bord'), 'image/jpeg')
+  await upload('Clients/Dupont', 'Contrat signé.pdf', pdf('Contrat de prestation', ['Entre les soussignés…', 'Article 1 : Objet', 'Article 2 : Durée', 'Fait à Lyon, le 3 février 2026']), 'application/pdf')
+  await upload('Clients/Dupont', 'Plan cuisine.jpg', await photo(28, 'Plan cuisine, version 3'), 'image/jpeg')
+  await upload('Clients/ACME/Design', 'Maquette accueil.jpg', await photo(250, 'ACME, accueil'), 'image/jpeg')
+  await upload('Clients/ACME/Design', 'Maquette tableau de bord.jpg', await photo(200, 'ACME, tableau de bord'), 'image/jpeg')
   await upload('Clients/ACME', 'Cahier des charges.md', new TextEncoder().encode('# Cahier des charges ACME\n\nRefonte du portail client.\n\n- Authentification unique\n- Tableau de bord\n- Export PDF\n'), 'text/markdown')
   const programme = await upload('Camp 2026', 'Programme.md', new TextEncoder().encode(markdown), 'text/markdown')
   await upload('Camp 2026', 'Informations pratiques.html', new TextEncoder().encode(html), 'text/html')
-  await upload('Camp 2026', 'Carte du site.jpg', await photo(140, 'Carte — Lac d’Annecy'), 'image/jpeg')
+  await upload('Camp 2026', 'Carte du site.jpg', await photo(140, 'Carte du lac d’Annecy'), 'image/jpeg')
   await upload('Camp 2026/Administratif', 'Fiche sanitaire.pdf', pdf('Fiche sanitaire de liaison', ['Nom de l’enfant :', 'Allergies :', 'Traitement en cours :']), 'application/pdf')
   await upload('Camp 2026/Administratif', 'Autorisation parentale.pdf', pdf('Autorisation parentale', ['Je soussigné(e)…', 'autorise mon enfant à participer au camp.']), 'application/pdf')
   for (const [index, hue] of [12, 45, 95, 170, 205, 300].entries()) {
-    await upload('Photos/Vacances été 2025', `IMG_${4210 + index}.jpg`, await photo(hue, `Été 2025 — ${index + 1}`), 'image/jpeg')
+    await upload('Photos/Vacances été 2025', `IMG_${4210 + index}.jpg`, await photo(hue, `Été 2025, photo ${index + 1}`), 'image/jpeg')
   }
   await upload('Factures', 'Suivi des factures 2026.csv', new TextEncoder().encode(csv), 'text/csv')
   await upload('Factures', 'Facture 2026-003.pdf', pdf('Facture 2026-003', ['ACME SAS', 'Prestation de conception', 'Total TTC : 5 760 EUR']), 'application/pdf')

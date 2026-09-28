@@ -5,7 +5,7 @@
 
 /*
   Design tokens. Inspired by the Proton duotone language: deep violet navigation,
-  calm warm neutrals for content, one accent. Semantic names only — components never
+  calm warm neutrals for content, one accent. Semantic names only: components never
   reference raw colours, so light and dark are two value sets of the same vocabulary.
 */
 :root {

@@ -1,7 +1,7 @@
 const UNITS = ['octets', 'Ko', 'Mo', 'Go', 'To']
 
 export function formatSize(bytes: number | null | undefined) {
-  if (bytes === null || bytes === undefined) return '—'
+  if (bytes === null || bytes === undefined) return ''
   if (bytes < 1024) return `${bytes} ${bytes > 1 ? 'octets' : 'octet'}`
   let value = bytes
   let unit = 0
@@ -23,7 +23,7 @@ const daysAgo = (date: Date) => Math.round((startOfDay(new Date()) - startOfDay(
 
 /** Compact date for lists: "11:42", "Hier", "12 sept.", "12 sept. 2025". */
 export function formatShortDate(value: string | Date | null | undefined) {
-  if (!value) return '—'
+  if (!value) return ''
   const date = new Date(value)
   const days = daysAgo(date)
   if (days === 0) return time.format(date)
@@ -33,7 +33,7 @@ export function formatShortDate(value: string | Date | null | undefined) {
 
 /** Readable date with time: "Aujourd'hui, 11:42", "Hier, 21:17", "12 septembre 2026". */
 export function formatDateTime(value: string | Date | null | undefined) {
-  if (!value) return '—'
+  if (!value) return ''
   const date = new Date(value)
   const days = daysAgo(date)
   if (days === 0) return `Aujourd’hui, ${time.format(date)}`

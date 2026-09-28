@@ -18,7 +18,7 @@ export function useAuth() {
         `Saisissez ce code pour vous connecter à ${config.public.appName}.`,
         'Il expire dans 10 minutes. Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.',
       ])
-      await sendEmail(email, `${code} — code de connexion`, text, html)
+      await sendEmail(email, `${code} est votre code de connexion`, text, html)
     },
     async isUserActive(userId) {
       const [row] = await useDB().select({ status: user.status }).from(user).where(eq(user.id, userId)).limit(1)

@@ -56,7 +56,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
               <div class="h-1 flex-1 overflow-hidden rounded-full bg-subtle">
                 <div class="h-full rounded-full bg-accent transition-[width] duration-200" :style="{ width: `${task.file.size ? (task.loaded / task.file.size) * 100 : 0}%` }" />
               </div>
-              <span class="w-9 text-right text-xs text-ink-weak tabular">{{ task.status === 'queued' ? '—' : `${Math.round(task.file.size ? (task.loaded / task.file.size) * 100 : 0)} %` }}</span>
+              <span class="w-9 text-right text-xs text-ink-weak tabular">{{ task.status === 'queued' ? '0 %' : `${Math.round(task.file.size ? (task.loaded / task.file.size) * 100 : 0)} %` }}</span>
             </div>
             <p v-else class="truncate text-sm text-ink-weak">{{ formatSize(task.file.size) }} · {{ task.parentName }}</p>
           </div>

@@ -142,7 +142,7 @@ const searchAll = () => run(() => navigateTo({ path: '/search', query: { q: quer
               <ListboxGroupLabel class="px-2.5 pt-1 pb-1.5 text-xs font-semibold text-ink-weak">{{ group.label }}</ListboxGroupLabel>
               <ListboxItem v-for="command in group.commands" :key="command.id" :value="command.id" class="flex h-10 cursor-default items-center gap-3 rounded-md px-2.5 outline-none data-highlighted:bg-hover" @select="run(command.run)">
                 <component :is="command.icon" class="size-4 shrink-0 text-ink-weak" aria-hidden="true" />
-                <span class="min-w-0 flex-1 truncate text-base text-ink">{{ command.label }}<span v-if="command.hint" class="text-ink-weak"> — {{ command.hint }}</span></span>
+                <span class="min-w-0 flex-1 truncate text-base text-ink">{{ command.label }}<span v-if="command.hint" class="ml-2 text-ink-weak">{{ command.hint }}</span></span>
                 <UiKbd v-if="command.shortcut" :keys="command.shortcut" />
               </ListboxItem>
             </ListboxGroup>

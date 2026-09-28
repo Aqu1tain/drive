@@ -22,7 +22,7 @@ const tooltip = computed(() => {
     ...(access.hasLink ? ['Toute personne disposant du lien'] : []),
     ...people.value.map(p => p.kind === 'invitation' ? `${p.label} (invité)` : p.label),
   ]
-  return (access.inherited ? 'Hérité du dossier parent — ' : '') + lines.join(', ')
+  return (access.inherited ? 'Hérité du dossier parent : ' : '') + lines.join(', ')
 })
 </script>
 

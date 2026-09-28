@@ -21,7 +21,7 @@ function kindCondition(kind: SearchQuery['type']): SQL | undefined {
   )
 }
 
-/** A term matches the name, the name of an enclosing folder, or — for the owner — a person who has access. */
+/** A term matches the name, the name of an enclosing folder, or, for the owner, a person who has access. */
 function termCondition(term: string, includePeople: boolean) {
   const { resources, accessRules, user, invitations } = tables
   const like = likePattern(term)

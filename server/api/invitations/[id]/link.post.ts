@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-/** Issues a fresh link (the previous one stops working) — also how a lost invitation gets re-sent. */
+/** Issues a fresh link (the previous one stops working); also how a lost invitation gets re-sent. */
 export default defineEventHandler(async (event) => {
   await requireOwner(event)
   const invitation = await requireInvitation(getRouterParam(event, 'id')!)

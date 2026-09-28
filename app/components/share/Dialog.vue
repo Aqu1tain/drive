@@ -70,7 +70,7 @@ async function add(value = email.value) {
     setAccess(await api<ResourceAccess>(`/api/resources/${props.item.id}/access`))
     if (result.inviteUrl) {
       lastInvite.value = { email: address, url: result.inviteUrl, emailed: result.emailed }
-      if (!result.emailed) await copy(result.inviteUrl, 'Lien d’invitation copié — transmettez-le à la personne')
+      if (!result.emailed) await copy(result.inviteUrl, 'Lien d’invitation copié : transmettez-le à la personne')
     }
     else {
       toast(result.emailed ? `${address} a été prévenu par email` : `Accès accordé à ${address}`)
@@ -90,7 +90,7 @@ async function copy(text: string, message = 'Lien copié') {
     toast(message)
   }
   catch {
-    toast('Copie automatique impossible — sélectionnez le lien pour le copier')
+    toast('Copie automatique impossible. Sélectionnez le lien pour le copier.')
   }
 }
 
@@ -161,7 +161,7 @@ async function saveLink(patch: { enabled?: boolean, allowDownload?: boolean, exp
     })
     setAccess(result)
     if (patch.enabled === true && result.link) await copy(result.link.url, 'Lien public créé et copié')
-    if (patch.enabled === false) toast('Lien public désactivé — il ne fonctionne plus')
+    if (patch.enabled === false) toast('Lien public désactivé : il ne fonctionne plus')
   }
   catch (error) {
     toast.error(errorMessage(error, 'Impossible de modifier le lien'))
@@ -241,19 +241,19 @@ function openParentSharing(crumb: { id: string | null, name: string }) {
             <RadioGroupItem value="account" class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-field bg-canvas data-[state=checked]:border-accent">
               <RadioGroupIndicator class="size-2 rounded-full bg-accent" />
             </RadioGroupItem>
-            <span><span class="font-medium text-ink">Invitation avec compte</span> <span class="text-ink-weak">— la personne crée son accès ; vous savez précisément qui consulte.</span></span>
+            <span><span class="block font-medium text-ink">Invitation avec compte</span><span class="block text-ink-weak">La personne crée son accès : vous savez précisément qui consulte.</span></span>
           </label>
           <label class="flex items-start gap-2.5">
             <RadioGroupItem value="link" class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-field bg-canvas data-[state=checked]:border-accent">
               <RadioGroupIndicator class="size-2 rounded-full bg-accent" />
             </RadioGroupItem>
-            <span><span class="font-medium text-ink">Lien personnel</span> <span class="text-ink-weak">— sans compte ; l’activité est attribuée à ce lien, qui peut toutefois être transféré.</span></span>
+            <span><span class="block font-medium text-ink">Lien personnel</span><span class="block text-ink-weak">Sans compte. L’activité est attribuée à ce lien, qui peut toutefois être transféré.</span></span>
           </label>
         </RadioGroupRoot>
         <label class="flex items-center gap-2.5" :class="!emailEnabled && 'opacity-60'">
           <input v-model="notify" type="checkbox" :disabled="!emailEnabled" class="size-4 accent-(--accent)">
           <span class="text-ink">Prévenir par email</span>
-          <span v-if="!emailEnabled" class="text-ink-weak">(envoi non configuré — le lien sera copié)</span>
+          <span v-if="!emailEnabled" class="text-ink-weak">(envoi non configuré, le lien sera copié)</span>
         </label>
       </div>
 
