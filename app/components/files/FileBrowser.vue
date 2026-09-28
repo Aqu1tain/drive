@@ -185,8 +185,135 @@ function onClick(event: MouseEvent, index: number) {
 }
 
 function onBackgroundClick(event: MouseEvent) {
+  if (suppressClick) {
+    suppressClick = false
+    return
+  }
   if ((event.target as HTMLElement).closest('[data-index]')) return
   setSelection([])
+}
+
+interface Marquee {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  pointerId: number
+  active: boolean
+  base: string[]
+  clientX: number
+  clientY: number
+}
+
+const MARQUEE_THRESHOLD = 4
+const EDGE = 48
+const marquee = ref<Marquee | null>(null)
+let suppressClick = false
+let autoScroll = 0
+let autoSpeed = 0
+
+const marqueeBox = computed(() => {
+  const m = marquee.value
+  if (!m?.active) return null
+  return { left: Math.min(m.x0, m.x1), top: Math.min(m.y0, m.y1), width: Math.abs(m.x1 - m.x0), height: Math.abs(m.y1 - m.y0) }
+})
+
+function contentPoint(clientX: number, clientY: number) {
+  const el = scroller.value!
+  const rect = el.getBoundingClientRect()
+  return { x: clientX - rect.left + el.scrollLeft, y: clientY - rect.top + el.scrollTop }
+}
+
+/** Indices touched by the rectangle, computed from the layout: works for rows the virtualizer has not rendered. */
+function indicesInBox(box: { left: number, top: number, width: number, height: number }) {
+  const count = sorted.value.length
+  const bottom = box.top + box.height
+  const right = box.left + box.width
+  if (!isGrid.value) {
+    const first = Math.max(0, Math.floor((box.top - headerOffset.value) / rowHeight.value))
+    const last = Math.min(count - 1, Math.floor((bottom - headerOffset.value) / rowHeight.value))
+    return last < first ? [] : Array.from({ length: last - first + 1 }, (_, i) => first + i)
+  }
+  const gap = 12
+  const cardWidth = (width.value - 24 - (columns.value - 1) * gap) / columns.value
+  const rowSpan = cardHeight.value + gap
+  const hits: number[] = []
+  for (let row = Math.max(0, Math.floor((box.top - 4) / rowSpan)); row <= Math.floor((bottom - 4) / rowSpan); row++) {
+    const top = 4 + row * rowSpan
+    if (top > bottom || top + cardHeight.value < box.top) continue
+    for (let col = 0; col < columns.value; col++) {
+      const index = row * columns.value + col
+      if (index >= count) break
+      const left = 12 + col * (cardWidth + gap)
+      if (left <= right && left + cardWidth >= box.left) hits.push(index)
+    }
+  }
+  return hits
+}
+
+function updateMarquee() {
+  const m = marquee.value
+  if (!m) return
+  const point = contentPoint(m.clientX, m.clientY)
+  m.x1 = point.x
+  m.y1 = point.y
+  if (!m.active) {
+    if (Math.hypot(m.x1 - m.x0, m.y1 - m.y0) < MARQUEE_THRESHOLD) return
+    m.active = true
+  }
+  const hits = indicesInBox(marqueeBox.value!).map(i => sorted.value[i]!.id)
+  setSelection([...new Set([...m.base, ...hits])])
+}
+
+function onPointerDown(event: PointerEvent) {
+  lastPointer = event.pointerType
+  if (event.button !== 0 || event.pointerType === 'touch' || !sorted.value.length) return
+  const target = event.target as HTMLElement
+  if (target.closest('[data-index], button, a, input, [role="columnheader"]')) return
+  const point = contentPoint(event.clientX, event.clientY)
+  const additive = event.metaKey || event.ctrlKey || event.shiftKey
+  marquee.value = {
+    x0: point.x, y0: point.y, x1: point.x, y1: point.y,
+    pointerId: event.pointerId, active: false,
+    base: additive ? [...selection.value] : [],
+    clientX: event.clientX, clientY: event.clientY,
+  }
+  scroller.value?.setPointerCapture(event.pointerId)
+  scroller.value?.focus({ preventScroll: true })
+}
+
+function onPointerMove(event: PointerEvent) {
+  const m = marquee.value
+  if (!m || event.pointerId !== m.pointerId) return
+  m.clientX = event.clientX
+  m.clientY = event.clientY
+  updateMarquee()
+  const rect = scroller.value!.getBoundingClientRect()
+  autoSpeed = event.clientY < rect.top + EDGE ? event.clientY - rect.top - EDGE : Math.max(0, event.clientY - rect.bottom + EDGE)
+  if (!autoSpeed) stopAutoScroll()
+  else if (m.active && !autoScroll) autoScroll = requestAnimationFrame(scrollTick)
+}
+
+/** Near the top or bottom edge the list scrolls on its own, faster the closer the pointer gets. */
+function scrollTick() {
+  if (!marquee.value?.active || !autoSpeed || !scroller.value) return stopAutoScroll()
+  scroller.value.scrollTop += Math.max(-24, Math.min(24, autoSpeed / 2))
+  updateMarquee()
+  autoScroll = requestAnimationFrame(scrollTick)
+}
+
+function stopAutoScroll() {
+  if (autoScroll) cancelAnimationFrame(autoScroll)
+  autoScroll = 0
+}
+
+function onPointerUp(event: PointerEvent) {
+  const m = marquee.value
+  if (!m || event.pointerId !== m.pointerId) return
+  stopAutoScroll()
+  if (m.active) suppressClick = true
+  marquee.value = null
+  scroller.value?.releasePointerCapture(event.pointerId)
 }
 
 const menuEntries = ref<MenuEntry[]>([])
@@ -421,13 +548,17 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
         ref="scroller"
         v-bind="isEmpty ? {} : gridAttrs"
         class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] focus:outline-none"
-        :class="isGrid ? 'px-3' : ''"
+        :class="[isGrid ? 'px-3' : '', marqueeBox && 'cursor-select select-none']"
         @keydown="onKeydown"
         @focus="keyboardFocus = focusIndex >= 0"
         @blur="keyboardFocus = false"
         @click="onBackgroundClick"
         @contextmenu="onContextMenu"
-        @pointerdown="lastPointer = $event.pointerType"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @scroll="marquee?.active && updateMarquee()"
         @dragover="onDragOver"
         @dragleave="onDragLeave"
         @drop="onDrop"
@@ -474,7 +605,8 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
               :data-folder-id="sorted[row.index]!.type === 'folder' && !trash ? sorted[row.index]!.id : undefined"
               :data-folder-name="sorted[row.index]!.type === 'folder' ? sorted[row.index]!.name : undefined"
               :draggable="isOwner && !trash"
-              class="group absolute inset-x-0 top-0 grid items-center gap-x-4 border-b border-line-weak pr-2 pl-4 select-none transition-colors duration-100"
+              class="group absolute inset-x-0 top-0 grid cursor-pointer items-center gap-x-4 border-b border-line-weak pr-2 pl-4 select-none transition-colors duration-100"
+              :data-draggable="isOwner && !trash || undefined"
               :class="[
                 selectedSet.has(sorted[row.index]!.id) ? 'bg-selected hover:bg-selected-hover' : 'hover:bg-hover',
                 dropTargetId === sorted[row.index]!.id && 'bg-selected! ring-2 ring-inset ring-accent',
@@ -560,6 +692,12 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
             </div>
           </template>
         </div>
+        <div
+          v-if="marqueeBox"
+          class="pointer-events-none absolute z-(--z-sticky) rounded-sm border border-accent bg-accent/10"
+          :style="{ left: `${marqueeBox.left}px`, top: `${marqueeBox.top}px`, width: `${marqueeBox.width}px`, height: `${marqueeBox.height}px` }"
+          aria-hidden="true"
+        />
       </div>
     </UiContextMenu>
   </div>

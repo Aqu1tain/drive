@@ -27,7 +27,8 @@ const failed = ref(false)
     :data-folder-id="item.type === 'folder' && !trash ? item.id : undefined"
     :data-folder-name="item.type === 'folder' ? item.name : undefined"
     :draggable="draggable"
-    class="group flex flex-col overflow-hidden rounded-lg border p-1.5 select-none transition-colors duration-100"
+    class="group flex cursor-pointer flex-col overflow-hidden rounded-lg border p-1.5 select-none transition-colors duration-100"
+    :data-draggable="draggable || undefined"
     :class="[
       selected ? 'border-accent/40 bg-selected' : 'border-line-weak bg-canvas hover:bg-hover',
       dropTarget && 'ring-2 ring-accent',
