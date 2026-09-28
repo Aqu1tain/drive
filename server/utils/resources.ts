@@ -6,10 +6,14 @@ import type { AccessRule, Resource } from '../database/schema'
 
 const { resources, accessRules, invitations, user } = tables
 
+export type RuleStatus = 'active' | 'pending' | 'disabled' | 'expired' | 'revoked'
+
 export interface RuleRow {
   rule: AccessRule
   person: AccessPerson | null
   active: boolean
+  status: RuleStatus
+  invitationMode: 'account' | 'link' | null
 }
 
 export async function findResource(id: string) {
@@ -48,6 +52,7 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
       invitationEmail: invitations.email,
       invitationName: invitations.name,
       invitationStatus: invitations.status,
+      invitationMode: invitations.mode,
       invitationExpiresAt: invitations.expiresAt,
     })
     .from(accessRules)
@@ -56,23 +61,31 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
     .where(where)
     .orderBy(asc(accessRules.createdAt))
 
-  return rows.map((row) => {
+  return rows.map((row): RuleRow => {
     const expired = isExpired(row.rule.expiresAt, now)
     if (row.rule.kind === 'user') {
+      const status: RuleStatus = expired ? 'expired' : row.userStatus === 'active' ? 'active' : 'disabled'
       return {
         rule: row.rule,
         person: { kind: 'user', label: row.userName || row.userEmail!, email: row.userEmail! },
-        active: !expired && row.userStatus === 'active',
+        active: status === 'active',
+        status,
+        invitationMode: null,
       }
     }
     if (row.rule.kind === 'invitation') {
+      const status: RuleStatus = expired || isExpired(row.invitationExpiresAt, now)
+        ? 'expired'
+        : row.invitationStatus === 'revoked' ? 'revoked' : row.invitationMode === 'account' ? 'pending' : 'active'
       return {
         rule: row.rule,
         person: { kind: 'invitation', label: row.invitationName || row.invitationEmail!, email: row.invitationEmail! },
-        active: !expired && row.invitationStatus !== 'revoked' && !isExpired(row.invitationExpiresAt, now),
+        active: status === 'active' || status === 'pending',
+        status,
+        invitationMode: row.invitationMode,
       }
     }
-    return { rule: row.rule, person: null, active: !expired }
+    return { rule: row.rule, person: null, active: !expired, status: expired ? 'expired' : 'active', invitationMode: null }
   })
 }
 
@@ -104,7 +117,7 @@ export function summarizeAccess(own: RuleRow[], inherited: RuleRow[]): AccessSum
   const hasLink = active.some(row => row.rule.kind === 'link')
   return {
     level: hasLink ? 'public' : list.length > 0 ? 'shared' : 'private',
-    people: list.slice(0, 5),
+    people: list,
     userCount: list.filter(p => p.kind === 'user').length,
     invitationCount: list.filter(p => p.kind === 'invitation').length,
     hasLink,

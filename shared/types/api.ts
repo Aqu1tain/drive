@@ -61,8 +61,8 @@ export interface AccessEntry {
   kind: 'user' | 'invitation' | 'link'
   label: string
   email: string | null
-  status?: 'active' | 'pending' | 'disabled'
-  invitationMode?: 'account' | 'link'
+  status: 'active' | 'pending' | 'disabled' | 'expired' | 'revoked'
+  invitationMode: 'account' | 'link' | null
   allowDownload: boolean
   expiresAt: string | null
   inheritedFrom: Crumb | null
