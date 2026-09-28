@@ -24,8 +24,15 @@ export async function createUser(input: { email: string, name: string, role: 'ow
     emailVerified: input.emailVerified,
     role: input.role,
     status: 'active',
-  })
-  if (input.password) await setPassword(created.id, input.password)
+  }, { method: 'admin' })
+  if (!input.password) return created
+  try {
+    await setPassword(created.id, input.password)
+  }
+  catch (error) {
+    await ctx.internalAdapter.deleteUser(created.id)
+    throw error
+  }
   return created
 }
 
@@ -42,5 +49,5 @@ export async function setPassword(userId: string, password: string) {
 
 export async function revokeSessions(userId: string) {
   const ctx = await useAuth().$context
-  await ctx.internalAdapter.deleteSessions(userId)
+  await ctx.internalAdapter.deleteUserSessions(userId)
 }

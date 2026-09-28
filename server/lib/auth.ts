@@ -1,8 +1,10 @@
 import { betterAuth } from 'better-auth'
+import { APIError } from 'better-auth/api'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { emailOTP, twoFactor } from 'better-auth/plugins'
 import { passkey } from '@better-auth/passkey'
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
+import * as authSchema from '../database/schema/auth'
 
 export interface AuthOptions {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,7 +24,7 @@ export function createAuth(options: AuthOptions) {
     baseURL: options.appUrl,
     secret: options.secret,
     trustedOrigins: [options.appUrl],
-    database: drizzleAdapter(options.db, { provider: 'pg' }),
+    database: drizzleAdapter(options.db, { provider: 'pg', schema: authSchema }),
     emailAndPassword: {
       enabled: true,
       disableSignUp: true,
@@ -54,13 +56,15 @@ export function createAuth(options: AuthOptions) {
     advanced: {
       cookiePrefix: 'drive',
       useSecureCookies: protocol === 'https:',
+      ipAddress: { ipAddressHeaders: ['x-drive-client-ip'] },
     },
     databaseHooks: {
       session: {
         create: {
           before: async (session) => {
-            if (options.isUserActive && !(await options.isUserActive(session.userId))) return false
-            return { data: session }
+            if (options.isUserActive && !(await options.isUserActive(session.userId))) {
+              throw new APIError('FORBIDDEN', { message: 'Ce compte est désactivé' })
+            }
           },
           after: async (session) => {
             await options.onSessionCreated?.(session.userId)
@@ -70,11 +74,12 @@ export function createAuth(options: AuthOptions) {
     },
     plugins: [
       passkey({ rpID: hostname, rpName: options.appName, origin: new URL(options.appUrl).origin }),
-      twoFactor({ issuer: options.appName }),
+      twoFactor({ issuer: options.appName, backupCodeOptions: { storeBackupCodes: 'encrypted' } }),
       emailOTP({
         disableSignUp: true,
         otpLength: 6,
         expiresIn: 600,
+        storeOTP: 'hashed',
         async sendVerificationOTP({ email, otp, type }) {
           if (type === 'sign-in') await options.sendSignInCode(email, otp)
         },

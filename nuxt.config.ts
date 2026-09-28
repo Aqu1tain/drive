@@ -43,6 +43,7 @@ export default defineNuxtConfig({
     databaseUrl: '',
     authSecret: '',
     setupToken: '',
+    trustProxy: false,
     storage: {
       driver: 'local',
       localDir: './storage-data',
