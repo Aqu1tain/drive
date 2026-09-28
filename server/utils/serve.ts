@@ -61,7 +61,7 @@ export async function openResource(event: H3Event, viewer: Viewer, id: string): 
     kind,
     scripts: kind === 'html' && resource.allowScripts,
     contentUrl: `${viewer.apiBase}/resources/${resource.id}/content`,
-    downloadUrl: access.download && resource.type === 'file' ? `${viewer.apiBase}/resources/${resource.id}/download` : null,
+    downloadUrl: access.download ? `${viewer.apiBase}/resources/${resource.id}/download` : null,
     frameUrl: kind === 'html' ? usercontentUrl(`/c/${frameTokenFor(viewer, resource.id)}/`) : null,
   }
 }
@@ -74,6 +74,7 @@ export async function serveContent(event: H3Event, viewer: Viewer, id: string) {
 
 export async function serveDownload(event: H3Event, viewer: Viewer, id: string) {
   const { resource, access } = await requireReadable(viewer, id)
+  if (resource.type === 'folder') return serveArchive(event, viewer, [resource.id])
   event.context.logResourceId = resource.id
   if (!access.download) throw createError({ statusCode: 403, statusMessage: 'Le téléchargement est désactivé pour ce partage' })
   if (!isRangeContinuation(event)) await logAccess(event, viewer, resource, 'download')
