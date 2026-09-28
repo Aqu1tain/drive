@@ -11,7 +11,8 @@ declare module 'h3' {
   }
 }
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
+  await whenReady()
   event.context.requestId = randomUUID()
   event.context.startedAt = performance.now()
   event.context.origin = isUsercontentHost(event) ? 'usercontent' : 'app'
