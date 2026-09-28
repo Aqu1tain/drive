@@ -185,16 +185,18 @@ export function useFileActions() {
     }
   }
 
+  /** One file downloads as is; a folder or a selection becomes a single ZIP, streamed by the server. */
   function download(items: ResourceItem[], apiBase = '/api') {
-    const files = items.filter(item => item.type === 'file' && item.canDownload)
-    for (const [index, file] of files.entries()) {
-      setTimeout(() => {
-        const anchor = document.createElement('a')
-        anchor.href = `${apiBase}/resources/${file.id}/download`
-        anchor.download = file.name
-        anchor.click()
-      }, index * 300)
-    }
+    const allowed = items.filter(item => item.canDownload)
+    if (allowed.length === 0) return
+    const single = allowed.length === 1 ? allowed[0]! : null
+    const anchor = document.createElement('a')
+    anchor.href = single
+      ? `${apiBase}/resources/${single.id}/download`
+      : `${apiBase}/downloads?ids=${allowed.map(item => item.id).join(',')}`
+    anchor.download = single?.type === 'file' ? single.name : ''
+    anchor.click()
+    if (!single || single.type === 'folder') toast('Préparation de l’archive ZIP, le téléchargement démarre')
   }
 
   function showDetails(item: ResourceItem | null, tab: DetailsTab = 'details') {
@@ -211,8 +213,7 @@ export function useFileActions() {
   function menuFor(items: ResourceItem[], context: MenuContext): MenuEntry[] {
     if (items.length === 0) return []
     const single = items.length === 1 ? items[0]! : null
-    const files = items.filter(item => item.type === 'file')
-    const downloadable = files.some(item => item.canDownload)
+    const downloadable = items.some(item => item.canDownload)
 
     if (context.trash) {
       return [
