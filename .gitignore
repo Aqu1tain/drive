@@ -10,3 +10,4 @@ test-results
 storage-data
 *.log
 .DS_Store
+.playwright-mcp
