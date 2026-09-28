@@ -18,7 +18,7 @@ const Separator = computed(() => props.variant === 'dropdown' ? DropdownMenuSepa
     >
       <component :is="entry.icon" v-if="entry.icon" class="size-4 shrink-0" :class="entry.danger ? 'text-danger' : 'text-ink-weak'" aria-hidden="true" />
       <span class="flex-1 truncate">{{ entry.label }}</span>
-      <UiKbd v-if="entry.shortcut" :keys="entry.shortcut" class="ml-4" />
+      <UiKbd v-if="entry.shortcut" :keys="entry.shortcut" class="ml-4 pointer-coarse:hidden" />
     </component>
   </template>
 </template>
