@@ -105,4 +105,4 @@ Stack : Nuxt 4, Vue 3, TypeScript, PostgreSQL 17, Drizzle, Better Auth, Tailwind
 
 ## Licence
 
-[MIT](LICENSE)
+[CC BY-NC-SA 4.0](LICENSE) : usage non commercial libre, modifications partagées sous la même licence. Pour un usage commercial, une licence payante est nécessaire : voir [COMMERCIAL.md](COMMERCIAL.md).
