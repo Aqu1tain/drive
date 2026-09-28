@@ -2,7 +2,7 @@
 
 ## Signaler une vulnérabilité
 
-Merci de ne pas ouvrir d'issue publique. Utilisez l'onglet **Security → Report a vulnerability** du dépôt GitHub (signalement privé). Indiquez la version, les étapes pour reproduire et l'impact estimé. Vous recevrez une réponse dès que possible.
+Merci de ne pas ouvrir d'issue publique. Utilisez l'onglet **Security → Report a vulnerability** du dépôt GitHub (signalement privé), ou écrivez à [contact@corentinrenard.com](mailto:contact@corentinrenard.com). Indiquez la version, les étapes pour reproduire et l'impact estimé. Vous recevrez une réponse dès que possible.
 
 ## Modèle de sécurité
 
