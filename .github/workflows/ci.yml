@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: drive
+          POSTGRES_PASSWORD: drive
+          POSTGRES_DB: drive
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U drive" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      NUXT_DATABASE_URL: postgres://drive:drive@localhost:5432/drive
+      NUXT_AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only
+      NUXT_PUBLIC_APP_URL: http://localhost:3000
+      NUXT_PUBLIC_USERCONTENT_URL: http://127.0.0.1:3000
+      NUXT_STORAGE_DRIVER: local
+      NUXT_STORAGE_LOCAL_DIR: /tmp/drive-storage
+      NITRO_HOST: 127.0.0.1
+      NITRO_PORT: "3000"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test:unit
+      - run: pnpm build
+      - name: Start the built server
+        run: |
+          node scripts/migrate.mjs
+          node .output/server/index.mjs > server.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/api/setup && exit 0; sleep 1; done
+          cat server.log && exit 1
+      - run: pnpm test:integration
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-logs
+          path: |
+            server.log
+            test-results/
