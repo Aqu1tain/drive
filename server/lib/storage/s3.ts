@@ -24,6 +24,8 @@ export class S3StorageProvider implements StorageProvider {
       region: options.region,
       forcePathStyle: options.forcePathStyle,
       credentials: { accessKeyId: options.accessKeyId, secretAccessKey: options.secretAccessKey },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     })
   }
 
