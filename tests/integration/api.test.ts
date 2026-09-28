@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Client, USERCONTENT_URL, ownerClient, readerClient, unique } from './client'
 
 let owner: Client
@@ -9,6 +9,15 @@ beforeAll(async () => {
   const folder = await owner.post('/api/folders', { name: unique('it'), parentId: null })
   expect(folder.status).toBe(201)
   root = folder.body.id
+})
+
+afterAll(async () => {
+  await owner.post('/api/resources/trash', { ids: [root] })
+  await owner.delete(`/api/resources/${root}`)
+  const { people } = (await owner.get('/api/people')).body as { people: Array<{ id: string, kind: string, email: string }> }
+  for (const person of people.filter(p => /^(reader|invitee|guest)-/.test(p.email))) {
+    await (person.kind === 'user' ? owner.delete(`/api/people/${person.id}`) : owner.delete(`/api/invitations/${person.id}`))
+  }
 })
 
 async function folderIn(parentId: string, name = unique('folder')) {
@@ -96,6 +105,7 @@ describe('file operations', () => {
     const restored = await owner.post('/api/resources/restore', { ids: [file.id] })
     expect(restored.body.restored[0]).toMatchObject({ movedToRoot: true, parentId: null })
     await owner.post('/api/resources/trash', { ids: [file.id] })
+    await owner.delete(`/api/resources/${file.id}`)
   })
 
   it('searches by name, folder name and type', async () => {
