@@ -1,7 +1,9 @@
 import type { H3Event } from 'h3'
-import { and, eq, gt } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm'
+import { kindOf } from '#shared/utils/search'
+import type { ActivityEvent, ActivityStats } from '#shared/types/api'
 import { hashIp } from '../lib/crypto'
-import type { Resource } from '../database/schema'
+import type { AccessEvent, Resource } from '../database/schema'
 
 const { accessEvents, resources } = tables
 
@@ -31,10 +33,11 @@ function actorOf(viewer: Viewer): Actor {
   return { actorKind: 'link', actorLabel: 'Lien public', accessRuleId: viewer.linkRule?.id, visitorId: viewer.visitorId }
 }
 
-function sameActor(actor: Actor) {
+function sameActor(actor: Actor, ipHash: string | null) {
   if (actor.userId) return eq(accessEvents.userId, actor.userId)
   if (actor.invitationId) return eq(accessEvents.invitationId, actor.invitationId)
-  return actor.visitorId ? eq(accessEvents.visitorId, actor.visitorId) : undefined
+  if (actor.visitorId) return eq(accessEvents.visitorId, actor.visitorId)
+  return ipHash ? eq(accessEvents.ipHash, ipHash) : undefined
 }
 
 function networkTraits(event: H3Event) {
@@ -56,7 +59,8 @@ export async function logAccess(event: H3Event, viewer: Viewer, resource: Resour
   if (viewer.kind === 'share' && (await getSessionUser(event))?.role === 'owner') return
 
   const actor = actorOf(viewer)
-  const identity = sameActor(actor)
+  const traits = networkTraits(event)
+  const identity = sameActor(actor, traits.ipHash)
   if (type === 'view' && identity) {
     const [recent] = await db.select({ id: accessEvents.id }).from(accessEvents).where(and(
       eq(accessEvents.resourceId, resource.id),
@@ -67,7 +71,7 @@ export async function logAccess(event: H3Event, viewer: Viewer, resource: Resour
     if (recent) return
   }
 
-  await db.insert(accessEvents).values({ resourceId: resource.id, type, ...actor, ...networkTraits(event) })
+  await db.insert(accessEvents).values({ resourceId: resource.id, type, ...actor, ...traits })
   if (type === 'view') {
     await db.update(resources).set({ lastExternalViewAt: new Date() }).where(eq(resources.id, resource.id))
   }
@@ -93,4 +97,48 @@ export async function logInvitationAccepted(event: H3Event, resourceIds: string[
     userId,
     ...networkTraits(event),
   })))
+}
+
+/** Views and downloads of a resource — for a folder, of everything inside it too. */
+export function activityScope(resource: Resource) {
+  return resource.type === 'folder'
+    ? sql`${accessEvents.resourceId} in (select id from ${resources} where id = ${resource.id} or ancestor_ids @> array[${resource.id}::uuid])`
+    : eq(accessEvents.resourceId, resource.id)
+}
+
+export async function activityStats(resource: Resource): Promise<ActivityStats> {
+  const db = useDB()
+  const scope = activityScope(resource)
+  const [counts] = await db.select({
+    views: sql<number>`count(*) filter (where ${accessEvents.type} = 'view')::int`,
+    downloads: sql<number>`count(*) filter (where ${accessEvents.type} = 'download')::int`,
+    visitors: sql<number>`count(distinct coalesce(${accessEvents.userId}, ${accessEvents.invitationId}::text, ${accessEvents.visitorId}, ${accessEvents.ipHash})) filter (where ${accessEvents.type} in ('view', 'download'))::int`,
+  }).from(accessEvents).where(scope)
+  const [last] = await db.select({ at: accessEvents.createdAt, by: accessEvents.actorLabel }).from(accessEvents)
+    .where(and(scope, eq(accessEvents.type, 'view'))).orderBy(desc(accessEvents.createdAt)).limit(1)
+  return {
+    views: counts?.views ?? 0,
+    downloads: counts?.downloads ?? 0,
+    visitors: counts?.visitors ?? 0,
+    lastViewAt: last?.at.toISOString() ?? null,
+    lastViewBy: last?.by ?? null,
+  }
+}
+
+export async function toActivityEvents(events: AccessEvent[]): Promise<ActivityEvent[]> {
+  const ids = [...new Set(events.map(e => e.resourceId).filter((id): id is string => !!id))]
+  const rows = ids.length ? await useDB().select().from(resources).where(inArray(resources.id, ids)) : []
+  const byId = new Map(rows.map(r => [r.id, r]))
+  return events.map((event) => {
+    const resource = event.resourceId ? byId.get(event.resourceId) : undefined
+    return {
+      id: event.id,
+      type: event.type,
+      actorKind: event.actorKind,
+      actorLabel: event.actorLabel,
+      targetLabel: event.targetLabel,
+      resource: resource ? { id: resource.id, name: resource.name, type: resource.type, kind: kindOf(resource.type, resource.mimeType) } : null,
+      createdAt: event.createdAt.toISOString(),
+    }
+  })
 }
