@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { CircleHelp, Keyboard, LogOut, Menu, Monitor, Moon, Settings, Sun } from '@lucide/vue'
+import { CircleHelp, Keyboard, LogOut, Menu, Monitor, Moon, PanelLeft, Settings, Sun } from '@lucide/vue'
 
 defineProps<{ owner: boolean }>()
-defineEmits<{ menu: [] }>()
+defineEmits<{ menu: [], toggleSidebar: [] }>()
 
 const { data: me } = useMe()
 const dialogs = useDialogs()
@@ -33,6 +33,7 @@ const userEntries = computed<MenuEntry[]>(() => [
 <template>
   <header class="flex h-15 shrink-0 items-center gap-2 px-3 md:px-4">
     <UiIconButton :icon="Menu" label="Menu" class="md:hidden" @click="$emit('menu')" />
+    <UiIconButton :icon="PanelLeft" label="Réduire ou déplier la navigation" class="max-md:hidden" @click="$emit('toggleSidebar')" />
     <AppSearchBox :owner="owner" class="min-w-0 flex-1 md:max-w-[640px]" />
     <div class="ml-auto flex items-center gap-1">
       <UiIconButton :icon="CircleHelp" label="Raccourcis clavier" shortcut="Mod+/" class="max-sm:hidden" @click="dialogs.shortcuts()" />

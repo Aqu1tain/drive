@@ -4,6 +4,7 @@ const uploads = useUploads()
 const context = useSelectionContext()
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
 const folderInput = useTemplateRef<HTMLInputElement>('folderInput')
+const pageInput = useTemplateRef<HTMLInputElement>('pageInput')
 
 const target = () => context.state.folder ?? { id: null, name: 'Mon Drive' }
 
@@ -15,14 +16,17 @@ function onPick(event: Event) {
 
 const pickFiles = () => fileInput.value?.click()
 const pickFolder = () => folderInput.value?.click()
+const pickPage = () => pageInput.value?.click()
 
 onMounted(() => {
   document.addEventListener('drive:upload', pickFiles)
   document.addEventListener('drive:upload-folder', pickFolder)
+  document.addEventListener('drive:upload-page', pickPage)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('drive:upload', pickFiles)
   document.removeEventListener('drive:upload-folder', pickFolder)
+  document.removeEventListener('drive:upload-page', pickPage)
 })
 </script>
 
@@ -34,4 +38,5 @@ onBeforeUnmount(() => {
   <DialogsConflict v-if="dialogs.state.conflict" :request="dialogs.state.conflict" @close="dialogs.state.conflict = null" />
   <input ref="fileInput" type="file" multiple class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">
   <input ref="folderInput" type="file" webkitdirectory class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">
+  <input ref="pageInput" type="file" accept=".html,.htm,text/html" class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">
 </template>

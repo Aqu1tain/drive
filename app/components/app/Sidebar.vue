@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Activity, Clock, FolderUp, FolderPlus, HardDrive, House, Plus, Share2, Star, Trash2, Upload, Users, Inbox } from '@lucide/vue'
+import { Activity, Clock, FolderUp, FolderPlus, Globe, HardDrive, House, Plus, Share2, Star, Trash2, Upload, Users, Inbox } from '@lucide/vue'
 import { useQuery } from '@tanstack/vue-query'
 import type { Component } from 'vue'
 
-const props = defineProps<{ owner: boolean }>()
+const props = defineProps<{ owner: boolean, collapsed?: boolean }>()
 const emit = defineEmits<{ navigate: [] }>()
 const { public: config } = useRuntimeConfig()
 const dialogs = useDialogs()
@@ -41,6 +41,8 @@ const newEntries = computed<MenuEntry[]>(() => [
   { kind: 'separator' },
   { id: 'files', label: 'Importer des fichiers', icon: Upload, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
   { id: 'folder-upload', label: 'Importer un dossier', icon: FolderUp, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-folder')) },
+  { kind: 'separator' },
+  { id: 'page-upload', label: 'Importer une page web', icon: Globe, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-page')) },
 ])
 
 const { data: storage } = useQuery({
@@ -64,15 +66,16 @@ function onDrop(event: DragEvent) {
 </script>
 
 <template>
-  <aside class="flex w-[248px] shrink-0 flex-col bg-nav text-nav-ink" aria-label="Navigation principale">
-    <div class="flex h-15 shrink-0 items-center gap-2.5 px-5">
-      <AppLogo class="size-7" />
-      <span class="text-md font-semibold tracking-tight">{{ config.appName }}</span>
+  <aside class="flex shrink-0 flex-col bg-nav text-nav-ink transition-[width] duration-200" :class="collapsed ? 'w-[68px]' : 'w-[248px]'" aria-label="Navigation principale">
+    <div class="flex h-15 shrink-0 items-center gap-2.5" :class="collapsed ? 'justify-center' : 'px-5'">
+      <AppLogo class="size-7 shrink-0" />
+      <span v-if="!collapsed" class="text-md font-semibold tracking-tight">{{ config.appName }}</span>
     </div>
 
-    <div v-if="owner" class="px-4 pt-1 pb-4">
+    <div v-if="owner" class="pt-1 pb-4" :class="collapsed ? 'px-3' : 'px-4'">
       <UiDropdownMenu :entries="newEntries">
-        <UiButton variant="primary" size="lg" :icon="Plus" block class="justify-start! shadow-none">Nouveau</UiButton>
+        <UiButton v-if="collapsed" variant="primary" size="lg" :icon="Plus" aria-label="Nouveau" class="w-full px-0! shadow-none" />
+        <UiButton v-else variant="primary" size="lg" :icon="Plus" block class="justify-start! shadow-none">Nouveau</UiButton>
       </UiDropdownMenu>
     </div>
     <div v-else class="h-3" />
@@ -83,8 +86,11 @@ function onDrop(event: DragEvent) {
           <NuxtLink
             :to="item.to"
             :aria-current="isActive(item) ? 'page' : undefined"
-            class="flex h-9 items-center gap-3 rounded-md px-3 text-base transition-colors duration-150"
+            :aria-label="collapsed ? item.label : undefined"
+            :title="collapsed ? item.label : undefined"
+            class="flex h-9 items-center gap-3 rounded-md text-base transition-colors duration-150"
             :class="[
+              collapsed ? 'justify-center' : 'px-3',
               isActive(item) ? 'bg-nav-active font-semibold text-nav-ink' : 'text-nav-ink-weak hover:bg-nav-hover hover:text-nav-ink',
               dropTarget === item.to && 'ring-2 ring-accent',
             ]"
@@ -94,13 +100,13 @@ function onDrop(event: DragEvent) {
             @drop="item.drop && onDrop($event)"
           >
             <component :is="item.icon" class="size-[18px] shrink-0" aria-hidden="true" />
-            {{ item.label }}
+            <span v-if="!collapsed">{{ item.label }}</span>
           </NuxtLink>
         </li>
       </ul>
     </nav>
 
-    <div v-if="owner && storage" class="border-t border-nav-line px-5 py-4">
+    <div v-if="owner && storage && !collapsed" class="border-t border-nav-line px-5 py-4">
       <div class="mb-2 flex items-baseline justify-between text-sm">
         <span class="text-nav-ink-weak">Stockage</span>
         <span class="tabular text-nav-ink">{{ formatSize(storage.used) }}</span>
