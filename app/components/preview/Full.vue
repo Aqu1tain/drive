@@ -12,6 +12,7 @@ const breakpoints = useBreakpoints()
 const { data: info, isError, error } = usePreview(toRef(props, 'id'), toRef(props, 'apiBase'))
 const current = computed(() => info.value?.item ?? props.item)
 
+const isHtml = computed(() => info.value?.kind === 'html')
 const index = computed(() => props.siblings.findIndex(s => s.id === props.id))
 const previous = computed(() => index.value > 0 ? props.siblings[index.value - 1] : null)
 const next = computed(() => index.value >= 0 && index.value < props.siblings.length - 1 ? props.siblings[index.value + 1] : null)
@@ -47,12 +48,12 @@ const focusSelf = () => content.value?.$el.focus()
           <UiIconButton v-if="info?.downloadUrl && current" :icon="Download" label="Télécharger" tone="inverse" @click="actions.download([current], apiBase)" />
           <UiIconButton v-if="mode === 'owner' && current" :icon="Share2" label="Partager" tone="inverse" @click="dialogs.share(current)" />
           <UiIconButton v-if="mode === 'owner' && current && breakpoints.lg" :icon="Info" label="Détails" tone="inverse" @click="actions.showDetails(current); emit('shrink')" />
-          <UiIconButton v-if="breakpoints.lg" :icon="Minimize2" label="Réduire en panneau" tone="inverse" @click="emit('shrink')" />
+          <UiIconButton v-if="breakpoints.lg && mode !== 'share'" :icon="Minimize2" label="Réduire en panneau" tone="inverse" @click="emit('shrink')" />
         </header>
 
         <div class="relative flex min-h-0 flex-1">
           <button
-            v-if="previous"
+            v-if="previous && !isHtml"
             type="button"
             class="absolute top-1/2 left-3 z-10 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 sm:flex"
             :aria-label="`Précédent : ${previous.name}`"
@@ -60,13 +61,13 @@ const focusSelf = () => content.value?.$el.focus()
           >
             <ChevronLeft class="size-6" aria-hidden="true" />
           </button>
-          <div class="min-h-0 flex-1 sm:px-16">
+          <div class="min-h-0 flex-1" :class="!isHtml && 'sm:px-16'">
             <PreviewContent v-if="info" :key="info.item.id" :info="info" dark />
             <div v-else-if="isError" class="flex h-full items-center justify-center p-8 text-center text-white/70">{{ errorMessage(error, 'Aperçu indisponible') }}</div>
             <div v-else class="flex h-full items-center justify-center"><UiSpinner class="size-7 text-white/50" /></div>
           </div>
           <button
-            v-if="next"
+            v-if="next && !isHtml"
             type="button"
             class="absolute top-1/2 right-3 z-10 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 sm:flex"
             :aria-label="`Suivant : ${next.name}`"
