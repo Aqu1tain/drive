@@ -26,9 +26,17 @@ Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire
 - Cmd/Ctrl+clic : bascule, Maj+clic : plage, Cmd/Ctrl+A : tout.
 - Clic droit sur un élément non sélectionné : il devient la sélection, puis le menu s'ouvre et agit sur la sélection. Chaque ligne a aussi un bouton `⋮`.
 - La barre d'outils se transforme en barre de sélection (compteur + actions) dès qu'une sélection existe.
-- Glisser des éléments sur un dossier (liste ou fil d'Ariane) les y déplace.
+- Glisser des éléments sur un dossier (liste, fil d'Ariane ou « Mon Drive » dans la barre latérale) les y déplace.
+- Glisser depuis une zone vide trace un rectangle de sélection, en liste comme en grille ; ⌘/Ctrl ou Maj ajoute à la sélection existante. La liste défile d'elle-même près des bords.
 - Tri : dossiers toujours en premier, puis colonne choisie. Préférence mémorisée.
 - Colonnes liste : Nom, Accès, Modifié, Taille (+ Dernière consultation externe en large).
+
+## Curseurs
+
+- Main sur tout ce qui agit au clic : fichiers, boutons, liens, éléments de menu, onglets, options.
+- « Interdit » sur ce qui est désactivé.
+- « Saisir » pendant l'appui sur un élément déplaçable.
+- Croix fine violette (curseur sur mesure) pendant le tracé d'un rectangle de sélection ; curseur système en mode contraste forcé.
 
 ## Raccourcis
 
