@@ -56,6 +56,7 @@ Décision : abstraction `StorageProvider` (`put`, `get` avec plage, `size`, `del
 
 - Clés générées par le serveur (`blobs/8f/8f311e17-…`), le nom d'origine n'est qu'une métadonnée.
 - Upload en streaming (`event.node.req`, contre-pression respectée), hash SHA-256 et détection de signature (file-type) à la volée.
+- Au-delà de 32 Mo, le navigateur envoie le fichier en parties de 8 Mo : requêtes courtes, réessayées une à une (4 tentatives, délai croissant), reprise à la dernière partie reçue. Côté serveur, multipart natif S3 ou fichiers temporaires en local, parties reçues dans l'ordre pour calculer le hash au fil de l'eau. Les sessions vivent en mémoire (un seul processus) ; un redémarrage les perd et le client recommence, une tâche horaire abandonne celles restées inactives un jour.
 - Le type MIME vient de la signature binaire quand elle existe (un exécutable renommé `.jpg` n'est jamais une image), sinon de l'extension.
 
 Alternatives : BLOB PostgreSQL (base énorme, sauvegardes lentes), S3 seul (développement local plus lourd).
@@ -88,7 +89,6 @@ Pré-démarrage en production (`scripts/migrate.mjs`) : Nitro 2 n'attend pas les
 
 ## Limites connues
 
-- Node coupe une requête au bout de 5 min (`requestTimeout`) : un très gros fichier sur une connexion lente échouera. Upload par morceaux (tus ou multipart S3) en phase 2.
 - « Téléchargement désactivé » est une dissuasion, pas un DRM : un aperçu transmet forcément le contenu au navigateur.
 
 ## Performance
