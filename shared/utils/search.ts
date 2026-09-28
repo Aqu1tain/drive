@@ -80,6 +80,13 @@ const MIME_KINDS: Array<[RegExp, FileKind]> = [
   [/^text\/|json$|xml$|yaml$|javascript$/, 'text'],
 ]
 
+/** POSIX regexes (compatible with Postgres `~`) that reproduce `kindOf` in SQL: a kind matches its pattern and none listed before it. */
+export function mimeRulesFor(kind: FileKind) {
+  const index = MIME_KINDS.findIndex(([, k]) => k === kind)
+  if (index < 0) return null
+  return { include: MIME_KINDS[index]![0].source, exclude: MIME_KINDS.slice(0, index).map(([pattern]) => pattern.source) }
+}
+
 export function kindOf(type: 'file' | 'folder', mimeType: string | null): FileKind {
   if (type === 'folder') return 'folder'
   if (!mimeType) return 'other'
