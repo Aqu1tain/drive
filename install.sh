@@ -11,7 +11,12 @@
 set -euo pipefail
 
 REPO_URL="${DRIVE_REPO:-https://github.com/Aqu1tain/drive.git}"
-INSTALL_DIR="${DRIVE_DIR:-$HOME/drive}"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)
+if [ -z "${DRIVE_DIR:-}" ] && [ -f "$SCRIPT_DIR/compose.yaml" ] && [ -f "$SCRIPT_DIR/install.sh" ]; then
+  INSTALL_DIR="$SCRIPT_DIR"
+else
+  INSTALL_DIR="${DRIVE_DIR:-$HOME/drive}"
+fi
 ASSUME_YES=0
 MODE=""
 APP_DOMAIN=""
@@ -115,16 +120,13 @@ check_docker() {
 
 fetch_sources() {
   step "Récupération de Drive"
-  local here
-  here=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)
-  if [ -n "$here" ] && [ -f "$here/compose.yaml" ] && [ -f "$here/install.sh" ]; then
-    INSTALL_DIR="$here"
+  if [ -f "$INSTALL_DIR/compose.yaml" ] && [ -f "$INSTALL_DIR/install.sh" ] && [ ! -d "$INSTALL_DIR/.git" ]; then
     ok "Sources présentes dans $INSTALL_DIR"
     return
   fi
   if [ -d "$INSTALL_DIR/.git" ]; then
-    git -C "$INSTALL_DIR" pull --ff-only --quiet
-    ok "Mis à jour dans $INSTALL_DIR"
+    git -C "$INSTALL_DIR" pull --ff-only --quiet 2>/dev/null || warn "Mise à jour des sources impossible (modifications locales ?), version actuelle conservée"
+    ok "Sources présentes dans $INSTALL_DIR"
     return
   fi
   command -v git >/dev/null 2>&1 || fail "git est nécessaire (apt install git, dnf install git…)."
@@ -259,14 +261,17 @@ summary() {
 }
 
 backup() {
-  local target
+  local target minio
   target="$INSTALL_DIR/backups/$(date +%Y-%m-%d_%H%M%S)"
+  umask 077
   mkdir -p "$target"
   step "Sauvegarde vers $target"
-  compose exec -T db pg_dump -U drive -d drive | gzip > "$target/database.sql.gz"
+  compose exec -T db pg_dump -U drive -d drive | gzip > "$target/database.sql.gz" || fail "Échec de la sauvegarde de la base"
   ok "Base de données"
-  compose exec -T minio sh -c 'tar -C /data -cf - .' | gzip > "$target/files.tar.gz"
-  ok "Fichiers"
+  minio=$(compose ps -q minio)
+  [ -n "$minio" ] || fail "Le service de stockage n'est pas démarré"
+  docker run --rm --volumes-from "$minio:ro" alpine tar -C /data -czf - . > "$target/files.tar.gz" || fail "Échec de la sauvegarde des fichiers"
+  ok "Fichiers ($(du -h "$target/files.tar.gz" | cut -f1))"
   cp "$INSTALL_DIR/.env" "$target/env"
   chmod 600 "$target/env"
   ok "Configuration (contient vos secrets, gardez-la en lieu sûr)"

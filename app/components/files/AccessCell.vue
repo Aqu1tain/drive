@@ -31,7 +31,7 @@ const tooltip = computed(() => {
     <span class="inline-flex max-w-full min-w-0 items-center gap-1.5 text-sm" :class="access?.level === 'private' || !access ? 'text-ink-hint' : 'text-ink-weak'">
       <Lock v-if="!access || access.level === 'private'" class="size-3.5 shrink-0" aria-hidden="true" />
       <Globe v-else-if="access.hasLink" class="size-3.5 shrink-0 text-accent-ink" aria-hidden="true" />
-      <span v-else class="flex shrink-0 -space-x-1">
+      <span v-else class="flex shrink-0 -space-x-0.5">
         <UiAvatar v-for="person in people.slice(0, 3)" :key="person.email" :name="person.label" :kind="person.kind" size="sm" class="ring-2 ring-canvas" />
       </span>
       <span v-if="!compact" class="truncate">{{ text }}</span>
