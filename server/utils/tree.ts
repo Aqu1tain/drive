@@ -1,6 +1,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { extensionOf, sanitizeName, searchKeyOf, InvalidNameError } from '#shared/utils/names'
 import type { Resource } from '../database/schema'
+import type { Transaction } from './db'
 
 const { resources } = tables
 
@@ -56,4 +57,41 @@ export function isUniqueViolation(error: unknown) {
 
 export function nameTaken(name: string): never {
   throw createError({ statusCode: 409, statusMessage: `« ${name} » existe déjà à cet emplacement`, data: { reason: 'name_taken' } })
+}
+
+export const uuidArray = (ids: string[]) =>
+  ids.length ? sql`array[${sql.join(ids.map(id => sql`${id}::uuid`), sql`, `)}]` : sql`'{}'::uuid[]`
+
+/** Moves a resource under `target` (null = root) and rewrites the ancestor path of its whole subtree. */
+export async function reparent(tx: Transaction, resource: Resource, target: Resource | null, patch: Partial<typeof resources.$inferInsert> = {}) {
+  const ancestorIds = childAncestors(target)
+  await tx.update(resources).set({ ...patch, parentId: target?.id ?? null, ancestorIds }).where(eq(resources.id, resource.id))
+  if (resource.type !== 'folder') return
+  await tx.execute(sql`
+    update ${resources}
+    set ancestor_ids = ${uuidArray(ancestorIds)} || ancestor_ids[${sql.raw(String(resource.ancestorIds.length + 1))}:]
+    where ancestor_ids @> array[${resource.id}::uuid]
+  `)
+}
+
+/** Storage keys of a resource and everything below it, to delete blobs once rows are gone. */
+export async function subtreeKeys(ids: string[]) {
+  if (ids.length === 0) return []
+  const rows = await useDB().select({ storageKey: resources.storageKey, thumbnailKey: resources.thumbnailKey }).from(resources)
+    .where(sql`${resources.id} = any(${uuidArray(ids)}) or ${resources.ancestorIds} && ${uuidArray(ids)}`)
+  return rows.flatMap(row => [row.storageKey, row.thumbnailKey]).filter((key): key is string => !!key)
+}
+
+export async function deleteBlobs(keys: string[]) {
+  const storage = useStorageProvider()
+  await Promise.all(keys.map(key => storage.delete(key).catch(error =>
+    console.error(JSON.stringify({ level: 'error', job: 'delete-blob', key, error: String(error) })))))
+}
+
+/** "Mon Drive / Clients / Dupont" for each resource, in one query. */
+export async function locationsOf(items: Resource[]) {
+  const ids = [...new Set(items.flatMap(item => item.ancestorIds))]
+  const ancestors = ids.length ? await useDB().select({ id: resources.id, name: resources.name }).from(resources).where(sql`${resources.id} = any(${uuidArray(ids)})`) : []
+  const names = new Map(ancestors.map(a => [a.id, a.name]))
+  return new Map(items.map(item => [item.id, ['Mon Drive', ...item.ancestorIds.map(id => names.get(id) ?? '…')].join(' / ')]))
 }
