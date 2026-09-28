@@ -24,9 +24,9 @@ export async function getSessionUser(event: H3Event): Promise<SessionUser | null
   if (event.context.auth) return event.context.auth.user
 
   const session = await useAuth().api.getSession({ headers: event.headers })
-  const raw = session?.user as { id: string, name: string, email: string, role?: string, status?: string } | undefined
+  const raw = session?.user as { id: string, name: string, email: string, role?: string, status?: string, twoFactorEnabled?: boolean | null } | undefined
   const user = raw && raw.status === 'active'
-    ? { id: raw.id, name: raw.name, email: raw.email, role: raw.role === 'owner' ? 'owner' as const : 'reader' as const }
+    ? { id: raw.id, name: raw.name, email: raw.email, role: raw.role === 'owner' ? 'owner' as const : 'reader' as const, twoFactorEnabled: !!raw.twoFactorEnabled }
     : null
   event.context.auth = { user }
   return user
