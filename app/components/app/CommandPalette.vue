@@ -127,12 +127,12 @@ const searchAll = () => run(() => navigateTo({ path: '/search', query: { q: quer
           <ListboxContent class="max-h-[min(460px,60vh)] overflow-y-auto p-2">
             <ListboxGroup v-if="files.length">
               <ListboxGroupLabel class="px-2.5 pt-1 pb-1.5 text-xs font-semibold text-ink-weak">{{ query.trim() ? 'Fichiers' : 'Récents' }}</ListboxGroupLabel>
-              <ListboxItem v-for="item in files" :key="item.id" :value="`file-${item.id}`" class="flex h-11 cursor-default items-center gap-3 rounded-md px-2.5 outline-none data-highlighted:bg-hover" @select="openFile(item)">
+              <ListboxItem v-for="item in files" :key="item.id" :value="`file-${item.id}`" class="flex h-11 cursor-pointer items-center gap-3 rounded-md px-2.5 outline-none data-highlighted:bg-hover" @select="openFile(item)">
                 <FilesFileIcon :kind="item.kind" />
                 <span class="min-w-0 flex-1 truncate text-base text-ink">{{ item.name }}</span>
                 <span class="max-w-[40%] truncate text-sm text-ink-weak">{{ item.location }}</span>
               </ListboxItem>
-              <ListboxItem v-if="query.trim()" value="search-all" class="flex h-10 cursor-default items-center gap-3 rounded-md px-2.5 text-accent-ink outline-none data-highlighted:bg-hover" @select="searchAll">
+              <ListboxItem v-if="query.trim()" value="search-all" class="flex h-10 cursor-pointer items-center gap-3 rounded-md px-2.5 text-accent-ink outline-none data-highlighted:bg-hover" @select="searchAll">
                 <Search class="size-4" aria-hidden="true" />
                 <span class="flex-1 truncate text-base">Tous les résultats pour « {{ query.trim() }} »</span>
                 <ArrowRight class="size-4" aria-hidden="true" />
@@ -140,7 +140,7 @@ const searchAll = () => run(() => navigateTo({ path: '/search', query: { q: quer
             </ListboxGroup>
             <ListboxGroup v-for="group in groups" :key="group.id" class="mt-1.5">
               <ListboxGroupLabel class="px-2.5 pt-1 pb-1.5 text-xs font-semibold text-ink-weak">{{ group.label }}</ListboxGroupLabel>
-              <ListboxItem v-for="command in group.commands" :key="command.id" :value="command.id" class="flex h-10 cursor-default items-center gap-3 rounded-md px-2.5 outline-none data-highlighted:bg-hover" @select="run(command.run)">
+              <ListboxItem v-for="command in group.commands" :key="command.id" :value="command.id" class="flex h-10 cursor-pointer items-center gap-3 rounded-md px-2.5 outline-none data-highlighted:bg-hover" @select="run(command.run)">
                 <component :is="command.icon" class="size-4 shrink-0 text-ink-weak" aria-hidden="true" />
                 <span class="min-w-0 flex-1 truncate text-base text-ink">{{ command.label }}<span v-if="command.hint" class="ml-2 text-ink-weak">{{ command.hint }}</span></span>
                 <UiKbd v-if="command.shortcut" :keys="command.shortcut" />

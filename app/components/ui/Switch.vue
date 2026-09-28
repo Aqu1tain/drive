@@ -8,7 +8,7 @@ const id = useId()
 
 <template>
   <div class="flex items-start justify-between gap-4">
-    <label :for="id" class="min-w-0 cursor-default">
+    <label :for="id" class="min-w-0 cursor-pointer">
       <span class="block text-base text-ink">{{ label }}</span>
       <span v-if="description" class="block text-sm text-ink-weak">{{ description }}</span>
     </label>

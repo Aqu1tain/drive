@@ -32,4 +32,4 @@ export function tidyMenu(entries: Array<MenuEntry | false | null | undefined | '
 }
 
 export const MENU_CONTENT = 'z-(--z-menu) min-w-56 rounded-lg border border-line-weak bg-raised p-1 shadow-lifted animate-pop-in origin-(--reka-dropdown-menu-content-transform-origin) focus:outline-none'
-export const MENU_ITEM = 'flex h-9 cursor-default select-none items-center gap-3 rounded-md px-2.5 text-base text-ink outline-none data-highlighted:bg-hover data-disabled:opacity-40'
+export const MENU_ITEM = 'flex h-9 cursor-pointer select-none items-center gap-3 rounded-md px-2.5 text-base text-ink outline-none data-highlighted:bg-hover data-disabled:opacity-40'

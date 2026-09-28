@@ -91,7 +91,7 @@ onBeforeUnmount(() => document.removeEventListener('drive:focus-search', onFocus
             v-for="item in results"
             :key="item.id"
             :value="item.id"
-            class="flex h-12 cursor-default items-center gap-3 rounded-md px-2.5 outline-none data-highlighted:bg-hover"
+            class="flex h-12 cursor-pointer items-center gap-3 rounded-md px-2.5 outline-none data-highlighted:bg-hover"
           >
             <FilesFileIcon :kind="item.kind" />
             <div class="min-w-0">
@@ -99,7 +99,7 @@ onBeforeUnmount(() => document.removeEventListener('drive:focus-search', onFocus
               <p class="truncate text-sm text-ink-weak">{{ item.location ?? formatShortDate(item.updatedAt) }}</p>
             </div>
           </ComboboxItem>
-          <ComboboxItem value="__all" class="mt-0.5 flex h-10 cursor-default items-center gap-3 rounded-md border-t border-line-weak px-2.5 text-base text-accent-ink outline-none data-highlighted:bg-hover">
+          <ComboboxItem value="__all" class="mt-0.5 flex h-10 cursor-pointer items-center gap-3 rounded-md border-t border-line-weak px-2.5 text-base text-accent-ink outline-none data-highlighted:bg-hover">
             <Search class="size-4" aria-hidden="true" />
             <span class="flex-1 truncate">Tous les résultats pour « {{ query.trim() }} »</span>
             <ArrowRight class="size-4" aria-hidden="true" />

@@ -43,7 +43,7 @@ watch(open, value => !value && settle({ strategy: 'skip', applyToAll: false }))
       <label
         v-for="option in options"
         :key="option.value"
-        class="flex cursor-default items-start gap-3 rounded-md p-2.5 transition-colors hover:bg-hover has-data-[state=checked]:bg-selected"
+        class="flex cursor-pointer items-start gap-3 rounded-md p-2.5 transition-colors hover:bg-hover has-data-[state=checked]:bg-selected"
       >
         <RadioGroupItem :value="option.value" class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-field data-[state=checked]:border-accent">
           <RadioGroupIndicator class="size-2 rounded-full bg-accent" />

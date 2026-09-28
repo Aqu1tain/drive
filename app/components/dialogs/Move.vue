@@ -78,7 +78,7 @@ const title = props.items.length === 1 ? `Déplacer « ${props.items[0]!.name} �
         :aria-disabled="movingIds.has(folder.id) || undefined"
         tabindex="0"
         class="flex h-10 items-center gap-3 rounded-md px-2.5 outline-none select-none"
-        :class="movingIds.has(folder.id) ? 'opacity-40' : 'cursor-default hover:bg-hover focus-visible:bg-hover'"
+        :class="movingIds.has(folder.id) ? 'opacity-40' : 'cursor-pointer hover:bg-hover focus-visible:bg-hover'"
         @click="highlighted = folder.id"
         @dblclick="!movingIds.has(folder.id) && go(folder.id, folder.name)"
         @keydown.enter="!movingIds.has(folder.id) && go(folder.id, folder.name)"
