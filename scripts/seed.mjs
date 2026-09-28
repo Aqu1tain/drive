@@ -3,7 +3,7 @@
 import sharp from 'sharp'
 
 const BASE = process.argv[2] ?? process.env.SEED_BASE_URL ?? 'http://localhost:3000'
-const OWNER = { email: process.env.SEED_EMAIL ?? 'owner@example.com', password: process.env.SEED_PASSWORD ?? 'correct-horse-battery', name: 'Corentin' }
+const OWNER = { email: process.env.SEED_EMAIL ?? 'owner@example.com', password: process.env.SEED_PASSWORD ?? 'correct-horse-battery', name: 'Camille Laurent' }
 
 function client() {
   const cookies = new Map()

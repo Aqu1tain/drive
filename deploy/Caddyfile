@@ -1,0 +1,12 @@
+# HTTPS certificates are issued and renewed automatically for both domains.
+
+# The app: sessions, API, interface.
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
+
+# Isolated user content (HTML pages). Same container, other origin: it never sees the app's cookies.
+{$CONTENT_DOMAIN} {
+	reverse_proxy app:3000
+}

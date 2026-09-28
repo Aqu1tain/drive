@@ -8,7 +8,7 @@ if (setup.value && !setup.value.needed) await navigateTo('/login', { replace: tr
 const name = ref('')
 const email = ref('')
 const password = ref('')
-const token = ref('')
+const token = ref(typeof useRoute().query.token === 'string' ? String(useRoute().query.token) : '')
 const error = ref<string | null>(null)
 const busy = ref(false)
 

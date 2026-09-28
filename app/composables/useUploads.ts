@@ -40,7 +40,8 @@ const batches = new Map<string, Batch>()
 let queryClient: ReturnType<typeof useQueryClient> | undefined
 let router: ReturnType<typeof useRouter> | undefined
 
-const newId = () => crypto.randomUUID()
+/** randomUUID only exists in secure contexts; a plain-HTTP install by IP must still upload. */
+const newId = () => crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 
 function send(task: UploadTask) {
   task.status = 'uploading'
