@@ -1,0 +1,61 @@
+{
+  "name": "drive-perso",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "start": "node .output/server/index.mjs",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "seed": "node --experimental-strip-types scripts/seed.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/markdown-it": "^14.2.0",
+    "@types/node": "^26.6.3",
+    "@types/nodemailer": "^8.0.2",
+    "drizzle-kit": "^0.31.11",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.2",
+    "vue-tsc": "^3.3.11"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1141.0",
+    "@aws-sdk/lib-storage": "^3.1141.0",
+    "@aws-sdk/s3-request-presigner": "^3.1141.0",
+    "@better-auth/passkey": "1.7.6",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@lucide/vue": "^1.48.0",
+    "@nuxtjs/color-mode": "4.0.1",
+    "@tanstack/vue-query": "^5.104.0",
+    "@tanstack/vue-virtual": "^3.13.39",
+    "better-auth": "1.7.6",
+    "drizzle-orm": "0.45.3",
+    "file-type": "^22.1.1",
+    "markdown-it": "^15.0.2",
+    "nodemailer": "^10.0.11",
+    "nuxt": "4.5.2",
+    "pdfjs-dist": "^6.3.289",
+    "postgres": "^3.4.9",
+    "reka-ui": "2.10.5",
+    "sharp": "^0.35.4",
+    "vue": "^3.5.43",
+    "vue-router": "^5.3.1",
+    "vue-sonner": "^2.0.9",
+    "zod": "^4.6.5"
+  }
+}
