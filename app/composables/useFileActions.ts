@@ -199,6 +199,23 @@ export function useFileActions() {
     if (!single || single.type === 'folder') toast(t('actions.toast.preparingZip'))
   }
 
+  /** Turning version history on is harmless; turning it off means later replacements overwrite, so it asks first. */
+  async function setVersioning(folder: ResourceItem, enabled: boolean) {
+    if (!enabled) {
+      const confirmed = await dialogs.confirm({
+        title: t('versions.turnOffTitle', { folder: folder.name }),
+        message: t('versions.turnOffMessage'),
+        confirmLabel: t('versions.turnOff'),
+        danger: true,
+      })
+      if (!confirmed) return
+    }
+    await run(() => api(`/api/resources/${folder.id}`, { method: 'PATCH', body: { versioning: enabled } }), t('versions.failed'))
+    refresh()
+    queryClient.invalidateQueries({ queryKey: ['versions'] })
+    toast(t(enabled ? 'versions.turnedOn' : 'versions.turnedOff', { folder: folder.name }))
+  }
+
   function showDetails(item: ResourceItem | null, tab: DetailsTab = 'details') {
     details.show(item, tab)
   }
@@ -261,10 +278,11 @@ export function useFileActions() {
       single && { id: 'details', label: t('common.details'), icon: Info, onSelect: () => showDetails(single, 'details') },
       single && { id: 'activity', label: t('actions.activity'), icon: History, onSelect: () => showDetails(single, 'activity') },
       single?.type === 'file' && { id: 'versions', label: t('versions.menu'), icon: FileClock, onSelect: () => showDetails(single, 'versions') },
+      single?.versioning !== undefined && { id: 'versioning', label: t('versions.folderSwitch'), icon: FileClock, checked: single.versioning, onSelect: () => setVersioning(single, !single.versioning) },
       { kind: 'separator' },
       { id: 'trash', label: t('actions.trash'), icon: Trash2, shortcut: 'Delete', danger: true, onSelect: () => trash(items) },
     ])
   }
 
-  return { refresh, preview, openInTab, star, trash, restore, deleteForever, emptyTrash, moveTo, copyLink, download, showDetails, menuFor, patchInCaches }
+  return { refresh, preview, openInTab, star, trash, restore, deleteForever, emptyTrash, moveTo, copyLink, download, showDetails, setVersioning, menuFor, patchInCaches }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { ArrowDown, ArrowUp, EllipsisVertical, FolderPlus, Star, Upload } from '@lucide/vue'
+import { ArrowDown, ArrowUp, EllipsisVertical, Star } from '@lucide/vue'
 import type { HTMLAttributes } from 'vue'
 import type { ResourceItem } from '#shared/types/api'
 
@@ -15,7 +15,8 @@ const props = withDefaults(defineProps<{
   sortable?: boolean
   apiBase?: string
   previewId?: string | null
-}>(), { sortable: true, apiBase: '/api', folder: null, previewId: null })
+  backgroundMenu?: MenuEntry[]
+}>(), { sortable: true, apiBase: '/api', folder: null, previewId: null, backgroundMenu: () => [] })
 
 const emit = defineEmits<{
   open: [item: ResourceItem]
@@ -333,12 +334,7 @@ function onContextMenu(event: MouseEvent) {
     return
   }
   setSelection([])
-  menuEntries.value = isOwner.value && props.folder && !props.trash
-    ? [
-        { id: 'new-folder', label: t('files.newFolder'), icon: FolderPlus, onSelect: () => dialogs.newFolder(props.folder!.id) },
-        { id: 'upload', label: t('files.uploadFiles'), icon: Upload, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
-      ]
-    : []
+  menuEntries.value = props.backgroundMenu
 }
 
 const menuContext = computed(() => ({ mode: props.mode, trash: props.trash, apiBase: props.apiBase, open: (item: ResourceItem) => emit('open', item) }))
