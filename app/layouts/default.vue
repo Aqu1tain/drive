@@ -32,6 +32,7 @@ useShortcuts()
       <AppShortcutsDialog :owner="isOwner" />
       <AppCommandPalette :owner="isOwner" />
       <UploadsQueue v-if="isOwner" />
+      <AppDropZone :owner="isOwner" />
     </ClientOnly>
   </div>
 </template>
