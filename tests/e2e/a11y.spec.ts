@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { OWNER, createFolder, ownerApi, removeFolder, signIn, unique } from './helpers'
+import { OWNER, createFolder, ownerApi, removeFolder, signIn, unique, uploadText } from './helpers'
 
 async function audit(page: Page, label: string) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()
@@ -49,13 +49,14 @@ for (const scheme of ['light', 'dark'] as const) {
 
     test('public link page', async ({ page }) => {
       const owner = await ownerApi()
-      const { items } = await (await owner.get('/api/shared')).json()
-      const withLink = items.find((i: { access?: { hasLink: boolean } }) => i.access?.hasLink)
-      test.skip(!withLink, 'no public link in the dataset')
-      const { link } = await (await owner.get(`/api/resources/${withLink.id}/access`)).json()
+      const folder = await createFolder(owner, unique('a11y-public'))
+      await uploadText(owner, folder.id, 'programme.txt', 'Programme de la journée')
+      const { link } = await (await owner.put(`/api/resources/${folder.id}/link`, { data: { enabled: true } })).json()
       await page.goto(link.url)
       await page.waitForLoadState('networkidle')
+      await expect(page.getByText('programme.txt')).toBeVisible()
       expect(await audit(page, `${scheme} public`)).toEqual([])
+      await removeFolder(owner, folder.id)
     })
   })
 }
