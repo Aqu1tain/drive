@@ -20,6 +20,12 @@ curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | ba
 
 The script is interactive. Answer the questions, then open the address printed at the end to create your owner account.
 
+The script runs in English. For French, pass `--lang fr` (or set `DRIVE_LANG=fr`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash -s -- --lang fr
+```
+
 ## Step by step (recommended for an agent)
 
 ### 1. Install Docker
@@ -69,6 +75,8 @@ Without a domain (HTTP by IP, ports 3000 and 3001):
 
 Useful options: `--smtp smtp://user:password@smtp.example.com:587` to send invitations by email, `--smtp-from "Drive <drive@example.com>"`, `--name "My Drive"`, `--port 8080` if port 3000 is already taken.
 
+Language: the script runs in English unless you pass `--lang fr` (or set `DRIVE_LANG=fr`). The choice is saved as `DEFAULT_LOCALE` in `.env`: it becomes the default language of the interface, the emails and the shared pages, and `update`, `backup`, `status`, `logs` and `uninstall` reuse it.
+
 The script writes `~/drive/.env` (randomly generated secrets), pulls the image, starts the services and waits for the application to respond.
 
 Check:
@@ -99,7 +107,7 @@ Everything is set in `~/drive/.env`, then `docker compose up -d` applies it.
 | `APP_DOMAIN`, `CONTENT_DOMAIN` | Domains served over HTTPS by Caddy | empty in IP mode |
 | `COMPOSE_PROFILES` | `https` enables Caddy | `https` in domain mode |
 | `APP_NAME` | Name shown in the interface and the emails | `Drive` |
-| `DEFAULT_LOCALE` | Language of the interface for everyone who has not picked one, and of emails and shared pages (`en` or `fr`) | `en` |
+| `DEFAULT_LOCALE` | Language of the interface for everyone who has not picked one, and of emails and shared pages (`en` or `fr`) | `en`, or `fr` with `--lang fr` |
 | `SMTP_URL`, `SMTP_FROM` | Sending invitations and sign-in codes | disabled |
 | `UPLOAD_MAX_BYTES` | Maximum size of a file | 5 GB |
 | `STORAGE_QUOTA_BYTES` | Total space allowed | 100 GB |

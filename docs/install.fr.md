@@ -15,10 +15,10 @@ Ce guide s'adresse autant à une personne qu'à un assistant IA qui agit sur un 
 ## Méthode rapide
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash -s -- --lang fr
 ```
 
-Le script est interactif. Répondez aux questions, puis ouvrez l'adresse affichée à la fin pour créer votre compte propriétaire.
+Le script est interactif. Répondez aux questions, puis ouvrez l'adresse affichée à la fin pour créer votre compte propriétaire. Sans `--lang fr`, il est en anglais.
 
 ## Méthode pas à pas (recommandée pour un agent)
 
@@ -58,16 +58,18 @@ Vérification : `ls ~/drive/compose.yaml ~/drive/install.sh` ne renvoie pas d'er
 Avec un domaine :
 
 ```bash
-~/drive/install.sh --domain drive.exemple.fr --content-domain files.exemple.fr --yes
+~/drive/install.sh --domain drive.exemple.fr --content-domain files.exemple.fr --yes --lang fr
 ```
 
 Sans domaine (HTTP par IP, ports 3000 et 3001) :
 
 ```bash
-~/drive/install.sh --ip --yes
+~/drive/install.sh --ip --yes --lang fr
 ```
 
 Options utiles : `--smtp smtp://utilisateur:motdepasse@smtp.exemple.fr:587` pour envoyer les invitations par email, `--smtp-from "Drive <drive@exemple.fr>"`, `--name "Mon Drive"`, `--port 8080` si le port 3000 est déjà pris.
+
+Langue : le script est en anglais, sauf avec `--lang fr` (ou la variable `DRIVE_LANG=fr`). Ce choix est enregistré dans `.env` sous le nom `DEFAULT_LOCALE` : il devient la langue par défaut de l'interface, des emails et des pages partagées, et `update`, `backup`, `status`, `logs` et `uninstall` le reprennent.
 
 Le script écrit `~/drive/.env` (secrets générés aléatoirement), télécharge l'image, démarre les services et attend que l'application réponde.
 
@@ -99,7 +101,7 @@ Tout se règle dans `~/drive/.env`, puis `docker compose up -d` pour appliquer.
 | `APP_DOMAIN`, `CONTENT_DOMAIN` | Domaines servis par Caddy en HTTPS | vides en mode IP |
 | `COMPOSE_PROFILES` | `https` active Caddy | `https` en mode domaine |
 | `APP_NAME` | Nom affiché dans l'interface et les emails | `Drive` |
-| `DEFAULT_LOCALE` | Langue de l'interface pour qui n'en a pas choisi, ainsi que des emails et des pages partagées (`en` ou `fr`) | `en` |
+| `DEFAULT_LOCALE` | Langue de l'interface pour qui n'en a pas choisi, ainsi que des emails et des pages partagées (`en` ou `fr`) | `en`, ou `fr` avec `--lang fr` |
 | `SMTP_URL`, `SMTP_FROM` | Envoi des invitations et des codes de connexion | désactivé |
 | `UPLOAD_MAX_BYTES` | Taille maximale d'un fichier | 5 Go |
 | `STORAGE_QUOTA_BYTES` | Espace total autorisé | 100 Go |

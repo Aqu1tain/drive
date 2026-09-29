@@ -8,6 +8,7 @@ Follow [docs/install.md](docs/install.md), section "Step by step". Rules:
 
 - Run the commands one at a time, and run the check of each step before moving on to the next.
 - Use the non-interactive mode: `./install.sh --domain … --content-domain … --yes` or `./install.sh --ip --yes`.
+- Add `--lang fr` when the person wants the installer and the interface in French.
 - Do not create the owner account on the person's behalf: give them the `…/setup?token=…` address printed by the script.
 - Never publish the contents of `.env` (secrets) and never commit it.
 - If something fails, read `./install.sh logs` and the "Troubleshooting" table in docs/install.md before changing anything.

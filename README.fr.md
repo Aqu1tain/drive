@@ -50,10 +50,10 @@ Drive n'est pas un Drive collaboratif. Il y a **un seul propriétaire** : vous. 
 Il vous faut un serveur Linux (VPS, Raspberry Pi 4 ou plus, NAS, machine à la maison) avec 1 Go de RAM libre. Docker est installé automatiquement si besoin.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash -s -- --lang fr
 ```
 
-Le script vous pose deux ou trois questions (votre nom de domaine, optionnel), génère tous les secrets, démarre Drive et vous donne l'adresse pour créer votre compte propriétaire.
+Le script vous pose deux ou trois questions (votre nom de domaine, optionnel), génère tous les secrets, démarre Drive et vous donne l'adresse pour créer votre compte propriétaire. Avec `--lang fr`, il vous parle en français et l'interface sera en français par défaut.
 
 - **Avec un domaine** (recommandé) : faites pointer deux noms vers votre serveur, par exemple `drive.exemple.fr` et `files.exemple.fr`. Les certificats HTTPS sont obtenus et renouvelés automatiquement.
 - **Sans domaine** : Drive est servi par adresse IP en HTTP, parfait pour essayer ou pour un réseau local.
