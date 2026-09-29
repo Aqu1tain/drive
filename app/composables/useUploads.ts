@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
-import type { FolderListing, ResourceItem } from '#shared/types/api'
+import type { FolderListing, ResourceDetails, ResourceItem } from '#shared/types/api'
 
 export interface UploadTarget {
   id: string | null
@@ -37,9 +37,10 @@ interface Batch {
 }
 
 const CONCURRENCY = 3
-/** Above this size a file travels in parts: short requests, retried one by one, resumable. */
-const MULTIPART_THRESHOLD = 32 * 1024 * 1024
-const PART_ATTEMPTS = 4
+/** Above one part a file travels in parts: requests stay short even on a slow connection, and each one can be retried. */
+const MULTIPART_THRESHOLD = 8 * 1024 * 1024
+/** Enough to ride out a network drop or a server restart: about 30 seconds of backing off. */
+const UPLOAD_ATTEMPTS = 6
 const state = reactive({ tasks: [] as UploadTask[], announcement: '' })
 const requests = new Map<string, XMLHttpRequest>()
 const batches = new Map<string, Batch>()
@@ -89,7 +90,20 @@ function putPart(task: UploadTask, partNumber: number, blob: Blob, offset: numbe
   })
 }
 
+interface UploadFailure {
+  canceled?: boolean
+  statusCode?: number
+  data?: { data?: { reason?: string, existingId?: string } }
+}
+
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const isTransient = (failure: UploadFailure) => !failure.canceled && (!failure.statusCode || failure.statusCode >= 500)
+const backOff = (attempt: number) => wait(1000 * 2 ** (attempt - 1))
+
+function uploadError(error: unknown) {
+  if ((error as UploadFailure).statusCode) return errorMessage(error, 'L’import a échoué')
+  return navigator.onLine ? 'Connexion interrompue' : 'Vous êtes hors ligne'
+}
 /** Read through a function: a cancel can land between two awaits, which type narrowing cannot see. */
 const isCanceled = (task: UploadTask) => task.status === 'canceled'
 
@@ -128,15 +142,14 @@ async function sendParts(task: UploadTask) {
           break
         }
         catch (error) {
-          const failure = error as { canceled?: boolean, statusCode?: number, data?: { data?: { reason?: string } } }
+          const failure = error as UploadFailure
           if (failure.canceled) return
           if (failure.data?.data?.reason === 'part_order') {
             await resumePoint(task)
             break
           }
-          const transient = !failure.statusCode || failure.statusCode >= 500
-          if (!transient || attempt >= PART_ATTEMPTS) throw failure
-          await wait(1000 * 2 ** (attempt - 1))
+          if (!isTransient(failure) || attempt >= UPLOAD_ATTEMPTS) throw failure
+          await backOff(attempt)
         }
       }
     }
@@ -147,7 +160,7 @@ async function sendParts(task: UploadTask) {
   catch (error) {
     if (!isCanceled(task)) {
       task.status = 'error'
-      task.error = errorMessage(error, 'L’import a échoué')
+      task.error = uploadError(error)
     }
   }
   finally {
@@ -156,41 +169,67 @@ async function sendParts(task: UploadTask) {
   }
 }
 
-function send(task: UploadTask) {
-  if (task.file.size > MULTIPART_THRESHOLD) {
-    sendParts(task)
-    return
-  }
-  task.status = 'uploading'
-  task.loaded = 0
-  task.error = undefined
-  const query = new URLSearchParams({ name: task.name, conflict: task.conflict, ...(task.parentId ? { parentId: task.parentId } : {}) })
-  const xhr = new XMLHttpRequest()
-  requests.set(task.id, xhr)
-  xhr.open('PUT', `/api/uploads?${query}`)
-  xhr.setRequestHeader('Content-Type', task.file.type || 'application/octet-stream')
-  xhr.upload.onprogress = event => (task.loaded = event.loaded)
-  xhr.onload = () => {
-    requests.delete(task.id)
-    if (xhr.status >= 200 && xhr.status < 300) markDone(task, JSON.parse(xhr.responseText) as ResourceItem)
-    else {
-      task.status = 'error'
-      task.error = errorMessage(xhrError(xhr), 'L’import a échoué')
-    }
-    settle(task)
-  }
-  xhr.onerror = () => {
-    requests.delete(task.id)
-    task.status = 'error'
-    task.error = navigator.onLine ? 'Connexion interrompue' : 'Vous êtes hors ligne'
-    settle(task)
-  }
-  xhr.onabort = () => {
-    requests.delete(task.id)
-    settle(task)
-  }
-  xhr.send(task.file)
+function putWhole(task: UploadTask) {
+  return new Promise<ResourceItem>((resolve, reject) => {
+    const query = new URLSearchParams({ name: task.name, conflict: task.conflict, ...(task.parentId ? { parentId: task.parentId } : {}) })
+    const xhr = new XMLHttpRequest()
+    requests.set(task.id, xhr)
+    xhr.open('PUT', `/api/uploads?${query}`)
+    xhr.setRequestHeader('Content-Type', task.file.type || 'application/octet-stream')
+    xhr.upload.onprogress = event => (task.loaded = event.loaded)
+    xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(JSON.parse(xhr.responseText) as ResourceItem) : reject(xhrError(xhr))
+    xhr.onerror = () => reject({ statusCode: undefined })
+    xhr.onabort = () => reject({ canceled: true })
+    xhr.send(task.file)
+  })
 }
+
+/** A connection cut after the server stored the file leaves it in place: the retry meets it under the same name, same size. */
+async function alreadyStored(task: UploadTask, failure: UploadFailure) {
+  const existingId = failure.data?.data?.existingId
+  if (failure.data?.data?.reason !== 'name_taken' || !existingId) return null
+  const { item } = await api<ResourceDetails>(`/api/resources/${existingId}`)
+  return item.size === task.file.size ? item : null
+}
+
+async function sendWhole(task: UploadTask) {
+  task.status = 'uploading'
+  task.error = undefined
+  let interrupted = false
+  try {
+    for (let attempt = 1; ; attempt++) {
+      if (isCanceled(task)) return
+      task.loaded = 0
+      try {
+        markDone(task, await putWhole(task))
+        return
+      }
+      catch (error) {
+        const failure = error as UploadFailure
+        const stored = interrupted ? await alreadyStored(task, failure) : null
+        if (stored) {
+          markDone(task, stored)
+          return
+        }
+        if (!isTransient(failure) || attempt >= UPLOAD_ATTEMPTS) throw failure
+        interrupted = true
+        await backOff(attempt)
+      }
+    }
+  }
+  catch (error) {
+    if (!isCanceled(task) && !(error as UploadFailure).canceled) {
+      task.status = 'error'
+      task.error = uploadError(error)
+    }
+  }
+  finally {
+    requests.delete(task.id)
+    settle(task)
+  }
+}
+
+const send = (task: UploadTask) => task.file.size > MULTIPART_THRESHOLD ? sendParts(task) : sendWhole(task)
 
 function pump() {
   const running = state.tasks.filter(t => t.status === 'uploading').length

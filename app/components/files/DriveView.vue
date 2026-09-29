@@ -141,8 +141,9 @@ async function onDropFiles(target: { id: string | null, name: string }, transfer
   uploads.uploadTree(files, target)
 }
 
+/** Drops on the list are handled by the list itself (it may aim at a folder row); this only catches the rest of the view. */
 function onEmptyAreaDrop(event: DragEvent) {
-  if (!acceptsFiles.value || !hasFiles(event)) return
+  if (event.defaultPrevented || !acceptsFiles.value || !hasFiles(event)) return
   event.preventDefault()
   onDropFiles(props.folder!, event.dataTransfer!)
 }
