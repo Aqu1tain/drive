@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
+import { isSystemFile } from '#shared/utils/names'
 import type { FolderListing, ResourceDetails, ResourceItem } from '#shared/types/api'
 
 export interface UploadTarget {
@@ -365,8 +366,8 @@ async function uploadTree(entries: TreeFile[], target: UploadTarget) {
 }
 
 export async function filesFromDataTransfer(transfer: DataTransfer): Promise<TreeFile[]> {
-  const entries = [...transfer.items].map(item => item.webkitGetAsEntry?.()).filter((e): e is FileSystemEntry => !!e)
-  if (entries.length === 0) return [...transfer.files].map(file => ({ file, path: [] }))
+  const entries = [...transfer.items].map(item => item.webkitGetAsEntry?.()).filter((e): e is FileSystemEntry => !!e && !isSystemFile(e.name))
+  if (entries.length === 0) return [...transfer.files].filter(file => !isSystemFile(file.name)).map(file => ({ file, path: [] }))
 
   const result: TreeFile[] = []
   async function walk(entry: FileSystemEntry, path: string[]) {
@@ -379,15 +380,18 @@ export async function filesFromDataTransfer(transfer: DataTransfer): Promise<Tre
     let batch: FileSystemEntry[]
     do {
       batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject))
-      for (const child of batch) await walk(child, [...path, entry.name])
+      for (const child of batch) {
+        if (!isSystemFile(child.name)) await walk(child, [...path, entry.name])
+      }
     } while (batch.length > 0)
   }
   for (const entry of entries) await walk(entry, [])
   return result
 }
 
-export const filesFromInput = (files: FileList): TreeFile[] =>
-  [...files].map(file => ({ file, path: file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(0, -1) : [] }))
+export const filesFromInput = (files: FileList): TreeFile[] => [...files]
+  .filter(file => !isSystemFile(file.webkitRelativePath || file.name))
+  .map(file => ({ file, path: file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(0, -1) : [] }))
 
 function cancelTask(task: UploadTask) {
   task.status = 'canceled'

@@ -30,6 +30,11 @@ export function searchKeyOf(value: string) {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 }
 
+const SYSTEM_FILES = /^(\.DS_Store|\._.+|\.Spotlight-V100|\.Trashes|\.fseventsd|\.TemporaryItems|__MACOSX|Icon\r|Thumbs\.db|ehthumbs\.db|desktop\.ini)$/i
+
+/** What an operating system leaves in folders (.DS_Store, Thumbs.db, __MACOSX...): never worth importing. */
+export const isSystemFile = (path: string) => path.split('/').some(segment => SYSTEM_FILES.test(segment))
+
 export const searchWordsOf = (value: string) => searchKeyOf(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean)
 
 /** "rapport.pdf" -> "rapport (1).pdf", skipping names already taken (compared case-insensitively). */
