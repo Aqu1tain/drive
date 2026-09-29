@@ -1,109 +1,111 @@
+**English** · [Français](README.fr.md)
+
 <div align="center">
 
 <img src="public/favicon.svg" width="64" height="64" alt="">
 
 # Drive
 
-**Votre espace de fichiers personnel. Vous déposez, vous rangez, vous décidez précisément qui voit quoi, et vous savez qui a consulté.**
+**Your personal file space. Upload and organize your files, decide exactly who sees what, and know who opened them.**
 
-Auto-hébergé, une commande pour l'installer sur n'importe quel serveur avec Docker.
+Self-hosted, one command to install it on any server with Docker.
 
-<img src="docs/presentation.avif" alt="Présentation de Drive" width="100%">
+<img src="docs/presentation.avif" alt="Drive presentation" width="100%">
 
 </div>
 
-## Le principe
+## The idea
 
-Drive n'est pas un Drive collaboratif. Il y a **un seul propriétaire** : vous. Tous les autres sont **lecteurs** et ne peuvent jamais rien modifier, ni l'interface ni l'API ne le permettent.
+Drive is not a collaborative drive. There is **a single owner**: you. Everyone else is a **reader** and can never change anything: neither the interface nor the API allows it.
 
-- **Rangez** vos fichiers et dossiers comme dans un gestionnaire moderne : glisser-déposer, sélection multiple, clic droit, raccourcis clavier, palette de commandes (⌘K).
-- **Partagez** un fichier ou un dossier avec une personne (compte lecteur), une invitation, un lien personnel ou un lien public. Téléchargement autorisé ou non, expiration, révocation immédiate.
-- **Sachez qui a consulté** quoi et quand : un journal d'activité lisible, honnête sur ce qu'il sait (un lien public reste anonyme).
-- **Publiez des pages HTML ou des sites entiers** (déposés en ZIP) en toute sécurité : ils s'affichent sur une origine isolée, en plein écran si vous le souhaitez.
-- **Retrouvez** un fichier par son nom, ses étiquettes ou ce qu'il contient : texte des PDF, documents Word, classeurs Excel, présentations PowerPoint. Ces documents s'ouvrent aussi en aperçu, sans rien installer.
+- **Organize** your files and folders as in a modern file manager: drag and drop, multiple selection, right click, keyboard shortcuts, command palette (⌘K).
+- **Share** a file or a folder with a person (reader account), an invitation, a personal link or a public link. Downloads allowed or not, expiry, instant revocation.
+- **Know who viewed** what and when: a readable activity log, honest about what it knows (a public link stays anonymous).
+- **Publish HTML pages or whole websites** (uploaded as a ZIP) safely: they are displayed on an isolated origin, full screen if you like.
+- **Find** a file by its name, its tags or its content: text from PDFs, Word documents, Excel spreadsheets and PowerPoint presentations. These documents also open in a preview, with nothing to install.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/preview.webp" alt="Aperçu rapide d'un PDF à côté de la liste"></td>
-<td width="50%"><img src="docs/screenshots/share.webp" alt="Dialogue de partage"></td>
+<td width="50%"><img src="docs/screenshots/preview.webp" alt="Quick preview of a PDF next to the list"></td>
+<td width="50%"><img src="docs/screenshots/share.webp" alt="Share dialog"></td>
 </tr>
 <tr>
-<td align="center"><sub>Aperçu rapide sans quitter la liste</sub></td>
-<td align="center"><sub>Partage : personnes, héritage, lien public</sub></td>
+<td align="center"><sub>Quick preview without leaving the list</sub></td>
+<td align="center"><sub>Sharing: people, inheritance, public link</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/palette.webp" alt="Palette de commandes"></td>
-<td width="50%"><img src="docs/screenshots/dark-grid.webp" alt="Mode sombre en grille"></td>
+<td width="50%"><img src="docs/screenshots/palette.webp" alt="Command palette"></td>
+<td width="50%"><img src="docs/screenshots/dark-grid.webp" alt="Dark mode in grid view"></td>
 </tr>
 <tr>
-<td align="center"><sub>Palette de commandes (⌘K)</sub></td>
-<td align="center"><sub>Mode sombre, vue grille avec miniatures</sub></td>
+<td align="center"><sub>Command palette (⌘K)</sub></td>
+<td align="center"><sub>Dark mode, grid view with thumbnails</sub></td>
 </tr>
 </table>
 
-<p align="center"><img src="docs/screenshots/public-mobile.webp" alt="Lien partagé ouvert sur un téléphone" width="280"><br><sub>Ce que voit la personne qui reçoit un lien</sub></p>
+<p align="center"><img src="docs/screenshots/public-mobile.webp" alt="Shared link opened on a phone" width="280"><br><sub>What the person who receives a link sees</sub></p>
 
 ## Installation
 
-Il vous faut un serveur Linux (VPS, Raspberry Pi 4 ou plus, NAS, machine à la maison) avec 1 Go de RAM libre. Docker est installé automatiquement si besoin.
+You need a Linux server (VPS, Raspberry Pi 4 or newer, NAS, a machine at home) with 1 GB of free RAM. Docker is installed automatically if needed.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash
 ```
 
-Le script vous pose deux ou trois questions (votre nom de domaine, optionnel), génère tous les secrets, démarre Drive et vous donne l'adresse pour créer votre compte propriétaire.
+The script asks you two or three questions (your domain name, optional), generates every secret, starts Drive and gives you the address where you create your owner account.
 
-- **Avec un domaine** (recommandé) : faites pointer deux noms vers votre serveur, par exemple `drive.exemple.fr` et `files.exemple.fr`. Les certificats HTTPS sont obtenus et renouvelés automatiquement.
-- **Sans domaine** : Drive est servi par adresse IP en HTTP, parfait pour essayer ou pour un réseau local.
+- **With a domain** (recommended): point two names at your server, for example `drive.example.com` and `files.example.com`. HTTPS certificates are obtained and renewed automatically.
+- **Without a domain**: Drive is served over HTTP on the IP address, which is fine for trying it out or for a local network.
 
-Le guide détaillé, les options sans interaction et la configuration manuelle sont dans **[docs/install.md](docs/install.md)**.
+The detailed guide, the non-interactive options and the manual configuration are in **[docs/install.md](docs/install.md)**.
 
-### Installer avec un assistant IA
+### Installing with an AI assistant
 
-Le guide d'installation est écrit pour pouvoir être suivi par un agent (Claude Code, Codex, Cursor…) connecté à votre serveur. Donnez-lui simplement :
+The installation guide is written so that an agent (Claude Code, Codex, Cursor…) connected to your server can follow it. Just tell it:
 
-> Installe Drive sur ce serveur en suivant https://github.com/Aqu1tain/drive/blob/main/docs/install.md. Mon domaine est drive.exemple.fr.
+> Install Drive on this server by following https://github.com/Aqu1tain/drive/blob/main/docs/install.md. My domain is drive.example.com.
 
-Chaque étape du guide se termine par une commande de vérification, pour que l'agent sache si elle a réussi.
+Every step of the guide ends with a check command, so the agent knows whether it worked.
 
-### Au quotidien
+### Day to day
 
 ```bash
-~/drive/install.sh update    # mettre à jour
-~/drive/install.sh backup    # sauvegarder la base, les fichiers et la configuration
-~/drive/install.sh logs      # suivre le journal
-~/drive/install.sh status    # état des services
+~/drive/install.sh update    # update
+~/drive/install.sh backup    # back up the database, the files and the configuration
+~/drive/install.sh logs      # follow the logs
+~/drive/install.sh status    # service status
 ```
 
-## Sécurité, en bref
+## Security, in short
 
-- Autorisation centralisée côté serveur : chaque requête recalcule les droits, une révocation prend effet immédiatement.
-- Aucune URL de stockage exposée : tout passe par l'application, qui vérifie l'accès.
-- Le HTML et le SVG ne s'exécutent jamais sur l'origine de l'application. Les pages web sont servies sur un domaine séparé, dans un bac à sable (CSP `sandbox`), sans cookies.
-- CSP stricte à nonce, protection CSRF par origine, jetons de partage stockés hachés et chiffrés, mots de passe, clés d'accès (passkeys) et double authentification (TOTP).
-- Journal d'activité sobre : adresses IP tronquées puis hachées (ou non enregistrées), durée de conservation configurable. Voir [docs/privacy.md](docs/privacy.md).
+- Authorization is centralized on the server: every request recomputes permissions, so a revocation takes effect immediately.
+- No storage URL is ever exposed: everything goes through the application, which checks access.
+- HTML and SVG never run on the application's origin. Web pages are served from a separate domain, in a sandbox (CSP `sandbox`), without cookies.
+- Strict nonce-based CSP, origin-based CSRF protection, share tokens stored hashed and encrypted, passwords, passkeys and two-factor authentication (TOTP).
+- A minimal activity log: IP addresses are truncated then hashed (or not recorded at all), with a configurable retention period. See [docs/privacy.md](docs/privacy.md).
 
-Signaler une faille : [SECURITY.md](SECURITY.md). Choix d'architecture : [docs/decisions.md](docs/decisions.md).
+Report a vulnerability: [SECURITY.md](SECURITY.md). Architecture choices: [docs/decisions.md](docs/decisions.md).
 
-## Développement
+## Development
 
 ```bash
 pnpm install
-cp .env.example .env                        # puis renseignez NUXT_AUTH_SECRET
+cp .env.example .env                        # then fill in NUXT_AUTH_SECRET
 docker compose -f compose.dev.yaml up -d    # Postgres, MinIO, Mailpit
 pnpm dev                                    # http://localhost:3000
-pnpm seed                                   # contenu de démonstration (optionnel)
+pnpm seed                                   # demo content (optional)
 ```
 
-| Commande | Rôle |
+| Command | Purpose |
 |---|---|
-| `pnpm test:unit` | Résolveur de permissions, noms, recherche, cryptographie, lecture des documents |
-| `pnpm test:integration` | API et base de données, scénarios de sécurité (serveur de dev lancé) |
-| `pnpm test:e2e` | Parcours complets dans un navigateur, audit d'accessibilité axe |
-| `pnpm typecheck` | Vérification TypeScript |
+| `pnpm test:unit` | Permission resolver, names, search, cryptography, document parsing |
+| `pnpm test:integration` | API and database, security scenarios (dev server running) |
+| `pnpm test:e2e` | Full journeys in a browser, axe accessibility audit |
+| `pnpm typecheck` | TypeScript check |
 
-Stack : Nuxt 4, Vue 3, TypeScript, PostgreSQL 17, Drizzle, Better Auth, Tailwind 4, Reka UI, stockage S3 (MinIO par défaut) ou disque local. Conventions et repères pour contribuer : [AGENTS.md](AGENTS.md) et [docs/ux.md](docs/ux.md).
+Stack: Nuxt 4, Vue 3, TypeScript, PostgreSQL 17, Drizzle, Better Auth, Tailwind 4, Reka UI, S3 storage (MinIO by default) or local disk. Conventions and pointers for contributors: [AGENTS.md](AGENTS.md) and [docs/ux.md](docs/ux.md).
 
-## Licence
+## License
 
-[CC BY-NC-SA 4.0](LICENSE) : usage non commercial libre, modifications partagées sous la même licence. Pour un usage commercial, une licence payante est nécessaire : voir [COMMERCIAL.md](COMMERCIAL.md).
+[CC BY-NC-SA 4.0](LICENSE): free for non-commercial use, with modifications shared under the same license. Commercial use requires a paid license: see [COMMERCIAL.md](COMMERCIAL.md).
