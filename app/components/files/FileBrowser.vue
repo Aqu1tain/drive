@@ -50,7 +50,7 @@ const isEmpty = computed(() => !props.loading && props.items.length === 0)
 
 type SortKey = typeof preferences.sortBy
 const COMPARE: Record<SortKey, (a: ResourceItem, b: ResourceItem) => number> = {
-  name: (a, b) => a.name.localeCompare(b.name, 'fr', { numeric: true, sensitivity: 'base' }),
+  name: (a, b) => a.name.localeCompare(b.name, currentLocale(), { numeric: true, sensitivity: 'base' }),
   updatedAt: (a, b) => a.updatedAt.localeCompare(b.updatedAt),
   size: (a, b) => a.size - b.size,
   lastExternalViewAt: (a, b) => (a.lastExternalViewAt ?? '').localeCompare(b.lastExternalViewAt ?? ''),

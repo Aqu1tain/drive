@@ -181,7 +181,7 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
     <section class="flex min-w-0 flex-1 flex-col">
       <div class="flex h-14 shrink-0 items-center gap-2 px-3 md:px-4">
         <template v-if="selectedItems.length">
-          <UiIconButton :icon="X" :label="t('files.clearSelection')" :shortcut="t('actions.keys.escape')" @click="selection = []; browser?.focus()" />
+          <UiIconButton :icon="X" :label="t('files.clearSelection')" shortcut="Esc" @click="selection = []; browser?.focus()" />
           <span class="mr-2 text-base font-semibold text-ink tabular" aria-live="polite">{{ t('files.selected', { count: selectedItems.length }) }}</span>
           <div class="flex items-center gap-0.5">
             <template v-if="trash">
@@ -192,7 +192,7 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
               <UiIconButton v-if="isOwner && selectedItems.length === 1" :icon="Share2" :label="t('common.share')" shortcut="Mod+Alt+A" @click="dialogs.share(selectedItems[0]!)" />
               <UiIconButton v-if="canDownloadSelection" :icon="Download" :label="t('common.download')" @click="actions.download(selectedItems, apiBase)" />
               <UiIconButton v-if="isOwner" :icon="FolderInput" :label="t('actions.move')" class="max-sm:hidden" @click="dialogs.move(selectedItems)" />
-              <UiIconButton v-if="isOwner" :icon="Trash2" :label="t('actions.trash')" :shortcut="t('actions.keys.delete')" @click="actions.trash(selectedItems)" />
+              <UiIconButton v-if="isOwner" :icon="Trash2" :label="t('actions.trash')" shortcut="Delete" @click="actions.trash(selectedItems)" />
               <UiDropdownMenu :entries="selectionMenu" align="start">
                 <UiIconButton :icon="EllipsisVertical" :label="t('files.moreActions')" />
               </UiDropdownMenu>

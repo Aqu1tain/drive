@@ -225,8 +225,8 @@ export function useFileActions() {
 
     const openEntries: MenuEntry[] = single
       ? [
-          { id: 'open', label: t('common.open'), icon: single.type === 'folder' ? FolderOpen : Eye, shortcut: t('actions.keys.enter'), onSelect: () => context.open?.(single) },
-          ...(single.type === 'file' ? [{ id: 'preview', label: t('actions.preview'), icon: Eye, shortcut: t('actions.keys.space'), onSelect: () => preview(single) }] : []),
+          { id: 'open', label: t('common.open'), icon: single.type === 'folder' ? FolderOpen : Eye, shortcut: 'Enter', onSelect: () => context.open?.(single) },
+          ...(single.type === 'file' ? [{ id: 'preview', label: t('actions.preview'), icon: Eye, shortcut: 'Space', onSelect: () => preview(single) }] : []),
           ...(single.kind === 'html' ? [{ id: 'open-tab', label: t('actions.openInWindow'), icon: ExternalLink, onSelect: () => openInTab(single, context.apiBase) }] : []),
         ]
       : []
@@ -260,7 +260,7 @@ export function useFileActions() {
       single && { id: 'details', label: t('common.details'), icon: Info, onSelect: () => showDetails(single, 'details') },
       single && { id: 'activity', label: t('actions.activity'), icon: History, onSelect: () => showDetails(single, 'activity') },
       { kind: 'separator' },
-      { id: 'trash', label: t('actions.trash'), icon: Trash2, shortcut: t('actions.keys.delete'), danger: true, onSelect: () => trash(items) },
+      { id: 'trash', label: t('actions.trash'), icon: Trash2, shortcut: 'Delete', danger: true, onSelect: () => trash(items) },
     ])
   }
 

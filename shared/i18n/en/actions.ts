@@ -11,12 +11,6 @@ export default {
   restore: 'Restore',
   deleteForever: 'Delete forever',
   undo: 'Undo',
-  keys: {
-    enter: 'Enter',
-    space: 'Space',
-    delete: 'Delete',
-    escape: 'Esc',
-  },
   toast: {
     starred: { one: '“{name}” added to favorites', other: '{count} items added to favorites' },
     unstarred: { one: '“{name}” removed from favorites', other: '{count} items removed from favorites' },

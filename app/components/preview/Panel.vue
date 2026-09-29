@@ -11,11 +11,6 @@ const { t } = useI18n()
 const { data: info, isError, error } = usePreview(toRef(props, 'id'), toRef(props, 'apiBase'))
 const current = computed(() => info.value?.item ?? props.item)
 
-/** Inside a sentence "Today" loses its capital, month names keep theirs. */
-function midSentence(date: string) {
-  const day = [t('format.today'), t('format.yesterday')].find(word => date.startsWith(word))
-  return day ? day.toLowerCase() + date.slice(day.length) : date
-}
 </script>
 
 <template>
@@ -26,7 +21,7 @@ function midSentence(date: string) {
       <UiIconButton :icon="Maximize2" :label="t('preview.fullScreen')" size="sm" @click="$emit('expand')" />
       <UiIconButton v-if="info?.downloadUrl && current" :icon="Download" :label="t('common.download')" size="sm" @click="actions.download([current], apiBase)" />
       <UiIconButton v-if="mode === 'owner' && current" :icon="Share2" :label="t('common.share')" size="sm" @click="dialogs.share(current)" />
-      <UiIconButton :icon="X" :label="t('preview.close')" :shortcut="t('actions.keys.escape')" size="sm" @click="$emit('close')" />
+      <UiIconButton :icon="X" :label="t('preview.close')" shortcut="Esc" size="sm" @click="$emit('close')" />
     </header>
     <div class="min-h-0 flex-1 bg-subtle">
       <PreviewContent v-if="info" :info="info" />

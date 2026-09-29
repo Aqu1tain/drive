@@ -14,12 +14,6 @@ export default {
   restore: 'Restaurer',
   deleteForever: 'Supprimer définitivement',
   undo: 'Annuler',
-  keys: {
-    enter: 'Entrée',
-    space: 'Espace',
-    delete: 'Suppr',
-    escape: 'Échap',
-  },
   toast: {
     starred: { one: '{name} ajouté aux favoris', other: '{count} éléments ajouté aux favoris' },
     unstarred: { one: '{name} retiré des favoris', other: '{count} éléments retiré des favoris' },

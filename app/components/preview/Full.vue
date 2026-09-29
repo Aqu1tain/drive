@@ -42,7 +42,7 @@ const focusSelf = () => content.value?.$el.focus()
         @open-auto-focus.prevent="focusSelf"
       >
         <header class="flex h-14 shrink-0 items-center gap-2 px-2 sm:px-3">
-          <UiIconButton :icon="ArrowLeft" :label="t('preview.close')" :shortcut="t('actions.keys.escape')" tone="inverse" @click="emit('close')" />
+          <UiIconButton :icon="ArrowLeft" :label="t('preview.close')" shortcut="Esc" tone="inverse" @click="emit('close')" />
           <FilesFileIcon v-if="current" :kind="current.kind" class="ml-1 shrink-0" />
           <DialogTitle class="min-w-0 flex-1 truncate text-base font-semibold">{{ current?.name ?? t('preview.title') }}</DialogTitle>
           <span v-if="siblings.length > 1 && index >= 0" class="mr-2 text-sm text-white/60 tabular max-sm:hidden">{{ index + 1 }} / {{ siblings.length }}</span>

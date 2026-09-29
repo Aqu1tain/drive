@@ -43,11 +43,6 @@ async function toggleScripts(value: boolean) {
 
 const allowScripts = computed({ get: () => current.value?.allowScripts ?? false, set: toggleScripts })
 
-/** Inside a sentence "Today" loses its capital, month names keep theirs. */
-function midSentence(date: string) {
-  const day = [t('format.today'), t('format.yesterday')].find(word => date.startsWith(word))
-  return day ? day.toLowerCase() + date.slice(day.length) : date
-}
 
 function linkTerms(link: { allowDownload: boolean, expiresAt: string | null }) {
   const terms = t(link.allowDownload ? 'details.viewAndDownload' : 'details.viewOnly')

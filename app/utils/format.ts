@@ -64,8 +64,10 @@ export function formatDay(value: string | Date) {
   return formatLongDate(date)
 }
 
-export function plural(count: number, singular: string, pluralForm = `${singular}s`) {
-  return `${count.toLocaleString('fr-FR')} ${count > 1 ? pluralForm : singular}`
+/** Inside a sentence "Today" and "Yesterday" lose their capital; month names keep theirs. */
+export function midSentence(text: string) {
+  const day = [say('format.today'), say('format.yesterday')].find(word => text.startsWith(word))
+  return day ? day.toLowerCase() + text.slice(day.length) : text
 }
 
 export function initials(name: string) {

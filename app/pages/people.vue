@@ -18,11 +18,7 @@ const refresh = () => {
   queryClient.invalidateQueries({ queryKey: ['folder'] })
 }
 
-/** "Yesterday" reads in lowercase mid-sentence; times and dates keep their own case. */
-function since(value: string | Date) {
-  const text = formatShortDate(value)
-  return text === t('format.yesterday') ? text.toLowerCase() : text
-}
+const since = (value: string | Date) => midSentence(formatShortDate(value))
 
 async function attempt(task: () => Promise<unknown>, success: string) {
   try {
