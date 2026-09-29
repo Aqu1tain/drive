@@ -46,6 +46,7 @@ const failed = ref(false)
         decoding="async"
         draggable="false"
         class="size-full object-cover"
+        :class="{ 'object-top': item.kind === 'pdf' }"
         @error="failed = true"
       >
       <FilesFileIcon v-else :kind="item.kind" size="xl" />

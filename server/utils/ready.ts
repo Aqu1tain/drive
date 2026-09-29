@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 
 let ready: Promise<void> | undefined
 
@@ -16,7 +16,11 @@ export function whenReady() {
 async function prepare() {
   if (import.meta.dev) await migrate(useDB(), { migrationsFolder: resolve('server/database/migrations') })
   const { resources } = tables
-  const pending = await useDB().select({ id: resources.id }).from(resources)
-    .where(and(eq(resources.thumbnailStatus, 'pending'), isNull(resources.deletedAt)))
-  for (const { id } of pending) enqueueThumbnail(id)
+  const pending = await useDB().select({ id: resources.id }).from(resources).where(and(
+    eq(resources.type, 'file'),
+    isNotNull(resources.storageKey),
+    isNull(resources.deletedAt),
+    sql`${resources.processedChecksum} is distinct from ${resources.checksum}`,
+  ))
+  for (const { id } of pending) enqueueProcessing(id)
 }

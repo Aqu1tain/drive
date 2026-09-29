@@ -68,14 +68,19 @@ Alternatives : BLOB PostgreSQL (base énorme, sauvegardes lentes), S3 seul (dév
 - En production, utiliser un domaine enregistrable distinct (ex. `drive-usercontent.net`).
 - Les mutations exigent l'en-tête `Origin` de l'application (CSRF), y compris contre l'origine usercontent.
 - sharp ne charge jamais de SVG (le chargeur est bloqué) : pas de miniature SVG.
+- Les documents Office (docx, xlsx, pptx) sont convertis côté serveur en une page HTML autonome, servie sur la même origine isolée avec une CSP plus stricte encore : aucun script, aucune ressource externe (`default-src 'none'; img-src data:`), les liens s'ouvrent dans un nouvel onglet. Le texte des cellules et des paragraphes est échappé à la conversion.
 
 ## Recherche
 
-`pg_trgm` sur une clé normalisée (minuscules, sans accents) : nom, dossiers englobants, personnes ayant accès (propriétaire). Filtres `type:`, `access:`, `shared:`, `after:`, `before:`, `in:` exposés aussi en chips. Le texte intégral (PDF, Office) pourra s'ajouter via une table d'index alimentée par un extracteur, sans changer l'API.
+`pg_trgm` sur une clé normalisée (minuscules, sans accents) : nom, dossiers englobants, personnes ayant accès (propriétaire). Filtres `type:`, `access:`, `shared:`, `after:`, `before:`, `in:` exposés aussi en chips.
 
-## Miniatures
+Le texte des fichiers est aussi cherché : PDF (100 premières pages), Word, Excel, PowerPoint, HTML et fichiers texte. Il est normalisé comme les noms puis stocké en `tsvector` (configuration `simple`, sans racinisation, donc valable pour toutes les langues) dans une table à part, `resource_texts`, pour que les listes ne le chargent jamais. Chaque mot cherché doit commencer un mot du fichier : « factur » trouve « factures ». Un lecteur ne trouve que ce qu'il peut ouvrir, le texte ne sort jamais de la base.
 
-File en mémoire (2 workers), relancée au démarrage pour les éléments `pending`. Images uniquement (sharp, orientation EXIF, métadonnées supprimées). PDF et vidéo : phase 2.
+## Traitement des fichiers
+
+Après chaque upload, une file en mémoire (2 workers) dérive de la version du fichier : sa miniature (images avec sharp, première page des PDF avec pdf.js et @napi-rs/canvas), son texte pour la recherche et, pour les documents Office, une page d'aperçu. `processed_checksum` retient la version traitée : au démarrage, tout fichier dont la version n'a pas été traitée est remis en file, ce qui rattrape aussi les fichiers antérieurs à cette fonctionnalité. Si le fichier est remplacé pendant le traitement, le résultat est jeté.
+
+Les fichiers de plus de 80 Mo ne sont pas traités. pdf.js tourne dans le processus du serveur, page par page ; un PDF piégé ne peut être déposé que par le propriétaire. Vidéo : pas de miniature, faute de décodeur côté serveur (ffmpeg alourdirait l'image de plusieurs centaines de Mo).
 
 ## Journal d'activité
 

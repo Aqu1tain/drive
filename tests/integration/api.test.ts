@@ -1,5 +1,6 @@
 import { unzipSync } from 'fflate'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { docx, pdf } from '../fixtures'
 import { Client, USERCONTENT_URL, ownerClient, readerClient, unique } from './client'
 
 let owner: Client
@@ -230,6 +231,71 @@ describe('multipart uploads', () => {
     await fileIn(root, name)
     expect((await session(name, 10)).status).toBe(409)
     expect((await session(unique('huge'), Number.MAX_SAFE_INTEGER)).status).toBe(413)
+  })
+})
+
+describe('file processing', () => {
+  const word = () => unique('mot').replace(/-/g, '')
+  const searchIds = async (client: Client, q: string) =>
+    ((await client.get(`/api/search?q=${encodeURIComponent(q)}`)).body.items as Array<{ id: string }>).map(item => item.id)
+
+  async function eventually<T>(read: () => Promise<T>, done: (value: T) => boolean) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const value = await read()
+      if (done(value)) return value
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    throw new Error('Processing did not finish in time')
+  }
+
+  it('indexes the text of a PDF and renders its first page as a thumbnail', async () => {
+    const secret = word()
+    const file = (await owner.upload(root, `${unique('facture')}.pdf`, pdf('Facture', [`Prestation ${secret}`]))).body
+    await eventually(() => searchIds(owner, secret.slice(0, -2)), ids => ids.includes(file.id))
+
+    const { item } = (await owner.get(`/api/resources/${file.id}`)).body
+    expect(item.thumbnailUrl).toMatch(/\/thumbnail\?v=/)
+    const thumbnail = await owner.get(item.thumbnailUrl)
+    expect(thumbnail.headers.get('content-type')).toBe('image/webp')
+  })
+
+  it('previews an office document on the isolated origin, without scripts or remote content', async () => {
+    const secret = word()
+    const file = (await owner.upload(root, `${unique('compte-rendu')}.docx`, await docx(['Compte rendu', secret]))).body
+    expect(file.kind).toBe('document')
+    const info = await eventually(async () => (await owner.post(`/api/resources/${file.id}/open`)).body, body => !!body.frameUrl)
+    expect(info.frameUrl.startsWith(USERCONTENT_URL)).toBe(true)
+
+    const frame = await new Client().get(new URL(info.frameUrl).pathname, { base: USERCONTENT_URL })
+    expect(frame.status).toBe(200)
+    expect(frame.body).toContain(`<p>${secret}</p>`)
+    const policy = frame.headers.get('content-security-policy')!
+    expect(policy).toMatch(/^sandbox allow-popups/)
+    expect(policy).not.toContain('allow-scripts')
+    expect(policy).toContain("default-src 'none'; img-src data:;")
+    expect(await searchIds(owner, secret)).toContain(file.id)
+  })
+
+  it('never lets readers find text in files they cannot open', async () => {
+    const { client: reader, email } = await readerClient(owner)
+    const shared = await folderIn(root, 'Lecture')
+    const secret = word()
+    const visible = await fileIn(shared, `${unique('visible')}.txt`, `note ${secret}`)
+    const hidden = await fileIn(root, `${unique('cache')}.txt`, `note ${secret}`)
+    await owner.post(`/api/resources/${shared}/access`, { email, notify: false })
+
+    await eventually(() => searchIds(owner, secret), ids => ids.includes(visible.id) && ids.includes(hidden.id))
+    expect(await searchIds(reader, secret)).toEqual([visible.id])
+  })
+
+  it('forgets the text of a replaced version', async () => {
+    const [before, after] = [word(), word()]
+    const name = `${unique('version')}.txt`
+    const file = await fileIn(root, name, before)
+    await eventually(() => searchIds(owner, before), ids => ids.includes(file.id))
+    expect((await owner.upload(root, name, after, 'replace')).status).toBe(200)
+    await eventually(() => searchIds(owner, after), ids => ids.includes(file.id))
+    expect(await searchIds(owner, before)).not.toContain(file.id)
   })
 })
 

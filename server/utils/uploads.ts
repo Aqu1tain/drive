@@ -50,6 +50,7 @@ export async function commitUpload(viewer: Viewer, plan: UploadPlan, blob: { sto
     mimeType,
     thumbnailKey: null,
     thumbnailStatus: canThumbnail(mimeType, blob.size) ? 'pending' as const : 'none' as const,
+    previewKey: null,
     width: null,
     height: null,
     updatedAt: new Date(),
@@ -59,7 +60,7 @@ export async function commitUpload(viewer: Viewer, plan: UploadPlan, blob: { sto
   try {
     if (replacing) {
       [resource] = await db.update(resources).set({ extension: plan.fields.extension, ...content }).where(eq(resources.id, replacing.id)).returning() as [Resource]
-      for (const key of [replacing.storageKey, replacing.thumbnailKey]) if (key) await storage.delete(key).catch(() => {})
+      for (const key of [replacing.storageKey, replacing.thumbnailKey, replacing.previewKey]) if (key) await storage.delete(key).catch(() => {})
     }
     else {
       [resource] = await db.insert(resources).values({
@@ -78,7 +79,7 @@ export async function commitUpload(viewer: Viewer, plan: UploadPlan, blob: { sto
     throw error
   }
 
-  if (resource.thumbnailStatus === 'pending') enqueueThumbnail(resource.id)
+  enqueueProcessing(resource.id)
   const summaries = await summarizeMany([resource])
   return { item: toItem(resource, { viewer, summary: summaries.get(resource.id) }), replaced: !!replacing }
 }

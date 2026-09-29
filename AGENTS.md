@@ -21,7 +21,8 @@ Un seul propriétaire dépose, range et partage ; tous les autres sont lecteurs 
 | Chemin | Contenu |
 |---|---|
 | `server/domain/access.ts` | Résolveur de permissions pur (lecture, téléchargement, gestion). Testé dans `tests/unit/access.test.ts` |
-| `server/utils/` | Services auto-importés par Nitro : ressources, listing, partage, activité, contenu, recherche, uploads |
+| `server/utils/` | Services auto-importés par Nitro : ressources, listing, partage, activité, contenu, recherche, uploads, traitement des fichiers |
+| `server/lib/documents/` | Lecture des PDF et documents Office : texte, miniature, page d'aperçu (fonctions pures) |
 | `server/api/` | Endpoints. Les écritures passent toutes par `requireOwner`, les lectures par `requireReadable` |
 | `server/routes/c`, `server/routes/p` | Origine isolée pour le HTML (aperçus et pages publiées) |
 | `server/lib/` | Stockage (local, S3), cryptographie, MIME, configuration Better Auth |

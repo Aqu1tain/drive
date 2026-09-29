@@ -10,6 +10,7 @@ const viewer = computed(() => {
   if (failed.value) return 'none'
   const kind = props.info.kind
   if (kind === 'image' || kind === 'pdf' || kind === 'audio' || kind === 'video' || kind === 'html') return kind
+  if (props.info.frameUrl) return 'document'
   if (kind === 'text' || kind === 'spreadsheet' && props.info.item.mimeType === 'text/csv') return isMarkdown.value ? 'markdown' : 'text'
   return 'none'
 })
@@ -31,6 +32,7 @@ const viewer = computed(() => {
       <video :src="info.contentUrl" controls playsinline preload="metadata" class="max-h-full max-w-full rounded-lg bg-black" @error="failed = true" />
     </div>
     <PreviewHtml v-else-if="viewer === 'html' && info.frameUrl" :src="info.frameUrl" :scripts="info.scripts" :title="info.item.name" />
+    <PreviewHtml v-else-if="viewer === 'document' && info.frameUrl" :src="info.frameUrl" :scripts="false" :title="info.item.name" converted />
     <PreviewNone v-else :info="info" :dark="dark" />
   </div>
 </template>

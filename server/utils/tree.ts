@@ -77,9 +77,9 @@ export async function reparent(tx: Transaction, resource: Resource, target: Reso
 /** Storage keys of a resource and everything below it, to delete blobs once rows are gone. */
 export async function subtreeKeys(ids: string[]) {
   if (ids.length === 0) return []
-  const rows = await useDB().select({ storageKey: resources.storageKey, thumbnailKey: resources.thumbnailKey }).from(resources)
+  const rows = await useDB().select({ storageKey: resources.storageKey, thumbnailKey: resources.thumbnailKey, previewKey: resources.previewKey }).from(resources)
     .where(sql`${resources.id} = any(${uuidArray(ids)}) or ${resources.ancestorIds} && ${uuidArray(ids)}`)
-  return rows.flatMap(row => [row.storageKey, row.thumbnailKey]).filter((key): key is string => !!key)
+  return rows.flatMap(row => [row.storageKey, row.thumbnailKey, row.previewKey]).filter((key): key is string => !!key)
 }
 
 export async function deleteBlobs(keys: string[]) {
