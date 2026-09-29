@@ -1,159 +1,161 @@
-# Installer Drive
+**English** · [Français](install.fr.md)
 
-Ce guide s'adresse autant à une personne qu'à un assistant IA qui agit sur un serveur. Chaque étape se termine par une vérification : ne passez à la suivante que si elle réussit.
+# Installing Drive
 
-## Ce qu'il faut
+This guide is meant for a person as much as for an AI assistant working on a server. Every step ends with a check: only move on to the next one if it passes.
 
-- Un serveur Linux 64 bits (x86_64 ou ARM64) avec au moins 1 Go de RAM libre et quelques Go de disque, plus la place pour vos fichiers.
-- Un accès SSH avec un utilisateur qui peut utiliser `sudo`.
-- Optionnel mais recommandé : un nom de domaine. Il vous faut deux noms qui pointent vers le serveur :
-  - un pour l'application, par exemple `drive.exemple.fr` ;
-  - un pour le contenu isolé (pages HTML déposées), par exemple `files.exemple.fr`. L'idéal est un domaine enregistrable distinct (`exemple-files.fr`), mais un sous-domaine fonctionne.
+## Requirements
 
-## Méthode rapide
+- A 64-bit Linux server (x86_64 or ARM64) with at least 1 GB of free RAM and a few GB of disk, plus room for your files.
+- SSH access with a user who can run `sudo`.
+- Optional but recommended: a domain name. You need two names pointing to the server:
+  - one for the application, for example `drive.example.com`;
+  - one for isolated content (uploaded HTML pages), for example `files.example.com`. A separate registrable domain (`example-files.com`) is ideal, but a subdomain works.
+
+## Quick method
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash
 ```
 
-Le script est interactif. Répondez aux questions, puis ouvrez l'adresse affichée à la fin pour créer votre compte propriétaire.
+The script is interactive. Answer the questions, then open the address printed at the end to create your owner account.
 
-## Méthode pas à pas (recommandée pour un agent)
+## Step by step (recommended for an agent)
 
-### 1. Installer Docker
+### 1. Install Docker
 
 ```bash
 command -v docker >/dev/null || curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker "$USER"   # puis reconnectez la session SSH
+sudo usermod -aG docker "$USER"   # then reconnect the SSH session
 ```
 
-Vérification (doit afficher deux numéros de version, sans erreur de permission) :
+Check (must print two version numbers, with no permission error):
 
 ```bash
 docker version --format '{{.Server.Version}}' && docker compose version --short
 ```
 
-### 2. Préparer le DNS (seulement avec un domaine)
+### 2. Set up DNS (only with a domain)
 
-Créez deux enregistrements `A` (et `AAAA` si vous avez de l'IPv6) vers l'adresse publique du serveur, puis ouvrez les ports 80 et 443.
+Create two `A` records (and `AAAA` if you have IPv6) pointing to the server's public address, then open ports 80 and 443.
 
 ```bash
-curl -fsS https://api.ipify.org; echo            # adresse publique du serveur
-getent hosts drive.exemple.fr files.exemple.fr   # doivent afficher cette même adresse
-sudo ufw allow 80,443/tcp 2>/dev/null || true    # si ufw est actif
+curl -fsS https://api.ipify.org; echo            # public address of the server
+getent hosts drive.example.com files.example.com # must print that same address
+sudo ufw allow 80,443/tcp 2>/dev/null || true    # if ufw is active
 ```
 
-### 3. Télécharger Drive
+### 3. Download Drive
 
 ```bash
 git clone https://github.com/Aqu1tain/drive.git ~/drive && cd ~/drive
 ```
 
-Vérification : `ls ~/drive/compose.yaml ~/drive/install.sh` ne renvoie pas d'erreur.
+Check: `ls ~/drive/compose.yaml ~/drive/install.sh` returns no error.
 
-### 4. Configurer et démarrer
+### 4. Configure and start
 
-Avec un domaine :
+With a domain:
 
 ```bash
-~/drive/install.sh --domain drive.exemple.fr --content-domain files.exemple.fr --yes
+~/drive/install.sh --domain drive.example.com --content-domain files.example.com --yes
 ```
 
-Sans domaine (HTTP par IP, ports 3000 et 3001) :
+Without a domain (HTTP by IP, ports 3000 and 3001):
 
 ```bash
 ~/drive/install.sh --ip --yes
 ```
 
-Options utiles : `--smtp smtp://utilisateur:motdepasse@smtp.exemple.fr:587` pour envoyer les invitations par email, `--smtp-from "Drive <drive@exemple.fr>"`, `--name "Mon Drive"`, `--port 8080` si le port 3000 est déjà pris.
+Useful options: `--smtp smtp://user:password@smtp.example.com:587` to send invitations by email, `--smtp-from "Drive <drive@example.com>"`, `--name "My Drive"`, `--port 8080` if port 3000 is already taken.
 
-Le script écrit `~/drive/.env` (secrets générés aléatoirement), télécharge l'image, démarre les services et attend que l'application réponde.
+The script writes `~/drive/.env` (randomly generated secrets), pulls the image, starts the services and waits for the application to respond.
 
-Vérification :
+Check:
 
 ```bash
-cd ~/drive && docker compose ps                     # app, db et minio sont "healthy" (et caddy en mode domaine)
+cd ~/drive && docker compose ps                     # app, db and minio are "healthy" (and caddy in domain mode)
 curl -fsS http://127.0.0.1:3000/api/setup; echo     # {"needed":true,"tokenRequired":true}
 ```
 
-Avec un domaine, `curl -fsS https://drive.exemple.fr/api/setup` doit répondre la même chose (le certificat peut prendre une minute).
+With a domain, `curl -fsS https://drive.example.com/api/setup` must return the same thing (the certificate can take a minute).
 
-### 5. Créer le compte propriétaire
+### 5. Create the owner account
 
-Le script affiche une adresse de la forme `https://drive.exemple.fr/setup?token=…`. Ouvrez-la dans un navigateur et créez le compte. Le jeton est aussi dans `~/drive/.env` (variable `SETUP_TOKEN`) ; il n'est plus utilisable une fois le propriétaire créé.
+The script prints an address like `https://drive.example.com/setup?token=…`. Open it in a browser and create the account. The token is also in `~/drive/.env` (variable `SETUP_TOKEN`); it can no longer be used once the owner exists.
 
-Vérification : `curl -fsS http://127.0.0.1:3000/api/setup` renvoie désormais `"needed":false`.
+Check: `curl -fsS http://127.0.0.1:3000/api/setup` now returns `"needed":false`.
 
-Un agent doit s'arrêter ici et laisser la personne créer son compte elle-même : c'est elle qui choisit son mot de passe.
+An agent must stop here and let the person create the account themselves: they are the one who chooses the password.
 
 ## Configuration
 
-Tout se règle dans `~/drive/.env`, puis `docker compose up -d` pour appliquer.
+Everything is set in `~/drive/.env`, then `docker compose up -d` applies it.
 
-| Variable | Rôle | Défaut |
+| Variable | Purpose | Default |
 |---|---|---|
-| `APP_URL` | Adresse publique de l'application | écrite par le script |
-| `USERCONTENT_URL` | Adresse publique du contenu isolé | écrite par le script |
-| `APP_DOMAIN`, `CONTENT_DOMAIN` | Domaines servis par Caddy en HTTPS | vides en mode IP |
-| `COMPOSE_PROFILES` | `https` active Caddy | `https` en mode domaine |
-| `APP_NAME` | Nom affiché dans l'interface et les emails | `Drive` |
-| `SMTP_URL`, `SMTP_FROM` | Envoi des invitations et des codes de connexion | désactivé |
-| `UPLOAD_MAX_BYTES` | Taille maximale d'un fichier | 5 Go |
-| `STORAGE_QUOTA_BYTES` | Espace total autorisé | 100 Go |
-| `ACTIVITY_RETENTION_DAYS` | Durée de conservation du journal d'activité | 365 |
-| `ACTIVITY_IP_MODE` | `hash` (réseau haché) ou `none` | `hash` |
-| `APP_BIND`, `APP_PORT`, `CONTENT_PORT` | Exposition directe des ports | `127.0.0.1`, 3000, 3001 |
-| `TRUST_PROXY` | Faire confiance à `X-Forwarded-For` (derrière un proxy) | `true` en mode domaine |
-| `S3_*` | Stockage S3 externe (R2, AWS, Scaleway…) au lieu de MinIO | MinIO intégré |
+| `APP_URL` | Public address of the application | written by the script |
+| `USERCONTENT_URL` | Public address of the isolated content | written by the script |
+| `APP_DOMAIN`, `CONTENT_DOMAIN` | Domains served over HTTPS by Caddy | empty in IP mode |
+| `COMPOSE_PROFILES` | `https` enables Caddy | `https` in domain mode |
+| `APP_NAME` | Name shown in the interface and the emails | `Drive` |
+| `SMTP_URL`, `SMTP_FROM` | Sending invitations and sign-in codes | disabled |
+| `UPLOAD_MAX_BYTES` | Maximum size of a file | 5 GB |
+| `STORAGE_QUOTA_BYTES` | Total space allowed | 100 GB |
+| `ACTIVITY_RETENTION_DAYS` | How long the activity log is kept | 365 |
+| `ACTIVITY_IP_MODE` | `hash` (hashed network) or `none` | `hash` |
+| `APP_BIND`, `APP_PORT`, `CONTENT_PORT` | Direct port exposure | `127.0.0.1`, 3000, 3001 |
+| `TRUST_PROXY` | Trust `X-Forwarded-For` (behind a proxy) | `true` in domain mode |
+| `S3_*` | External S3 storage (R2, AWS, Scaleway…) instead of MinIO | built-in MinIO |
 
-### Derrière votre propre reverse proxy
+### Behind your own reverse proxy
 
-Si vous avez déjà Nginx, Traefik ou un Caddy existant : laissez `COMPOSE_PROFILES` vide, mettez `TRUST_PROXY=true`, et faites pointer vos deux domaines vers `127.0.0.1:3000` en conservant l'en-tête `Host` d'origine. Les deux domaines vont vers le même conteneur : c'est l'en-tête `Host` qui les distingue.
+If you already run Nginx, Traefik or your own Caddy: leave `COMPOSE_PROFILES` empty, set `TRUST_PROXY=true`, and point both domains to `127.0.0.1:3000`, keeping the original `Host` header. Both domains go to the same container: the `Host` header is what tells them apart.
 
-### Stockage S3 externe
+### External S3 storage
 
-Renseignez `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (et `S3_FORCE_PATH_STYLE=false` pour AWS). Le service `minio` peut alors être ignoré.
+Fill in `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (and `S3_FORCE_PATH_STYLE=false` for AWS). The `minio` service can then be ignored.
 
-## Mettre à jour
+## Updating
 
 ```bash
 ~/drive/install.sh update
 ```
 
-Les migrations de base de données s'appliquent automatiquement au démarrage.
+Database migrations are applied automatically at startup.
 
-## Sauvegarder et restaurer
+## Back up and restore
 
 ```bash
-~/drive/install.sh backup   # crée ~/drive/backups/AAAA-MM-JJ_HHMMSS/{database.sql.gz,files.tar.gz,env}
+~/drive/install.sh backup   # creates ~/drive/backups/YYYY-MM-DD_HHMMSS/{database.sql.gz,files.tar.gz,env}
 ```
 
-Copiez ce dossier hors du serveur (il contient vos secrets). Pour restaurer sur une nouvelle machine :
+Copy this folder off the server (it contains your secrets). To restore on a new machine:
 
 ```bash
 git clone https://github.com/Aqu1tain/drive.git ~/drive && cd ~/drive
-cp /chemin/vers/sauvegarde/env .env
+cp /path/to/backup/env .env
 docker compose up -d db minio
-gunzip -c /chemin/vers/sauvegarde/database.sql.gz | docker compose exec -T db psql -U drive -d drive
-docker run --rm --volumes-from "$(docker compose ps -q minio)" -v /chemin/vers/sauvegarde:/backup alpine sh -c 'tar -C /data -xzf /backup/files.tar.gz'
+gunzip -c /path/to/backup/database.sql.gz | docker compose exec -T db psql -U drive -d drive
+docker run --rm --volumes-from "$(docker compose ps -q minio)" -v /path/to/backup:/backup alpine sh -c 'tar -C /data -xzf /backup/files.tar.gz'
 docker compose up -d
 ```
 
-## Dépannage
+## Troubleshooting
 
-| Symptôme | Piste |
+| Symptom | What to check |
 |---|---|
-| `permission denied` avec Docker | `sudo usermod -aG docker $USER` puis reconnectez-vous |
-| Le certificat HTTPS n'arrive pas | DNS pas encore propagé, ou ports 80/443 fermés. `docker compose logs caddy` |
-| La page affiche une erreur réseau à l'enregistrement | `APP_URL` ne correspond pas à l'adresse utilisée dans le navigateur |
-| Les pages HTML ne s'affichent pas | `USERCONTENT_URL` doit être joignable et différent de `APP_URL` |
-| Pas d'email reçu | `SMTP_URL` vide ou invalide. Les liens d'invitation restent copiables depuis le dialogue de partage |
-| Les clés d'accès ne fonctionnent pas | Elles exigent HTTPS : utilisez le mode domaine |
+| `permission denied` with Docker | `sudo usermod -aG docker $USER` then log in again |
+| The HTTPS certificate never arrives | DNS not propagated yet, or ports 80/443 closed. `docker compose logs caddy` |
+| The page shows a network error when creating the account | `APP_URL` does not match the address used in the browser |
+| HTML pages do not display | `USERCONTENT_URL` must be reachable and different from `APP_URL` |
+| No email received | `SMTP_URL` empty or invalid. Invitation links can still be copied from the share dialog |
+| Passkeys do not work | They require HTTPS: use domain mode |
 
-Journal de l'application : `~/drive/install.sh logs`.
+Application logs: `~/drive/install.sh logs`.
 
-## Désinstaller
+## Uninstalling
 
 ```bash
-~/drive/install.sh uninstall   # arrête Drive et supprime ses données après confirmation
+~/drive/install.sh uninstall   # stops Drive and deletes its data after confirmation
 ```
