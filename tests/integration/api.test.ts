@@ -364,6 +364,61 @@ describe('upload safety', () => {
   })
 })
 
+describe('tags', () => {
+  const created: string[] = []
+  afterAll(async () => {
+    for (const id of created) await owner.delete(`/api/tags/${id}`)
+  })
+
+  const newTag = async (name: string) => {
+    const response = await owner.post('/api/tags', { name })
+    expect(response.status).toBe(201)
+    created.push(response.body.id)
+    return response.body as { id: string, name: string, color: string }
+  }
+
+  it('labels a selection, filters search and survives deletion of the tag', async () => {
+    const urgent = await newTag(`  Urgent ${unique('t')}  `)
+    expect(urgent.name).toMatch(/^Urgent t-/)
+    expect((await owner.post('/api/tags', { name: urgent.name.toUpperCase() })).status).toBe(409)
+    const later = await newTag(`À relancer ${unique('t')}`)
+
+    const [a, b] = [await fileIn(root), await fileIn(root)]
+    const tagged = await owner.post('/api/resources/tags', { ids: [a.id, b.id], add: [urgent.id, later.id] })
+    expect(tagged.body.items).toHaveLength(2)
+    await owner.post('/api/resources/tags', { ids: [b.id], remove: [later.id] })
+
+    const listing = (await owner.get(`/api/folders/${root}`)).body.items as Array<{ id: string, tagIds: string[] }>
+    expect(listing.find(item => item.id === a.id)!.tagIds.toSorted()).toEqual([urgent.id, later.id].toSorted())
+    expect(listing.find(item => item.id === b.id)!.tagIds).toEqual([urgent.id])
+
+    const search = async (q: string) => ((await owner.get(`/api/search?q=${encodeURIComponent(q)}`)).body.items as Array<{ id: string }>).map(item => item.id)
+    expect(await search(`tag:"${later.name}"`)).toEqual([a.id])
+    expect((await search(`tag:"${urgent.name}"`)).toSorted()).toEqual([a.id, b.id].toSorted())
+
+    const counted = (await owner.get('/api/tags')).body.tags.find((tag: { id: string }) => tag.id === urgent.id)
+    expect(counted.count).toBe(2)
+
+    expect((await owner.delete(`/api/tags/${urgent.id}`)).status).toBe(200)
+    expect((await owner.get(`/api/resources/${b.id}`)).body.item.tagIds).toEqual([])
+    expect(await search(`tag:"${urgent.name}"`)).toEqual([])
+  })
+
+  it('stays private to the owner', async () => {
+    const { client: reader, email } = await readerClient(owner)
+    const tag = await newTag(unique('secret'))
+    const file = await fileIn(root)
+    await owner.post(`/api/resources/${file.id}/access`, { email, notify: false })
+    await owner.post('/api/resources/tags', { ids: [file.id], add: [tag.id] })
+
+    expect((await reader.get(`/api/resources/${file.id}`)).body.item.tagIds).toBeUndefined()
+    expect((await reader.get(`/api/search?q=${encodeURIComponent(`tag:${tag.name}`)}`)).body.items).toEqual([])
+    expect((await reader.get('/api/tags')).status).toBe(403)
+    expect((await reader.post('/api/resources/tags', { ids: [file.id], remove: [tag.id] })).status).toBe(403)
+    expect((await reader.post('/api/tags', { name: 'pirate' })).status).toBe(403)
+  })
+})
+
 describe('reader favorites', () => {
   it('lets a reader star what they can read, for themselves only', async () => {
     const [paul, marie] = [await readerClient(owner), await readerClient(owner)]
