@@ -12,5 +12,5 @@ export default defineEventHandler(async (event) => {
   const query = parseSearchQuery(q)
   const empty = query.terms.length === 0 && !query.type && !query.access && !query.sharedWith && !query.after && !query.before && !query.tag
   if (empty) return { items: [], query }
-  return { items: await searchResources(viewer, query, limit), query }
+  return { items: await withFolderPreviews(viewer, await searchResources(viewer, query, limit)), query }
 })

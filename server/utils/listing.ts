@@ -43,7 +43,7 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
     return {
       folder: null,
       breadcrumbs: [ROOT_CRUMB],
-      items: children.map(child => toItem(child, { viewer, summary: summarizeAccess(byChild.get(child.id) ?? [], []) })),
+      items: await withFolderPreviews(viewer, children.map(child => toItem(child, { viewer, summary: summarizeAccess(byChild.get(child.id) ?? [], []) }))),
     }
   }
 
@@ -58,10 +58,10 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
     return {
       folder: toItem(folder, { viewer, access, summary: summarizeAccess(own, effective.filter(row => row.inheritedFrom)) }),
       breadcrumbs,
-      items: children.map(child => toItem(child, {
+      items: await withFolderPreviews(viewer, children.map(child => toItem(child, {
         viewer,
         summary: summarizeAccess(byChild.get(child.id) ?? [], child.inheritAccess ? effective : []),
-      })),
+      }))),
     }
   }
 
@@ -70,5 +70,5 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
     return childAccess.read ? [toItem(child, { viewer, access: childAccess })] : []
   })
   const [marked, ...markedItems] = await withFavorites(viewer, [toItem(folder, { viewer, access }), ...items])
-  return { folder: marked!, breadcrumbs, items: markedItems }
+  return { folder: marked!, breadcrumbs, items: await withFolderPreviews(viewer, markedItems) }
 }

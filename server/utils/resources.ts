@@ -150,9 +150,11 @@ export async function summarizeMany(items: Resource[]) {
   }))
 }
 
+export const thumbnailUrl = (id: string, checksum: string, base: string) => `${base}/resources/${id}/thumbnail?v=${checksum.slice(0, 12)}`
+
 export function thumbnailPath(resource: Resource, base: string) {
   if (resource.thumbnailStatus !== 'ready' || !resource.checksum) return null
-  return `${base}/resources/${resource.id}/thumbnail?v=${resource.checksum.slice(0, 12)}`
+  return thumbnailUrl(resource.id, resource.checksum, base)
 }
 
 export const resourceKind = (resource: Resource) => isSite(resource) ? 'html' as const : kindOf(resource.type, resource.mimeType)
