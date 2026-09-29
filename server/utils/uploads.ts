@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+import { Readable } from 'node:stream'
 import { eq } from 'drizzle-orm'
 import { keepBothName } from '#shared/utils/names'
 import { detectMimeType } from '../lib/mime'
@@ -82,4 +84,13 @@ export async function commitUpload(viewer: Viewer, plan: UploadPlan, blob: { sto
   enqueueProcessing(resource.id)
   const summaries = await summarizeMany([resource])
   return { item: toItem(resource, { viewer, summary: summaries.get(resource.id) }), replaced: !!replacing }
+}
+
+/** Stores content already in memory (a small text written by an AI app), with the same checks as an upload. */
+export async function uploadBuffer(viewer: Viewer, input: { parentId?: string | null, name: string, conflict: ConflictStrategy }, data: Buffer) {
+  const plan = await planUpload({ ...input, size: data.length })
+  const storageKey = newBlobKey()
+  await useStorageProvider().put(storageKey, Readable.from(data))
+  const checksum = createHash('sha256').update(data).digest('hex')
+  return commitUpload(viewer, plan, { storageKey, size: data.length, checksum, head: data.subarray(0, SNIFF_BYTES) })
 }

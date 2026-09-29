@@ -12,6 +12,8 @@ export interface Viewer {
   linkRule?: AccessRule
   shareToken?: string
   visitorId?: string
+  /** The AI app acting for this person, named in the activity journal. */
+  via?: string
 }
 
 declare module 'h3' {

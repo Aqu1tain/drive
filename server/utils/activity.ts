@@ -20,7 +20,8 @@ interface Actor {
 
 function actorOf(viewer: Viewer): Actor {
   if (viewer.user) {
-    return { actorKind: viewer.kind === 'owner' ? 'owner' : 'user', actorLabel: viewer.user.name || viewer.user.email, userId: viewer.user.id }
+    const name = viewer.user.name || viewer.user.email
+    return { actorKind: viewer.kind === 'owner' ? 'owner' : 'user', actorLabel: viewer.via ? `${name} via ${viewer.via}` : name, userId: viewer.user.id }
   }
   if (viewer.invitation) {
     return {
@@ -34,7 +35,7 @@ function actorOf(viewer: Viewer): Actor {
 }
 
 function sameActor(actor: Actor, ipHash: string | null) {
-  if (actor.userId) return eq(accessEvents.userId, actor.userId)
+  if (actor.userId) return and(eq(accessEvents.userId, actor.userId), eq(accessEvents.actorLabel, actor.actorLabel))
   if (actor.invitationId) return eq(accessEvents.invitationId, actor.invitationId)
   if (actor.visitorId) return eq(accessEvents.visitorId, actor.visitorId)
   return ipHash ? eq(accessEvents.ipHash, ipHash) : undefined
