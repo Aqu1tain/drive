@@ -29,6 +29,7 @@ const dialogs = useDialogs()
 const details = useDetailsPanel()
 const uploads = useUploads()
 const context = useSelectionContext()
+const { t } = useI18n()
 
 const selection = ref<string[]>([])
 const selectedItems = computed(() => {
@@ -50,7 +51,7 @@ function withoutPreview() {
 function openItem(item: ResourceItem) {
   if (item.type === 'folder') {
     if (props.trash) {
-      dialogs.confirm({ title: 'Ce dossier est dans la corbeille', message: 'Restaurez-le pour parcourir son contenu.', confirmLabel: 'Restaurer' })
+      dialogs.confirm({ title: t('files.trashedFolder.title'), message: t('files.trashedFolder.browse'), confirmLabel: t('actions.restore') })
         .then((confirmed) => {
           if (confirmed) actions.restore([item])
         })
@@ -168,8 +169,8 @@ function onMoveToCrumb(crumb: Crumb, event: DragEvent) {
 }
 
 const viewOptions = [
-  { value: 'list' as const, label: 'Liste', icon: List },
-  { value: 'grid' as const, label: 'Grille', icon: LayoutGrid },
+  { value: 'list' as const, label: t('files.list'), icon: List },
+  { value: 'grid' as const, label: t('files.grid'), icon: LayoutGrid },
 ]
 
 const browser = useTemplateRef<{ focus: () => void }>('browser')
@@ -180,20 +181,20 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
     <section class="flex min-w-0 flex-1 flex-col">
       <div class="flex h-14 shrink-0 items-center gap-2 px-3 md:px-4">
         <template v-if="selectedItems.length">
-          <UiIconButton :icon="X" label="Effacer la sélection" shortcut="Échap" @click="selection = []; browser?.focus()" />
-          <span class="mr-2 text-base font-semibold text-ink tabular" aria-live="polite">{{ plural(selectedItems.length, 'sélectionné', 'sélectionnés') }}</span>
+          <UiIconButton :icon="X" :label="t('files.clearSelection')" :shortcut="t('actions.keys.escape')" @click="selection = []; browser?.focus()" />
+          <span class="mr-2 text-base font-semibold text-ink tabular" aria-live="polite">{{ t('files.selected', { count: selectedItems.length }) }}</span>
           <div class="flex items-center gap-0.5">
             <template v-if="trash">
-              <UiButton size="sm" variant="ghost" :icon="RotateCcw" @click="actions.restore(selectedItems)">Restaurer</UiButton>
-              <UiButton size="sm" variant="ghost" :icon="Trash2" class="text-danger" @click="actions.deleteForever(selectedItems)">Supprimer définitivement</UiButton>
+              <UiButton size="sm" variant="ghost" :icon="RotateCcw" @click="actions.restore(selectedItems)">{{ t('actions.restore') }}</UiButton>
+              <UiButton size="sm" variant="ghost" :icon="Trash2" class="text-danger" @click="actions.deleteForever(selectedItems)">{{ t('actions.deleteForever') }}</UiButton>
             </template>
             <template v-else>
-              <UiIconButton v-if="isOwner && selectedItems.length === 1" :icon="Share2" label="Partager" shortcut="Mod+Alt+A" @click="dialogs.share(selectedItems[0]!)" />
-              <UiIconButton v-if="canDownloadSelection" :icon="Download" label="Télécharger" @click="actions.download(selectedItems, apiBase)" />
-              <UiIconButton v-if="isOwner" :icon="FolderInput" label="Déplacer" class="max-sm:hidden" @click="dialogs.move(selectedItems)" />
-              <UiIconButton v-if="isOwner" :icon="Trash2" label="Déplacer vers la corbeille" shortcut="Suppr" @click="actions.trash(selectedItems)" />
+              <UiIconButton v-if="isOwner && selectedItems.length === 1" :icon="Share2" :label="t('common.share')" shortcut="Mod+Alt+A" @click="dialogs.share(selectedItems[0]!)" />
+              <UiIconButton v-if="canDownloadSelection" :icon="Download" :label="t('common.download')" @click="actions.download(selectedItems, apiBase)" />
+              <UiIconButton v-if="isOwner" :icon="FolderInput" :label="t('actions.move')" class="max-sm:hidden" @click="dialogs.move(selectedItems)" />
+              <UiIconButton v-if="isOwner" :icon="Trash2" :label="t('actions.trash')" :shortcut="t('actions.keys.delete')" @click="actions.trash(selectedItems)" />
               <UiDropdownMenu :entries="selectionMenu" align="start">
-                <UiIconButton :icon="EllipsisVertical" label="Plus d’actions" />
+                <UiIconButton :icon="EllipsisVertical" :label="t('files.moreActions')" />
               </UiDropdownMenu>
             </template>
           </div>
@@ -205,8 +206,8 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
 
         <div class="ml-auto flex shrink-0 items-center gap-1.5">
           <slot name="actions" :selected="selectedItems" />
-          <UiSegmented v-model="preferences.view" :options="viewOptions" label="Affichage" class="max-sm:hidden" />
-          <UiIconButton v-if="canDetails && mode !== 'share'" :icon="Info" label="Détails" :active="details.open.value" class="max-lg:hidden" @click="details.toggle()" />
+          <UiSegmented v-model="preferences.view" :options="viewOptions" :label="t('files.layout')" class="max-sm:hidden" />
+          <UiIconButton v-if="canDetails && mode !== 'share'" :icon="Info" :label="t('common.details')" :active="details.open.value" class="max-lg:hidden" @click="details.toggle()" />
         </div>
       </div>
 
@@ -238,7 +239,7 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
       </FilesFileBrowser>
     </section>
 
-    <aside v-if="previewId && !fullPreview" class="flex w-[45%] max-w-[760px] min-w-[360px] shrink-0 flex-col border-l border-line-weak animate-slide-in-right" aria-label="Aperçu">
+    <aside v-if="previewId && !fullPreview" class="flex w-[45%] max-w-[760px] min-w-[360px] shrink-0 flex-col border-l border-line-weak animate-slide-in-right" :aria-label="t('preview.title')">
       <PreviewPanel
         :id="previewId"
         :item="previewItem"
@@ -248,7 +249,7 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
         @expand="setFull(true)"
       />
     </aside>
-    <aside v-else-if="canDetails && mode !== 'share' && details.open.value && breakpoints.lg" class="flex w-[340px] shrink-0 flex-col border-l border-line-weak animate-slide-in-right" aria-label="Détails">
+    <aside v-else-if="canDetails && mode !== 'share' && details.open.value && breakpoints.lg" class="flex w-[340px] shrink-0 flex-col border-l border-line-weak animate-slide-in-right" :aria-label="t('common.details')">
       <DetailsPanel :item="detailsItem" :count="selectedItems.length" :mode="mode" :folder-to="folderTo" @close="details.close()" />
     </aside>
 
@@ -268,7 +269,7 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
       <div v-if="dragDepth > 0 && acceptsFiles" class="pointer-events-none absolute inset-2 z-(--z-dropzone) flex items-end justify-center rounded-xl border-2 border-dashed border-accent bg-accent-softer/60 pb-10">
         <div class="flex items-center gap-3 rounded-lg bg-accent px-5 py-3 text-white shadow-lifted">
           <CloudUpload class="size-5" aria-hidden="true" />
-          <span class="text-base">Déposer pour importer dans <strong class="font-semibold">{{ (dropTarget ?? folder)?.name }}</strong></span>
+          <span class="text-base">{{ t('files.dropTo') }} <strong class="font-semibold">{{ (dropTarget ?? folder)?.name }}</strong></span>
         </div>
       </div>
     </Transition>
@@ -279,7 +280,7 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
       size="lg"
       :icon="Plus"
       class="fixed right-5 bottom-6 z-(--z-sticky) size-14! rounded-2xl! p-0! shadow-lifted"
-      aria-label="Importer des fichiers"
+      :aria-label="t('files.uploadFiles')"
       @click="pickFiles"
     />
   </div>

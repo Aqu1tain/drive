@@ -7,8 +7,7 @@ import type { ResourceItem } from '#shared/types/api'
 
 export type BrowserMode = 'owner' | 'reader' | 'share'
 
-
-const label = (items: ResourceItem[]) => items.length === 1 ? items[0]!.name : plural(items.length, 'élément')
+const named = (items: ResourceItem[]) => ({ count: items.length, name: items[0]?.name ?? '' })
 
 /** Everything a person can do to files, in one place: menus, palette and shortcuts all read from here. */
 export function useFileActions() {
@@ -17,6 +16,7 @@ export function useFileActions() {
   const details = useDetailsPanel()
   const router = useRouter()
   const route = useRoute()
+  const { t } = useI18n()
 
   function refresh() {
     for (const key of ['folder', 'list', 'search', 'resource', 'access', 'activity', 'storage']) {
@@ -63,7 +63,7 @@ export function useFileActions() {
     }
     catch (error) {
       tab?.close()
-      toast.error(errorMessage(error, 'Impossible d’ouvrir la page'))
+      toast.error(errorMessage(error, t('actions.failed.openPage')))
     }
   }
 
@@ -74,62 +74,60 @@ export function useFileActions() {
   async function star(items: ResourceItem[], starred: boolean) {
     const rollback = snapshot()
     for (const item of items) patchInCaches(item.id, { starred })
-    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}/star`, { method: 'PUT', body: { starred } }))), 'Impossible de mettre à jour les favoris', rollback)
+    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}/star`, { method: 'PUT', body: { starred } }))), t('actions.failed.star'), rollback)
     queryClient.invalidateQueries({ queryKey: ['list', 'starred'] })
-    toast(starred ? `${label(items)} ajouté aux favoris` : `${label(items)} retiré des favoris`)
+    toast(t(starred ? 'actions.toast.starred' : 'actions.toast.unstarred', named(items)))
   }
 
   async function restore(items: ResourceItem[], quiet = false) {
     const result = await run(() => api<{ restored: Array<{ name: string, renamed: boolean, movedToRoot: boolean }> }>('/api/resources/restore', {
       method: 'POST',
       body: { ids: items.map(i => i.id) },
-    }), 'La restauration a échoué')
+    }), t('actions.failed.restore'))
     refresh()
     if (quiet) return
     const movedToRoot = result.restored.filter(r => r.movedToRoot).length
-    toast.success(movedToRoot
-      ? `${label(items)} restauré dans Mon Drive (dossier d’origine dans la corbeille)`
-      : `${label(items)} restauré`)
+    toast.success(t(movedToRoot ? 'actions.toast.restoredToRoot' : 'actions.toast.restored', named(items)))
   }
 
   async function trash(items: ResourceItem[]) {
     if (items.length === 0) return
     const rollback = snapshot()
     removeFromCaches(new Set(items.map(i => i.id)))
-    await run(() => api('/api/resources/trash', { method: 'POST', body: { ids: items.map(i => i.id) } }), 'Impossible de déplacer vers la corbeille', rollback)
+    await run(() => api('/api/resources/trash', { method: 'POST', body: { ids: items.map(i => i.id) } }), t('actions.failed.trash'), rollback)
     refresh()
-    toast(`${label(items)} déplacé vers la corbeille`, {
+    toast(t('actions.toast.trashed', named(items)), {
       duration: 6000,
-      action: { label: 'Annuler', onClick: () => restore(items, true) },
+      action: { label: t('actions.undo'), onClick: () => restore(items, true) },
     })
   }
 
   async function deleteForever(items: ResourceItem[]) {
     const confirmed = await dialogs.confirm({
-      title: items.length === 1 ? `Supprimer définitivement « ${items[0]!.name} » ?` : `Supprimer définitivement ${plural(items.length, 'élément')} ?`,
-      message: 'Cette action est irréversible. Les partages et l’historique associés seront effacés.',
-      confirmLabel: 'Supprimer définitivement',
+      title: t('actions.confirm.deleteTitle', named(items)),
+      message: t('actions.confirm.deleteMessage'),
+      confirmLabel: t('actions.deleteForever'),
       danger: true,
     })
     if (!confirmed) return
     const rollback = snapshot()
     removeFromCaches(new Set(items.map(i => i.id)))
-    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'DELETE' }))), 'La suppression a échoué', rollback)
+    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'DELETE' }))), t('actions.failed.delete'), rollback)
     refresh()
-    toast(`${label(items)} supprimé définitivement`)
+    toast(t('actions.toast.deleted', named(items)))
   }
 
   async function emptyTrash() {
     const confirmed = await dialogs.confirm({
-      title: 'Vider la corbeille ?',
-      message: 'Tous les éléments de la corbeille seront supprimés définitivement. Cette action est irréversible.',
-      confirmLabel: 'Vider la corbeille',
+      title: t('actions.confirm.emptyTitle'),
+      message: t('actions.confirm.emptyMessage'),
+      confirmLabel: t('actions.confirm.emptyTrash'),
       danger: true,
     })
     if (!confirmed) return
-    const { deleted } = await run(() => api<{ deleted: number }>('/api/trash/empty', { method: 'POST' }), 'Impossible de vider la corbeille')
+    const { deleted } = await run(() => api<{ deleted: number }>('/api/trash/empty', { method: 'POST' }), t('actions.failed.emptyTrash'))
     refresh()
-    toast(deleted ? `${plural(deleted, 'élément')} supprimé${deleted > 1 ? 's' : ''} définitivement` : 'La corbeille était déjà vide')
+    toast(deleted ? t('actions.toast.emptied', { count: deleted }) : t('actions.toast.alreadyEmpty'))
   }
 
   async function moveTo(items: ResourceItem[], target: { id: string | null, name: string }, options: { undoable?: boolean } = {}) {
@@ -143,20 +141,20 @@ export function useFileActions() {
     }
     catch (error) {
       if (errorReason(error) !== 'name_taken') {
-        toast.error(errorMessage(error, 'Le déplacement a échoué'))
+        toast.error(errorMessage(error, t('actions.failed.move')))
         return
       }
       const choice = await dialogs.conflict({ name: (error as { data?: { data?: { conflicts?: string[] } } }).data?.data?.conflicts?.[0] ?? movable[0]!.name, kind: 'file', remaining: 0 })
       if (choice.strategy === 'skip') return
-      await run(() => send('keep'), 'Le déplacement a échoué')
+      await run(() => send('keep'), t('actions.failed.move'))
     }
     refresh()
-    toast(`${label(movable)} déplacé vers ${target.name}`, {
+    toast(t('actions.toast.moved', { ...named(movable), folder: target.name }), {
       duration: 6000,
       action: options.undoable === false
         ? undefined
         : {
-            label: 'Annuler',
+            label: t('actions.undo'),
             onClick: async () => {
               for (const [parentId, group] of origins) {
                 await api('/api/resources/move', { method: 'POST', body: { ids: group.map(i => i.id), targetId: parentId, conflict: 'keep' } })
@@ -169,13 +167,13 @@ export function useFileActions() {
 
   async function copyLink(item: ResourceItem) {
     let url = `${location.origin}/open/${item.id}`
-    let message = 'Lien copié, accessible aux personnes ayant accès'
+    let message = t('actions.toast.linkCopied')
     if (item.access?.hasLink) {
       const access = await api<{ link: { url: string } | null, inheritedLink: { url: string } | null }>(`/api/resources/${item.id}/access`)
       const link = access.link ?? access.inheritedLink
       if (link) {
         url = link.url
-        message = 'Lien public copié'
+        message = t('actions.toast.publicLinkCopied')
       }
     }
     try {
@@ -183,7 +181,7 @@ export function useFileActions() {
       toast(message)
     }
     catch {
-      toast(`Copie impossible. Lien : ${url}`, { duration: 10000 })
+      toast(t('actions.toast.copyFailed', { url }), { duration: 10000 })
     }
   }
 
@@ -198,7 +196,7 @@ export function useFileActions() {
       : `${apiBase}/downloads?ids=${allowed.map(item => item.id).join(',')}`
     anchor.download = single?.type === 'file' ? single.name : ''
     anchor.click()
-    if (!single || single.type === 'folder') toast('Préparation de l’archive ZIP, le téléchargement démarre')
+    if (!single || single.type === 'folder') toast(t('actions.toast.preparingZip'))
   }
 
   function showDetails(item: ResourceItem | null, tab: DetailsTab = 'details') {
@@ -219,50 +217,50 @@ export function useFileActions() {
 
     if (context.trash) {
       return [
-        { id: 'restore', label: 'Restaurer', icon: ArchiveRestore, onSelect: () => restore(items) },
+        { id: 'restore', label: t('actions.restore'), icon: ArchiveRestore, onSelect: () => restore(items) },
         { kind: 'separator' },
-        { id: 'delete', label: 'Supprimer définitivement', icon: Trash2, danger: true, onSelect: () => deleteForever(items) },
+        { id: 'delete', label: t('actions.deleteForever'), icon: Trash2, danger: true, onSelect: () => deleteForever(items) },
       ]
     }
 
     const openEntries: MenuEntry[] = single
       ? [
-          { id: 'open', label: 'Ouvrir', icon: single.type === 'folder' ? FolderOpen : Eye, shortcut: 'Entrée', onSelect: () => context.open?.(single) },
-          ...(single.type === 'file' ? [{ id: 'preview', label: 'Aperçu rapide', icon: Eye, shortcut: 'Espace', onSelect: () => preview(single) }] : []),
-          ...(single.kind === 'html' ? [{ id: 'open-tab', label: 'Ouvrir en pleine fenêtre', icon: ExternalLink, onSelect: () => openInTab(single, context.apiBase) }] : []),
+          { id: 'open', label: t('common.open'), icon: single.type === 'folder' ? FolderOpen : Eye, shortcut: t('actions.keys.enter'), onSelect: () => context.open?.(single) },
+          ...(single.type === 'file' ? [{ id: 'preview', label: t('actions.preview'), icon: Eye, shortcut: t('actions.keys.space'), onSelect: () => preview(single) }] : []),
+          ...(single.kind === 'html' ? [{ id: 'open-tab', label: t('actions.openInWindow'), icon: ExternalLink, onSelect: () => openInTab(single, context.apiBase) }] : []),
         ]
       : []
 
     const allStarred = items.every(item => item.starred)
-    const starEntry = { id: 'star', label: allStarred ? 'Retirer des favoris' : 'Ajouter aux favoris', icon: allStarred ? StarOff : Star, shortcut: 'S', onSelect: () => star(items, !allStarred) }
+    const starEntry = { id: 'star', label: t(allStarred ? 'actions.removeFavorite' : 'actions.addFavorite'), icon: allStarred ? StarOff : Star, shortcut: 'S', onSelect: () => star(items, !allStarred) }
 
     if (context.mode !== 'owner') {
       return tidyMenu([
         ...openEntries,
         { kind: 'separator' },
         context.mode === 'reader' && starEntry,
-        downloadable && { id: 'download', label: 'Télécharger', icon: Download, onSelect: () => download(items, context.apiBase) },
-        context.mode === 'reader' && single && { id: 'details', label: 'Détails', icon: Info, onSelect: () => showDetails(single) },
+        downloadable && { id: 'download', label: t('common.download'), icon: Download, onSelect: () => download(items, context.apiBase) },
+        context.mode === 'reader' && single && { id: 'details', label: t('common.details'), icon: Info, onSelect: () => showDetails(single) },
       ])
     }
 
     return tidyMenu([
       ...openEntries,
       { kind: 'separator' },
-      single && { id: 'share', label: 'Partager', icon: Share2, shortcut: 'Mod+Alt+A', onSelect: () => dialogs.share(single) },
-      single && { id: 'copy-link', label: 'Copier le lien', icon: Link, onSelect: () => copyLink(single) },
+      single && { id: 'share', label: t('common.share'), icon: Share2, shortcut: 'Mod+Alt+A', onSelect: () => dialogs.share(single) },
+      single && { id: 'copy-link', label: t('actions.copyLink'), icon: Link, onSelect: () => copyLink(single) },
       { kind: 'separator' },
       starEntry,
-      { id: 'tags', label: 'Étiquettes…', icon: Tag, shortcut: 'L', onSelect: () => dialogs.tags(items) },
+      { id: 'tags', label: t('actions.tags'), icon: Tag, shortcut: 'L', onSelect: () => dialogs.tags(items) },
       { kind: 'separator' },
-      single && { id: 'rename', label: 'Renommer', icon: Pencil, shortcut: 'F2', onSelect: () => dialogs.rename(single) },
-      { id: 'move', label: 'Déplacer', icon: FolderInput, onSelect: () => dialogs.move(items) },
-      downloadable && { id: 'download', label: 'Télécharger', icon: Download, onSelect: () => download(items) },
+      single && { id: 'rename', label: t('common.rename'), icon: Pencil, shortcut: 'F2', onSelect: () => dialogs.rename(single) },
+      { id: 'move', label: t('actions.move'), icon: FolderInput, onSelect: () => dialogs.move(items) },
+      downloadable && { id: 'download', label: t('common.download'), icon: Download, onSelect: () => download(items) },
       { kind: 'separator' },
-      single && { id: 'details', label: 'Détails', icon: Info, onSelect: () => showDetails(single, 'details') },
-      single && { id: 'activity', label: 'Activité', icon: History, onSelect: () => showDetails(single, 'activity') },
+      single && { id: 'details', label: t('common.details'), icon: Info, onSelect: () => showDetails(single, 'details') },
+      single && { id: 'activity', label: t('actions.activity'), icon: History, onSelect: () => showDetails(single, 'activity') },
       { kind: 'separator' },
-      { id: 'trash', label: 'Déplacer vers la corbeille', icon: Trash2, shortcut: 'Suppr', danger: true, onSelect: () => trash(items) },
+      { id: 'trash', label: t('actions.trash'), icon: Trash2, shortcut: t('actions.keys.delete'), danger: true, onSelect: () => trash(items) },
     ])
   }
 

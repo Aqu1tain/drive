@@ -3,26 +3,27 @@ import { Globe, Lock } from '@lucide/vue'
 import type { AccessSummary } from '#shared/types/api'
 
 const props = defineProps<{ access?: AccessSummary, compact?: boolean }>()
+const { t } = useI18n()
 
 const people = computed(() => props.access?.people ?? [])
 const text = computed(() => {
   const access = props.access
-  if (!access || access.level === 'private') return 'Privé'
+  if (!access || access.level === 'private') return t('files.access.private')
   const parts = []
-  if (access.hasLink) parts.push('Public')
+  if (access.hasLink) parts.push(t('files.access.public'))
   if (people.value.length === 1 && !access.hasLink) parts.push(people.value[0]!.label)
-  else if (access.userCount) parts.push(plural(access.userCount, 'personne'))
-  if (access.invitationCount && !(people.value.length === 1 && !access.hasLink)) parts.push(plural(access.invitationCount, 'invité'))
+  else if (access.userCount) parts.push(t('files.access.people', { count: access.userCount }))
+  if (access.invitationCount && !(people.value.length === 1 && !access.hasLink)) parts.push(t('files.access.invited', { count: access.invitationCount }))
   return parts.join(' · ')
 })
 const tooltip = computed(() => {
   const access = props.access
-  if (!access || access.level === 'private') return 'Visible uniquement par vous'
-  const lines = [
-    ...(access.hasLink ? ['Toute personne disposant du lien'] : []),
-    ...people.value.map(p => p.kind === 'invitation' ? `${p.label} (invité)` : p.label),
-  ]
-  return (access.inherited ? 'Hérité du dossier parent : ' : '') + lines.join(', ')
+  if (!access || access.level === 'private') return t('files.access.onlyYou')
+  const who = [
+    ...(access.hasLink ? [t('files.access.anyoneWithLink')] : []),
+    ...people.value.map(p => p.kind === 'invitation' ? t('files.access.invitedPerson', { name: p.label }) : p.label),
+  ].join(', ')
+  return access.inherited ? t('files.access.inherited', { people: who }) : who
 })
 </script>
 
