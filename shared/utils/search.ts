@@ -12,6 +12,7 @@ export interface SearchQuery {
   after?: string
   before?: string
   folderId?: string
+  tag?: string
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -39,10 +40,10 @@ const TYPE_ALIASES: Record<string, FileKind> = {
 
 export function parseSearchQuery(input: string): SearchQuery {
   const query: SearchQuery = { terms: [] }
-  for (const token of input.trim().split(/\s+/).filter(Boolean)) {
+  for (const token of input.match(/[^\s:]+:"[^"]*"?|\S+/g) ?? []) {
     const colon = token.indexOf(':')
     const key = colon > 0 ? token.slice(0, colon).toLowerCase() : ''
-    const value = colon > 0 ? token.slice(colon + 1) : ''
+    const value = colon > 0 ? token.slice(colon + 1).replace(/^"|"$/g, '') : ''
 
     if (key === 'type' && TYPE_ALIASES[value.toLowerCase()]) query.type = TYPE_ALIASES[value.toLowerCase()]
     else if (key === 'access' && ACCESS_ALIASES[value.toLowerCase()]) query.access = ACCESS_ALIASES[value.toLowerCase()]
@@ -50,6 +51,7 @@ export function parseSearchQuery(input: string): SearchQuery {
     else if (key === 'after' && DATE.test(value)) query.after = value
     else if (key === 'before' && DATE.test(value)) query.before = value
     else if (key === 'in' && UUID.test(value)) query.folderId = value
+    else if ((key === 'tag' || key === 'étiquette' || key === 'etiquette') && value.trim()) query.tag = value.trim().toLowerCase()
     else query.terms.push(token)
   }
   return query
@@ -64,6 +66,7 @@ export function stringifySearchQuery(query: SearchQuery) {
     query.after && `after:${query.after}`,
     query.before && `before:${query.before}`,
     query.folderId && `in:${query.folderId}`,
+    query.tag && (/\s/.test(query.tag) ? `tag:"${query.tag}"` : `tag:${query.tag}`),
   ].filter(Boolean).join(' ')
 }
 
