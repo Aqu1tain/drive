@@ -44,7 +44,7 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
     return {
       folder: null,
       breadcrumbs: [rootCrumb()],
-      items: await withFolderPreviews(viewer, children.map(child => toItem(child, { viewer, summary: summarizeAccess(byChild.get(child.id) ?? [], []) }))),
+      items: await withFolderPreviews(viewer, withVersioning(children, false, children.map(child => toItem(child, { viewer, summary: summarizeAccess(byChild.get(child.id) ?? [], []) })))),
     }
   }
 
@@ -56,13 +56,14 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
   if (viewer.ctx.isOwner) {
     const effective = effectiveRuleRows(chain, rows)
     const own = effective.filter(row => !row.inheritedFrom)
+    const { enabled } = await versioningOf(folder)
     return {
-      folder: toItem(folder, { viewer, access, summary: summarizeAccess(own, effective.filter(row => row.inheritedFrom)) }),
+      folder: { ...toItem(folder, { viewer, access, summary: summarizeAccess(own, effective.filter(row => row.inheritedFrom)) }), versioning: enabled },
       breadcrumbs,
-      items: await withFolderPreviews(viewer, children.map(child => toItem(child, {
+      items: await withFolderPreviews(viewer, withVersioning(children, enabled, children.map(child => toItem(child, {
         viewer,
         summary: summarizeAccess(byChild.get(child.id) ?? [], child.inheritAccess ? effective : []),
-      }))),
+      })))),
     }
   }
 
@@ -110,4 +111,9 @@ export async function resourceDetails(viewer: Viewer, id: string): Promise<Resou
     stats: await activityStats(resource),
     versioning: await versioningOf(resource),
   }
+}
+
+/** For the owner's menus: whether each child folder keeps versions, its own choice or the one it inherits. */
+function withVersioning(children: Resource[], inherited: boolean, items: ResourceItem[]) {
+  return items.map((item, index) => item.type === 'folder' ? { ...item, versioning: children[index]!.versioning ?? inherited } : item)
 }

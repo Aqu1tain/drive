@@ -30,3 +30,28 @@ test('replacing a file in a versioned folder keeps the old one, and it can be re
 
   await removeFolder(owner, folder.id)
 })
+
+test('the folder menus turn version history on, and turning it off asks first', async ({ page }) => {
+  const owner = await ownerApi()
+  const parent = await createFolder(owner, unique('versions'))
+  const name = unique('contrats')
+  const folder = await createFolder(owner, name, parent.id)
+
+  await signIn(page, OWNER.email, OWNER.password)
+  await page.goto(`/drive/folder/${parent.id}`)
+  await page.getByRole('row', { name: new RegExp(name) }).click({ button: 'right' })
+  await page.getByRole('menuitemcheckbox', { name: 'Garder les versions précédentes' }).click()
+  await expect(page.getByText(`Les versions précédentes sont maintenant gardées dans « ${name} »`)).toBeVisible()
+
+  await page.goto(`/drive/folder/${folder.id}`)
+  await expect(page.getByRole('button', { name: 'Versions gardées' })).toBeVisible()
+  await page.getByRole('navigation', { name: 'Fil d’Ariane' }).getByRole('button', { name }).click()
+  const toggle = page.getByRole('menuitemcheckbox', { name: 'Garder les versions précédentes' })
+  await expect(toggle).toHaveAttribute('aria-checked', 'true')
+  await toggle.click()
+  await page.getByRole('dialog', { name: /Désactiver l’historique des versions/ }).getByRole('button', { name: 'Désactiver' }).click()
+  await expect(page.getByRole('button', { name: 'Versions gardées' })).toBeHidden()
+  expect((await (await owner.get(`/api/resources/${folder.id}`)).json()).versioning.enabled).toBe(false)
+
+  await removeFolder(owner, parent.id)
+})

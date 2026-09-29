@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloudUpload, Download, EllipsisVertical, FolderInput, Info, LayoutGrid, List, Plus, RotateCcw, Share2, Trash2, X } from '@lucide/vue'
+import { CloudUpload, Download, EllipsisVertical, FileClock, FolderInput, FolderPlus, Info, LayoutGrid, List, Plus, RotateCcw, Share2, Trash2, Upload, X } from '@lucide/vue'
 import type { Crumb, ResourceItem } from '#shared/types/api'
 
 const props = withDefaults(defineProps<{
@@ -113,6 +113,19 @@ const canDownloadSelection = computed(() => selectedItems.value.some(item => ite
 
 const pickFiles = () => document.dispatchEvent(new CustomEvent('drive:upload'))
 
+const createEntries = computed<MenuEntry[]>(() => acceptsFiles.value
+  ? [
+      { id: 'new-folder', label: t('files.newFolder'), icon: FolderPlus, onSelect: () => dialogs.newFolder(props.folder!.id) },
+      { id: 'upload', label: t('files.uploadFiles'), icon: Upload, onSelect: pickFiles },
+    ]
+  : [])
+/** The open folder's own actions, apart from opening it again or trashing it from inside. */
+const folderEntries = computed(() => isOwner.value && props.folderItem
+  ? actions.menuFor([props.folderItem], { mode: 'owner' }).filter(entry => !isAction(entry) || !['open', 'trash'].includes(entry.id))
+  : [])
+const crumbMenu = computed(() => tidyMenu([...createEntries.value, { kind: 'separator' }, ...folderEntries.value]))
+const backgroundMenu = computed(() => tidyMenu([...createEntries.value, { kind: 'separator' }, ...folderEntries.value.filter(entry => isAction(entry) && entry.id === 'versioning')]))
+
 const dragDepth = ref(0)
 const dropTarget = ref<{ id: string | null, name: string } | null>(null)
 const acceptsFiles = computed(() => isOwner.value && !props.trash && !!props.folder)
@@ -200,7 +213,15 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
           </div>
         </template>
         <template v-else>
-          <FilesBreadcrumbs v-if="crumbs?.length" :crumbs="crumbs" :to="crumbTo ?? (() => '/drive')" :droppable="isOwner" class="min-w-0 flex-1" @drop="onMoveToCrumb" />
+          <div v-if="crumbs?.length" class="@container flex min-w-0 flex-1 items-center gap-2">
+            <FilesBreadcrumbs :crumbs="crumbs" :to="crumbTo ?? (() => '/drive')" :droppable="isOwner" :menu="crumbMenu" @drop="onMoveToCrumb" />
+            <UiTooltip v-if="isOwner && folderItem?.versioning" :label="t('versions.keptHint')">
+              <button type="button" class="flex h-6 shrink-0 items-center gap-1 rounded-full bg-accent-softer px-2 text-sm text-accent-ink hover:bg-accent-soft max-lg:hidden" @click="details.show(folderItem, 'details')">
+                <FileClock class="size-3.5" aria-hidden="true" />
+                <span class="@max-sm:sr-only">{{ t('versions.kept') }}</span>
+              </button>
+            </UiTooltip>
+          </div>
           <h1 v-else class="min-w-0 flex-1 truncate px-2 text-lg font-semibold text-ink">{{ title }}</h1>
         </template>
 
@@ -226,6 +247,7 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
         :sortable="sortable"
         :api-base="apiBase"
         :preview-id="previewId && !fullPreview ? previewId : null"
+        :background-menu="backgroundMenu"
         @open="openItem"
         @preview="previewItemInPanel"
         @follow="switchPreview"

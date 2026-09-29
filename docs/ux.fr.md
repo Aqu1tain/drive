@@ -73,7 +73,9 @@ Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire
 
 ## Historique des versions
 
-- Les détails d'un dossier ont un interrupteur « Garder les versions précédentes » ; sa légende dit d'où vient le choix (« Activé pour tout le contenu de Clients ») ou ce que fait un remplacement quand il est désactivé.
+- « Garder les versions précédentes » est une entrée cochée partout où un dossier a des actions : son menu du clic droit, le menu du nom du dossier ouvert dans le fil d'Ariane, et le clic droit dans la zone vide à l'intérieur. Les détails du dossier ont le même réglage sous forme d'interrupteur, dont la légende dit d'où vient le choix (« Activé pour tout le contenu de Clients ») ou ce que fait un remplacement quand il est désactivé.
+- Un dossier ouvert qui garde les versions affiche une pastille « Versions gardées » à côté de son nom, qui ouvre ses détails.
+- Le désactiver demande d'abord confirmation, en rouge, et dit ce que cela implique : les fichiers remplacés ensuite sont écrasés, les versions déjà gardées restent. L'activer ne demande rien.
 - L'onglet « Versions » d'un fichier (panneau de détails, aussi « Historique des versions » dans le menu) : la version actuelle d'abord, les précédentes groupées par jour avec l'heure et la taille, une épingle sur les versions nommées. Un clic ouvre l'aperçu d'une version dans une fenêtre avec Télécharger et Restaurer ; le menu ajoute Nommer, Retirer le nom et Supprimer. La note de bas dit la place occupée et la règle de nettoyage en mots simples.
 - Quand l'historique est désactivé, l'onglet le dit et propose de l'activer pour le dossier du fichier en un clic.
 - « Importer une nouvelle version » (menu et onglet) garde le nom du fichier, quel que soit celui du fichier choisi.

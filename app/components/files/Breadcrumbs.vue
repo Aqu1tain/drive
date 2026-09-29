@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ChevronRight } from '@lucide/vue'
+import { ChevronDown, ChevronRight } from '@lucide/vue'
 import type { Crumb } from '#shared/types/api'
 
-const props = defineProps<{ crumbs: Crumb[], to: (crumb: Crumb) => string, droppable?: boolean, loading?: boolean }>()
+const props = defineProps<{ crumbs: Crumb[], to: (crumb: Crumb) => string, droppable?: boolean, loading?: boolean, menu?: MenuEntry[] }>()
 const emit = defineEmits<{ drop: [crumb: Crumb, event: DragEvent] }>()
 const { t } = useI18n()
 
@@ -38,7 +38,13 @@ function onDrop(event: DragEvent, crumb: Crumb) {
           <ChevronRight class="size-4 shrink-0 text-ink-hint" aria-hidden="true" />
         </li>
         <li class="flex min-w-0 items-center gap-0.5" :class="index === visible.length - 1 ? 'min-w-0' : 'shrink-0'">
-          <span v-if="index === visible.length - 1" aria-current="page" class="truncate px-2 text-lg font-semibold text-ink">
+          <UiDropdownMenu v-if="index === visible.length - 1 && menu?.length" :entries="menu">
+            <button type="button" aria-current="page" class="flex h-8 min-w-0 items-center gap-1 rounded-md px-2 text-lg font-semibold text-ink hover:bg-hover data-[state=open]:bg-hover">
+              <span class="truncate">{{ crumb.name }}</span>
+              <ChevronDown class="size-4 shrink-0 text-ink-weak" aria-hidden="true" />
+            </button>
+          </UiDropdownMenu>
+          <span v-else-if="index === visible.length - 1" aria-current="page" class="truncate px-2 text-lg font-semibold text-ink">
             {{ crumb.name }}
           </span>
           <NuxtLink
