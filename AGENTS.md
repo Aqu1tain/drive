@@ -25,6 +25,7 @@ Un seul propriétaire dépose, range et partage ; tous les autres sont lecteurs 
 | `server/lib/documents/` | Lecture des PDF et documents Office : texte, miniature, page d'aperçu (fonctions pures) |
 | `server/api/` | Endpoints. Les écritures passent toutes par `requireOwner`, les lectures par `requireReadable` |
 | `server/routes/c`, `server/routes/p` | Origine isolée pour le HTML (aperçus et pages publiées) |
+| `server/routes/mcp.ts`, `server/utils/mcp.ts`, `server/utils/oauth.ts` | Serveur MCP pour les assistants IA : outils, vérification des jetons OAuth, révocation. Voir [docs/mcp.md](docs/mcp.md) |
 | `server/lib/` | Stockage (local, S3), cryptographie, MIME, configuration Better Auth |
 | `server/database/` | Schéma Drizzle et migrations SQL |
 | `app/components/files/` | Navigateur de fichiers (liste et grille virtualisées, clavier, glisser-déposer) |

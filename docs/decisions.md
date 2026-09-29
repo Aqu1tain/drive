@@ -92,6 +92,21 @@ Les fichiers de plus de 80 Mo ne sont pas traités. pdf.js tourne dans le proces
 - IP : préfixe /24 (IPv4) ou /48 (IPv6) haché avec HMAC, ou rien (`NUXT_ACTIVITY_IP_MODE=none`). Rétention configurable (`NUXT_ACTIVITY_RETENTION_DAYS`), purge quotidienne.
 - Logs techniques séparés (stdout JSON : requestId, userId, resourceId, status, latence) avec jetons masqués.
 
+## Assistants IA (MCP)
+
+Décision : un serveur MCP sur `/mcp` (Streamable HTTP, sans état, réponses JSON), et Better Auth comme serveur d'autorisation OAuth 2.1 grâce à `@better-auth/mcp` : découverte (RFC 8414, RFC 9728), enregistrement dynamique des clients, code d'autorisation avec PKCE, jetons liés à la ressource `/mcp` (RFC 8707). Guide : [docs/mcp.md](mcp.md).
+
+- Chaque requête reconstruit le même `Viewer` que l'application pour la personne qui a autorisé l'app, compte actif exigé. Les outils appellent les services existants (`listFolder`, `searchResources`, `requireReadable`…) : le MCP n'a aucune règle d'accès à lui. Les outils d'organisation ne sont enregistrés que pour le propriétaire : un lecteur ne les voit pas et ne peut pas les appeler.
+- Jetons d'accès opaques (1 h), stockés hachés comme nos autres jetons, plutôt que des JWT : un JWT resterait valable jusqu'à son expiration et obligerait le serveur à relire ses propres clés par HTTP. Chaque appel vérifie en base le jeton, son audience, l'app, le compte et le consentement : une révocation prend effet à la requête suivante, quel que soit le chemin qui retire le consentement. Les jetons de rafraîchissement (30 jours) sont hachés et tournants.
+- Les clients n'appartiennent à personne (la création de clients depuis une session est refusée) ; consentements et jetons appartiennent à une personne. Désactiver ou supprimer un lecteur, ou changer son mot de passe, retire aussi ses apps.
+- Connexion par la page `/login` habituelle, puis page de consentement. Jamais d'approbation automatique (pas de `skip_consent`) ; un consentement vaut pour cette app jusqu'à sa révocation. Le nom de l'app est déclaré par l'app elle-même : la page montre aussi l'adresse où elle renvoie.
+- Lecture : le droit d'aperçu suffit pour le texte (fichiers texte, texte extrait des PDF et documents Office), puisque l'aperçu l'affiche déjà. Une image est remise telle quelle, c'est une copie : il faut aussi le droit de télécharger. Au plus 200 000 caractères par appel (suite avec `offset`), documents de 25 Mo et images de 5 Mo.
+- Journal : une lecture passe par `logAccess`, comme l'ouverture d'un aperçu, avec l'acteur « Alice via Claude Code » ; la déduplication distingue la personne de son assistant. Les lectures de l'assistant du propriétaire ne sont pas journalisées, comme les siennes.
+- Aucun outil de partage, de changement d'accès ni de suppression définitive, seulement la corbeille. Déplacer un élément dans un dossier partagé le partage, comme dans l'app : l'outil et la page de consentement le disent.
+- CSRF : `/mcp` n'est pas sous `/api/` et n'utilise aucun cookie, seulement le jeton. Seuls `/api/auth/oauth2/token` et `/api/auth/oauth2/register` échappent au contrôle d'`Origin` : ils ne s'appuient sur aucun cookie (vérificateur PKCE, identifiants du client, enregistrement anonyme). `/mcp` et la découverte ne répondent que sur l'origine de l'application.
+- HTTPS obligatoire, sauf sur `localhost` en développement : en HTTP sur une IP, `/mcp` et la découverte répondent 404.
+- Les clients MCP ne déclarent pas `application_type` ; traités en apps web, leurs adresses de retour locales (`http://127.0.0.1:…`) seraient refusées. Un enregistrement sans type est donc celui d'une app native.
+
 ## Migrations
 
 Pré-démarrage en production (`scripts/migrate.mjs`) : Nitro 2 n'attend pas les plugins asynchrones. En dev, un plugin les applique au lancement.
