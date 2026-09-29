@@ -33,6 +33,25 @@ test('authorized reader: sign in, see, preview, download', async ({ page }) => {
   expect(file.id).toBeTruthy()
 })
 
+test('a reader keeps their own favorites', async ({ page }) => {
+  const reader = await createReader(owner)
+  const folder = await createFolder(owner, 'Dossier favoris', root.id)
+  await uploadText(owner, folder.id, 'planning.txt', 'Planning du camp')
+  await owner.post(`/api/resources/${folder.id}/access`, { data: { email: reader.email, notify: false } })
+
+  await signIn(page, reader.email, reader.password)
+  await page.getByRole('row', { name: /Dossier favoris/ }).dblclick()
+  await page.getByRole('row', { name: /planning\.txt/ }).click()
+  await page.keyboard.press('s')
+  await expect(page.getByRole('row', { name: /planning\.txt/ }).getByLabel('Favori')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Favoris' }).click()
+  await expect(page).toHaveURL(/\/starred/)
+  await expect(page.getByRole('row', { name: /planning\.txt/ })).toBeVisible()
+
+  await owner.delete(`/api/people/${reader.id}`)
+})
+
 test('forbidden reader: a known URL leads to an access denied page', async ({ page }) => {
   const reader = await createReader(owner)
   const secret = await uploadText(owner, root.id, 'secret.txt', 'Confidentiel')
