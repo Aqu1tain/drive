@@ -25,6 +25,7 @@ import settings from './settings'
 import auth from './auth'
 import invite from './invite'
 import publicPage from './publicPage'
+import oauth from './oauth'
 
 export default {
   common,
@@ -52,4 +53,5 @@ export default {
   auth,
   invite,
   publicPage,
+  oauth,
 } satisfies Catalog<typeof en>

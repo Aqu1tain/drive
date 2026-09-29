@@ -7,6 +7,7 @@ export default {
   accessNotFound: 'Access not found',
   linkNotFound: 'Link not found',
   tagNotFound: 'Tag not found',
+  appNotFound: 'App not found',
   videoNotFound: 'Video not found',
   noThumbnail: 'No thumbnail',
   noContent: 'No content',
