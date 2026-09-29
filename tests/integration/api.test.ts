@@ -496,9 +496,13 @@ describe('version history', () => {
 
     await owner.patch(`/api/resources/${parent}`, { versioning: true })
     expect((await owner.get(`/api/resources/${child}`)).body.versioning).toMatchObject({ enabled: true, source: { id: parent } })
+    const listing = (await owner.get(`/api/folders/${parent}`)).body
+    expect(listing.folder.versioning).toBe(true)
+    expect(listing.items.find((item: { id: string }) => item.id === child).versioning).toBe(true)
 
     await owner.patch(`/api/resources/${child}`, { versioning: false })
     expect((await owner.get(`/api/resources/${child}`)).body.versioning).toMatchObject({ enabled: false, source: { id: child } })
+    expect((await owner.get(`/api/folders/${parent}`)).body.items.find((item: { id: string }) => item.id === child).versioning).toBe(false)
     await owner.patch(`/api/resources/${child}`, { versioning: true })
     expect((await owner.get(`/api/resources/${child}`)).body.versioning).toMatchObject({ enabled: true, source: { id: parent } })
 
@@ -563,6 +567,7 @@ describe('version history', () => {
     expect((await reader.get(`/api/resources/${file.id}/versions`)).status).toBe(403)
     expect((await reader.get(version.contentUrl)).status).toBe(403)
     expect((await reader.get(`/api/resources/${file.id}`)).body.versioning).toBeUndefined()
+    expect((await reader.get(`/api/folders/${folder}`)).body.folder.versioning).toBeUndefined()
 
     await owner.post('/api/resources/trash', { ids: [file.id] })
     await owner.delete(`/api/resources/${file.id}`)
