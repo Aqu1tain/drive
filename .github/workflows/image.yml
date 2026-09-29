@@ -13,13 +13,23 @@ permissions:
 concurrency:
   group: image-${{ github.ref }}
 
+env:
+  IMAGE: ghcr.io/aqu1tain/drive
+
 jobs:
-  image:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+  # Each architecture builds on a native runner: emulating arm64 was slow and could hang.
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -29,20 +39,76 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/aqu1tain/drive
+          images: ${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.title=Drive
+            org.opencontainers.image.description=Personal file space with controlled sharing
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=image-${{ matrix.arch }}
+          cache-to: type=gha,scope=image-${{ matrix.arch }},mode=max
+      - run: mkdir -p digests && touch "digests/${DIGEST#sha256:}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.arch }}
+          path: digests/*
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=sha,format=short
-          labels: |
-            org.opencontainers.image.title=Drive
-            org.opencontainers.image.description=Personal file space with controlled sharing
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - working-directory: digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "$IMAGE@sha256:%s " *)
+      - run: docker buildx imagetools inspect "$IMAGE:$DOCKER_METADATA_OUTPUT_VERSION"
+
+  # A version also ships its image as archives on the release, for servers that cannot reach ghcr.io.
+  release-assets:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Save one archive per architecture
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          command -v skopeo || (sudo apt-get update && sudo apt-get install -y skopeo)
+          for arch in amd64 arm64; do
+            skopeo copy --override-os linux --override-arch "$arch" "docker://$IMAGE:$version" "docker-archive:image.tar:$IMAGE:$version"
+            gzip -c image.tar > "drive-$version-linux-$arch.tar.gz"
+            rm image.tar
+          done
+          sha256sum drive-*.tar.gz > "drive-$version-SHA256SUMS.txt"
+      - name: Attach them to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" drive-* --clobber --repo "$GITHUB_REPOSITORY"
