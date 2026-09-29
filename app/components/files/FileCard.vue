@@ -49,6 +49,7 @@ const failed = ref(false)
         :class="{ 'object-top': item.kind === 'pdf' }"
         @error="failed = true"
       >
+      <FilesFolderMosaic v-else-if="item.previews?.length" :urls="item.previews" />
       <FilesFileIcon v-else :kind="item.kind" size="xl" />
     </div>
     <div class="flex h-10 items-center gap-2 pr-0.5 pl-1.5">
