@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ChevronRight } from '@lucide/vue'
-import type { FolderListing } from '#shared/types/api'
+import { ChevronRight, Download } from '@lucide/vue'
+import type { FolderListing, ResourceItem } from '#shared/types/api'
 
 definePageMeta({ layout: 'public' })
 
@@ -12,6 +12,7 @@ useHead({ title: computed(() => data.value?.folder?.name ?? 'Dossier') })
 
 onMounted(() => api(`/api/s/${token}/resources/${id.value}/open`, { method: 'POST' }).catch(() => {}))
 
+const downloadAllUrl = (items: ResourceItem[]) => `/api/s/${token}/downloads?ids=${items.filter(item => item.canDownload).map(item => item.id).join(',')}`
 const crumbTo = (crumbId: string | null, index: number) => index === 0 || !crumbId ? `/s/${token}` : `/s/${token}/folder/${crumbId}`
 </script>
 
@@ -26,7 +27,10 @@ const crumbTo = (crumbId: string | null, index: number) => index === 0 || !crumb
         </li>
       </ol>
     </nav>
-    <h1 class="mb-6 text-xl font-semibold tracking-tight text-ink sm:text-2xl">{{ data.folder?.name }}</h1>
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{{ data.folder?.name }}</h1>
+      <UiButton v-if="data.items.some(item => item.canDownload)" :icon="Download" :href="downloadAllUrl(data.items)">Tout télécharger</UiButton>
+    </div>
     <PublicListing v-if="data.items.length" :items="data.items" :token="token" />
     <p v-else class="rounded-xl bg-canvas p-8 text-center text-base text-ink-weak shadow-norm">Ce dossier est vide.</p>
   </div>

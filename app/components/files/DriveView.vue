@@ -108,7 +108,7 @@ watch(selection, () => {
 })
 
 const selectionMenu = computed(() => actions.menuFor(selectedItems.value, { mode: props.mode, trash: props.trash, apiBase: props.apiBase, open: openItem }))
-const canDownloadSelection = computed(() => selectedItems.value.some(item => item.type === 'file' && item.canDownload))
+const canDownloadSelection = computed(() => selectedItems.value.some(item => item.canDownload))
 
 const pickFiles = () => document.dispatchEvent(new CustomEvent('drive:upload'))
 

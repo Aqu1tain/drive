@@ -37,6 +37,10 @@ export class Client {
     return { status: response.status, headers: response.headers, body: parsed as T }
   }
 
+  headers(): Record<string, string> {
+    return this.cookies.size ? { cookie: [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ') } : {}
+  }
+
   get<T = any>(path: string, options?: { headers?: Record<string, string>, base?: string }) {
     return this.request<T>('GET', path, options)
   }

@@ -1,3 +1,4 @@
+import { unzipSync } from 'fflate'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { Client, USERCONTENT_URL, ownerClient, readerClient, unique } from './client'
 
@@ -119,6 +120,64 @@ describe('file operations', () => {
 
     const byType = await owner.get(`/api/search?q=${encodeURIComponent(`type:pdf in:${folder}`)}`)
     expect(byType.body.items.map((i: { id: string }) => i.id)).toEqual([pdf.body.id])
+  })
+})
+
+describe('zip downloads', () => {
+  async function zipOf(client: Client, path: string) {
+    const response = await fetch(`${process.env.TEST_BASE_URL ?? 'http://localhost:3000'}${path}`, { headers: client.headers() })
+    expect(response.status, path).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/zip')
+    const files = unzipSync(new Uint8Array(await response.arrayBuffer()))
+    return Object.fromEntries(Object.entries(files).map(([name, data]) => [name, new TextDecoder().decode(data)]))
+  }
+
+  it('packs a folder with its tree, empty folders included, trash excluded', async () => {
+    const folder = await folderIn(root, 'Camp')
+    await fileIn(folder, 'programme.txt', 'programme')
+    const admin = await folderIn(folder, 'Administratif')
+    await fileIn(admin, 'fiche.txt', 'fiche')
+    await folderIn(folder, 'Vide')
+    const trashed = await fileIn(folder, 'jete.txt', 'jete')
+    await owner.post('/api/resources/trash', { ids: [trashed.id] })
+
+    expect(await zipOf(owner, `/api/resources/${folder}/download`)).toEqual({
+      'Camp/programme.txt': 'programme',
+      'Camp/Administratif/fiche.txt': 'fiche',
+      'Camp/Vide/': '',
+    })
+  })
+
+  it('packs a multiple selection', async () => {
+    const a = await fileIn(root, `${unique('a')}.txt`, 'A')
+    const b = await fileIn(root, `${unique('b')}.txt`, 'B')
+    const files = await zipOf(owner, `/api/downloads?ids=${a.id},${b.id}`)
+    expect(files).toEqual({ [a.name]: 'A', [b.name]: 'B' })
+  })
+
+  it('only gives readers what they may read and download', async () => {
+    const { client: reader, email } = await readerClient(owner)
+    const folder = await folderIn(root, 'Partage')
+    await fileIn(folder, 'libre.txt', 'libre')
+    const hidden = await fileIn(folder, 'cache.txt', 'cache')
+    const viewOnly = await fileIn(folder, 'lecture.txt', 'lecture')
+    await owner.post(`/api/resources/${folder}/access`, { email, notify: false })
+    await owner.patch(`/api/resources/${hidden.id}`, { inheritAccess: false })
+    await owner.patch(`/api/resources/${viewOnly.id}`, { inheritAccess: false })
+    await owner.post(`/api/resources/${viewOnly.id}/access`, { email, allowDownload: false, notify: false })
+
+    expect(await zipOf(reader, `/api/resources/${folder}/download`)).toEqual({ 'Partage/libre.txt': 'libre' })
+    expect((await reader.get(`/api/downloads?ids=${hidden.id}`)).status).toBe(403)
+    expect((await reader.get(`/api/downloads?ids=${viewOnly.id}`)).status).toBe(403)
+  })
+
+  it('works through a public folder link and refuses malformed selections', async () => {
+    const folder = await folderIn(root, 'Public')
+    await fileIn(folder, 'infos.txt', 'infos')
+    const { link } = (await owner.put(`/api/resources/${folder}/link`, { enabled: true })).body
+    const token = new URL(link.url).pathname.split('/').at(-1)!
+    expect(await zipOf(new Client(), `/api/s/${token}/downloads?ids=${folder}`)).toEqual({ 'Public/infos.txt': 'infos' })
+    expect((await owner.get('/api/downloads?ids=../../etc')).status).toBe(400)
   })
 })
 
