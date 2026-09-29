@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/vue-query'
 import { Inbox } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
-useHead({ title: 'Partagé avec moi' })
+const { t } = useI18n()
+useHead({ title: t('labels.sharedWithMe') })
 const { data, isPending } = useQuery({
   queryKey: ['list', 'shared-with-me'],
   queryFn: () => api<{ items: ResourceItem[] }>('/api/shared-with-me'),
@@ -15,12 +16,12 @@ const { data, isPending } = useQuery({
     :items="data?.items ?? []"
     :loading="isPending"
     mode="reader"
-    label="Documents partagés avec moi"
-    title="Documents auxquels vous avez accès"
+    :label="t('views.sharedWithMe.label')"
+    :title="t('views.sharedWithMe.heading')"
     :folder-to="id => `/shared-with-me/folder/${id}`"
   >
     <template #empty>
-      <UiEmptyState :icon="Inbox" title="Rien pour l’instant" description="Les documents que l’on vous partage apparaîtront ici." />
+      <UiEmptyState :icon="Inbox" :title="t('views.sharedWithMe.empty')" :description="t('views.sharedWithMe.emptyHint')" />
     </template>
   </FilesDriveView>
 </template>
