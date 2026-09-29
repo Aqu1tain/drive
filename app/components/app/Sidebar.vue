@@ -78,8 +78,16 @@ const tagEntries = (tag: TagInfo): MenuEntry[] => [
 ]
 
 const dropTarget = ref<string | null>(null)
-function onDrop(event: DragEvent) {
+const uploads = useUploads()
+const acceptsDrop = (event: DragEvent) => ['application/x-drive-ids', 'Files'].some(type => event.dataTransfer?.types.includes(type))
+
+async function onDrop(event: DragEvent) {
   dropTarget.value = null
+  if (event.dataTransfer?.types.includes('Files')) {
+    event.preventDefault()
+    uploads.uploadTree(await filesFromDataTransfer(event.dataTransfer), { id: null, name: 'Mon Drive' })
+    return
+  }
   const raw = event.dataTransfer?.getData('application/x-drive-ids')
   if (!raw) return
   const ids = new Set<string>(JSON.parse(raw))
@@ -120,7 +128,7 @@ function onDrop(event: DragEvent) {
               dropTarget === item.to && 'ring-2 ring-accent',
             ]"
             @click="emit('navigate')"
-            @dragover="item.drop && $event.dataTransfer?.types.includes('application/x-drive-ids') && ($event.preventDefault(), dropTarget = item.to)"
+            @dragover="item.drop && owner && acceptsDrop($event) && ($event.preventDefault(), dropTarget = item.to)"
             @dragleave="dropTarget = null"
             @drop="item.drop && onDrop($event)"
           >
