@@ -9,7 +9,7 @@ test('rename and trash work after visiting the home page', async ({ page }) => {
   await signIn(page, OWNER.email, OWNER.password)
   await expect(page).toHaveURL(/\/home/)
   await expect(page.getByRole('heading', { level: 1 })).toContainText(/Bonjour|Bonsoir/)
-  await page.getByRole('link', { name: 'Mon Drive' }).click()
+  await page.getByRole('complementary', { name: 'Navigation principale' }).getByRole('link', { name: 'Mon Drive' }).click()
   await page.getByRole('row', { name: new RegExp(folder.name) }).dblclick()
 
   await page.getByRole('row', { name: /brouillon\.txt/ }).click()
