@@ -26,17 +26,18 @@ const groups = computed(() => [
       ['Maj+F10', 'Menu contextuel'],
     ],
   },
-  ...(props.owner
-    ? [{
-        title: 'Actions',
-        items: [
+  {
+    title: 'Actions',
+    items: props.owner
+      ? [
           ['F2', 'Renommer'],
           ['S', 'Ajouter ou retirer des favoris'],
+          ['L', 'Étiquettes'],
           ['Suppr', 'Déplacer vers la corbeille'],
           ['Mod+Alt+A', 'Partager'],
-        ],
-      }]
-    : []),
+        ]
+      : [['S', 'Ajouter ou retirer des favoris']],
+  },
   {
     title: 'Aperçu plein écran',
     items: [

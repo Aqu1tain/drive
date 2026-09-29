@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { TabsContent, TabsIndicator, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
-import { Globe, Lock, Share2, Star, X } from '@lucide/vue'
+import { Globe, Lock, Share2, Star, Tag, X } from '@lucide/vue'
 import type { ActivityEvent, ActivityStats, ResourceAccess, ResourceDetails, ResourceItem } from '#shared/types/api'
 
 const props = defineProps<{ item: ResourceItem | null, count: number, mode: BrowserMode, folderTo?: (id: string) => string }>()
@@ -110,6 +110,14 @@ const allowScripts = computed({ get: () => current.value?.allowScripts ?? false,
             <dd class="text-ink">{{ stats.lastViewBy }}<br><span class="text-sm text-ink-weak">{{ formatDateTime(stats.lastViewAt) }}</span></dd>
           </template>
         </dl>
+        <section v-if="isOwner" class="mt-5" aria-labelledby="details-tags">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <h3 id="details-tags" class="text-base text-ink-weak">Étiquettes</h3>
+            <UiButton size="sm" variant="ghost" :icon="Tag" @click="dialogs.tags([current])">Modifier</UiButton>
+          </div>
+          <TagsPills v-if="current.tagIds?.length" :ids="current.tagIds" :max="20" class="flex-wrap" />
+          <p v-else class="text-base text-ink-weak">Aucune</p>
+        </section>
 
         <template v-if="isOwner">
           <div class="mt-5 border-t border-line-weak pt-4">

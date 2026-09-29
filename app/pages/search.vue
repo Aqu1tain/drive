@@ -9,7 +9,9 @@ const { data: me } = useMe()
 const mode = computed(() => me.value?.user?.role === 'owner' ? 'owner' as const : 'reader' as const)
 const q = computed(() => String(route.query.q ?? ''))
 const parsed = computed(() => parseSearchQuery(q.value))
-useHead({ title: computed(() => q.value ? `« ${parsed.value.terms.join(' ') || q.value} »` : 'Recherche') })
+const { tags } = useTags(computed(() => mode.value === 'owner'))
+const tagName = computed(() => parsed.value.tag && (tags.value.find(tag => tag.name.toLowerCase() === parsed.value.tag)?.name ?? parsed.value.tag))
+useHead({ title: computed(() => q.value ? `« ${parsed.value.terms.join(' ') || tagName.value || q.value} »` : 'Recherche') })
 
 const { data, isPending } = useQuery({
   queryKey: computed(() => ['search', 'page', q.value]),
@@ -21,7 +23,10 @@ function update(patch: Partial<SearchQuery>) {
   navigateTo({ path: '/search', query: { q: stringifySearchQuery({ ...parsed.value, ...patch }) } }, { replace: true })
 }
 
-const title = computed(() => parsed.value.terms.length ? `Résultats pour « ${parsed.value.terms.join(' ')} »` : 'Résultats')
+const title = computed(() => {
+  if (parsed.value.terms.length) return `Résultats pour « ${parsed.value.terms.join(' ')} »`
+  return tagName.value ? `Étiquette « ${tagName.value} »` : 'Résultats'
+})
 </script>
 
 <template>
