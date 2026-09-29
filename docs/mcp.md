@@ -1,3 +1,5 @@
+**English** · [Français](mcp.fr.md)
+
 # Connect an AI assistant (MCP)
 
 Drive speaks the [Model Context Protocol](https://modelcontextprotocol.io). An AI assistant such as Claude Code, Claude.ai or Cursor can browse, search and read your drive, and the owner's assistant can also organize it.
@@ -75,9 +77,6 @@ What a reader's assistant reads shows up in the owner's activity journal, as "Al
 
 ## Revoke access
 
-Each person manages the assistants they allowed:
-
-- `GET /api/connected-apps` lists them, with the date they were allowed;
-- `DELETE /api/connected-apps/<clientId>` revokes one.
+Each person manages the assistants they allowed in Drive, under Settings, AI assistants: the list shows each app with the date it was allowed, and Disconnect revokes it. The same is available through the API: `GET /api/connected-apps` lists them, `DELETE /api/connected-apps/<clientId>` revokes one.
 
 A revoked assistant stops working on its next request and has to ask for consent again. Disabling or deleting a reader, or changing their password, also revokes all their assistants. Removing the server from the assistant (for example `claude mcp remove drive`) only forgets the token on that side: revoke it in Drive as well.
