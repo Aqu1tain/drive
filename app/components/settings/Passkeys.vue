@@ -9,6 +9,7 @@ interface Passkey {
   deviceType?: string
 }
 
+const { t, locale } = useI18n()
 const passkeys = ref<Passkey[] | null>(null)
 const busy = ref(false)
 
@@ -20,15 +21,13 @@ async function load() {
 async function add() {
   busy.value = true
   try {
-    const name = `${/Mac/.test(navigator.platform) ? 'Mac' : /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone' : 'Appareil'} (${new Date().toLocaleDateString('fr-FR')})`
+    const name = `${/Mac/.test(navigator.platform) ? 'Mac' : /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone' : t('settings.passkeys.device')} (${new Date().toLocaleDateString(locale.value)})`
     const { error } = await authClient.passkey.addPasskey({ name })
     if (error) {
-      toast.error(error.status === 401 || error.status === 403
-        ? 'Reconnectez-vous puis réessayez : l’ajout d’une clé exige une connexion récente.'
-        : 'Ajout annulé ou non pris en charge par cet appareil.')
+      toast.error(t(error.status === 401 || error.status === 403 ? 'settings.passkeys.signInAgain' : 'settings.passkeys.cancelled'))
       return
     }
-    toast.success('Clé d’accès ajoutée')
+    toast.success(t('settings.passkeys.added'))
     await load()
   }
   finally {
@@ -38,8 +37,8 @@ async function add() {
 
 async function remove(passkey: Passkey) {
   const { error } = await authClient.passkey.deletePasskey({ id: passkey.id })
-  if (error) return void toast.error('Suppression impossible')
-  toast('Clé d’accès supprimée')
+  if (error) return void toast.error(t('settings.passkeys.deleteFailed'))
+  toast(t('settings.passkeys.deleted'))
   await load()
 }
 
@@ -52,13 +51,13 @@ onMounted(load)
       <li v-for="passkey in passkeys" :key="passkey.id" class="flex items-center gap-3 px-3.5 py-2.5">
         <Fingerprint class="size-4 text-ink-weak" aria-hidden="true" />
         <div class="min-w-0 flex-1">
-          <p class="truncate text-base text-ink">{{ passkey.name || 'Clé d’accès' }}</p>
-          <p v-if="passkey.createdAt" class="text-sm text-ink-weak">Ajoutée le {{ formatLongDate(passkey.createdAt) }}</p>
+          <p class="truncate text-base text-ink">{{ passkey.name || t('settings.passkeys.name') }}</p>
+          <p v-if="passkey.createdAt" class="text-sm text-ink-weak">{{ t('settings.passkeys.addedOn', { date: formatLongDate(passkey.createdAt) }) }}</p>
         </div>
-        <UiIconButton :icon="Trash2" :label="`Supprimer ${passkey.name || 'cette clé'}`" size="sm" @click="remove(passkey)" />
+        <UiIconButton :icon="Trash2" :label="passkey.name ? t('settings.passkeys.delete', { name: passkey.name }) : t('settings.passkeys.deleteUnnamed')" size="sm" @click="remove(passkey)" />
       </li>
     </ul>
-    <p v-else-if="passkeys" class="mb-3 text-sm text-ink-weak">Aucune clé d’accès. Connectez-vous d’un geste avec Touch ID, Face ID, Windows Hello ou une clé de sécurité.</p>
-    <UiButton :icon="Fingerprint" :loading="busy" @click="add">Ajouter une clé d’accès</UiButton>
+    <p v-else-if="passkeys" class="mb-3 text-sm text-ink-weak">{{ t('settings.passkeys.empty') }}</p>
+    <UiButton :icon="Fingerprint" :loading="busy" @click="add">{{ t('settings.passkeys.add') }}</UiButton>
   </div>
 </template>

@@ -2,6 +2,7 @@
 import { toast } from 'vue-sonner'
 
 const emit = defineEmits<{ close: [], created: [] }>()
+const { t } = useI18n()
 const open = ref(true)
 watch(open, value => !value && emit('close'))
 
@@ -22,12 +23,12 @@ async function submit() {
   try {
     await api('/api/people', { method: 'POST', body: { name: name.value, email: email.value, password: password.value } })
     await navigator.clipboard.writeText(`${email.value.trim()}\n${password.value}`).catch(() => {})
-    toast('Compte créé, identifiants copiés')
+    toast(t('people.createDialog.created'))
     emit('created')
     open.value = false
   }
   catch (e) {
-    error.value = errorMessage(e, 'Impossible de créer le compte')
+    error.value = errorMessage(e, t('people.createDialog.failed'))
   }
   finally {
     busy.value = false
@@ -36,16 +37,16 @@ async function submit() {
 </script>
 
 <template>
-  <UiDialog v-model:open="open" title="Créer un compte lecteur" description="Pour partager ensuite avec cette personne. Transmettez-lui ses identifiants par un canal sûr." size="sm">
+  <UiDialog v-model:open="open" :title="t('people.createDialog.title')" :description="t('people.createDialog.description')" size="sm">
     <form id="create-person" class="flex flex-col gap-4" @submit.prevent="submit">
-      <UiInput v-model="name" label="Nom" autocomplete="off" required autofocus />
-      <UiInput v-model="email" label="Adresse email" type="email" autocomplete="off" required />
-      <UiInput v-model="password" label="Mot de passe provisoire" autocomplete="off" required hint="Généré aléatoirement. La personne pourra le changer." />
+      <UiInput v-model="name" :label="t('common.name')" autocomplete="off" required autofocus />
+      <UiInput v-model="email" :label="t('people.createDialog.email')" type="email" autocomplete="off" required />
+      <UiInput v-model="password" :label="t('people.createDialog.password')" autocomplete="off" required :hint="t('people.createDialog.passwordHint')" />
       <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
     </form>
     <template #footer>
-      <UiButton variant="ghost" @click="open = false">Annuler</UiButton>
-      <UiButton type="submit" form="create-person" variant="primary" :loading="busy">Créer</UiButton>
+      <UiButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UiButton>
+      <UiButton type="submit" form="create-person" variant="primary" :loading="busy">{{ t('common.create') }}</UiButton>
     </template>
   </UiDialog>
 </template>

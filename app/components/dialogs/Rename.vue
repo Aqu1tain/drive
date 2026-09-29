@@ -4,6 +4,7 @@ import type { ResourceItem } from '#shared/types/api'
 const props = defineProps<{ item: ResourceItem }>()
 const emit = defineEmits<{ close: [] }>()
 const actions = useFileActions()
+const { t } = useI18n()
 
 const open = ref(true)
 const name = ref(props.item.name)
@@ -35,7 +36,7 @@ async function submit() {
     open.value = false
   }
   catch (e) {
-    error.value = errorMessage(e, 'Impossible de renommer')
+    error.value = errorMessage(e, t('dialogs.rename.failed'))
   }
   finally {
     saving.value = false
@@ -44,13 +45,13 @@ async function submit() {
 </script>
 
 <template>
-  <UiDialog v-model:open="open" title="Renommer" size="sm" @open-auto-focus="onOpen">
+  <UiDialog v-model:open="open" :title="t('common.rename')" size="sm" @open-auto-focus="onOpen">
     <form id="rename-form" @submit.prevent="submit">
-      <UiInput ref="input" v-model="name" label="Nom" :error="error" autocomplete="off" />
+      <UiInput ref="input" v-model="name" :label="t('common.name')" :error="error" autocomplete="off" />
     </form>
     <template #footer>
-      <UiButton variant="ghost" @click="open = false">Annuler</UiButton>
-      <UiButton variant="primary" type="submit" form="rename-form" :loading="saving">Renommer</UiButton>
+      <UiButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UiButton>
+      <UiButton variant="primary" type="submit" form="rename-form" :loading="saving">{{ t('common.rename') }}</UiButton>
     </template>
   </UiDialog>
 </template>

@@ -2,4 +2,68 @@ import type { Catalog } from '..'
 import type en from '../en/people'
 
 export default {
+  title: 'Personnes',
+  intro: 'Tous sont lecteurs : ils consultent, ne modifient jamais.',
+  create: 'Créer un compte',
+  empty: {
+    title: 'Personne pour l’instant',
+    description: 'Partagez un fichier avec une adresse email : la personne apparaîtra ici. Vous pouvez aussi créer un compte directement.',
+  },
+  accounts: 'Comptes ({count})',
+  pendingInvitations: 'Invitations en attente ({count})',
+  disabled: 'Désactivé',
+  pending: 'En attente',
+  personalLink: 'Lien personnel',
+  shares: { one: '{count} partage', other: '{count} partages' },
+  lastSeen: 'Vu {when}',
+  neverSignedIn: 'Jamais connecté',
+  lastUsed: 'Utilisé {when}',
+  invited: 'Invité {when}',
+  optionsFor: 'Options pour {name}',
+  setPassword: 'Définir un mot de passe',
+  disableAccount: 'Désactiver le compte',
+  enableAccount: 'Réactiver le compte',
+  deleteAccount: 'Supprimer le compte',
+  copyNewLink: 'Copier un nouveau lien',
+  revokeInvitation: 'Révoquer l’invitation',
+  enabled: 'Compte réactivé',
+  accountDisabled: 'Compte désactivé',
+  deleted: 'Compte supprimé',
+  newLinkCopied: 'Nouveau lien copié. L’ancien ne fonctionne plus.',
+  revoked: 'Invitation révoquée',
+  confirmDisable: {
+    title: 'Désactiver le compte de {name} ?',
+    message: 'Ses sessions sont fermées immédiatement et il ne pourra plus rien consulter. Ses partages sont conservés si vous le réactivez.',
+    confirm: 'Désactiver',
+  },
+  confirmDelete: {
+    title: 'Supprimer le compte de {name} ?',
+    message: {
+      one: 'Tous ses accès ({count} partage) sont retirés immédiatement. Cette action est irréversible.',
+      other: 'Tous ses accès ({count} partages) sont retirés immédiatement. Cette action est irréversible.',
+    },
+  },
+  confirmRevoke: {
+    title: 'Révoquer l’invitation de {email} ?',
+    message: {
+      one: 'Ses {count} accès sont retirés immédiatement.',
+      other: 'Ses {count} accès sont retirés immédiatement.',
+    },
+    confirm: 'Révoquer',
+  },
+  createDialog: {
+    title: 'Créer un compte lecteur',
+    description: 'Pour partager ensuite avec cette personne. Transmettez-lui ses identifiants par un canal sûr.',
+    email: 'Adresse email',
+    password: 'Mot de passe provisoire',
+    passwordHint: 'Généré aléatoirement. La personne pourra le changer.',
+    created: 'Compte créé, identifiants copiés',
+    failed: 'Impossible de créer le compte',
+  },
+  passwordDialog: {
+    title: 'Mot de passe de {name}',
+    password: 'Nouveau mot de passe',
+    passwordHint: 'Au moins 10 caractères.',
+    changed: 'Mot de passe modifié. Ses sessions ont été fermées.',
+  },
 } satisfies Catalog<typeof en>
