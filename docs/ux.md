@@ -1,92 +1,94 @@
-# Notes UX
+**English** · [Français](ux.fr.md)
 
-Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire évoluer.
+# UX notes
 
-## Patterns étudiés → retenus
+A consistency guardrail. Every new interface must follow it, or update it.
 
-| Source | Pattern | Retenu parce que |
+## Patterns studied → adopted
+
+| Source | Pattern | Adopted because |
 |---|---|---|
-| Google Drive | Recherche centrale, chips de filtre, vues liste/grille, raccourcis clavier officiels | Référence de navigation clavier et de densité |
-| Dropbox | Aperçu latéral qui garde la liste visible | Continuité spatiale |
-| Notion / Raycast / Linear | Palette ⌘K : récents quand vide, résultats instantanés, actions contextuelles avec leur raccourci | Tout faire au clavier, apprendre les raccourcis en passant |
-| Proton Drive | Barre latérale violet profond, contenu clair, lignes 44 px, sélection neutre, toasts inversés en bas au centre, file de transfert en bas à droite | Langage visuel calme et premium |
-| Google / Proton | Suppression → toast « Annuler », pas de modale | Réversibilité |
+| Google Drive | Central search, filter chips, list/grid views, official keyboard shortcuts | Reference for keyboard navigation and density |
+| Dropbox | Side preview that keeps the list visible | Spatial continuity |
+| Notion / Raycast / Linear | ⌘K palette: recent items when empty, instant results, contextual actions with their shortcut | Do everything from the keyboard, learn the shortcuts along the way |
+| Proton Drive | Deep purple sidebar, light content, 44 px rows, neutral selection, inverted toasts at the bottom center, transfer queue at the bottom right | Calm, premium visual language |
+| Google / Proton | Deletion → "Undo" toast, no modal | Reversibility |
 
-## Langage visuel
+## Visual language
 
-- Barre latérale `nav` (violet profond en clair, quasi noir en sombre), contenu `canvas`. Un seul accent (`accent`, #6d4aff).
-- Inter 14/20. Titres en graisse 600, jamais de texte en capitales.
-- Rayons : 8 px (contrôles, lignes), 12 px (panneaux, dialogues, toasts). Ombres uniquement sur ce qui flotte (menus, dialogues, file d'upload).
-- Pas de dégradés, pas de verre dépoli, pas de cartes décoratives.
-- Mode sombre conçu (palette « Carbon »), jamais `invert()`.
+- `nav` sidebar (deep purple in light mode, near black in dark mode), `canvas` content. A single accent (`accent`, #6d4aff).
+- Inter 14/20. Headings in weight 600, never any all-caps text.
+- Radii: 8 px (controls, rows), 12 px (panels, dialogs, toasts). Shadows only on what floats (menus, dialogs, upload queue).
+- No gradients, no frosted glass, no decorative cards.
+- A dark mode designed as such ("Carbon" palette), never `invert()`.
 
-## Comportement des fichiers
+## File behavior
 
-- Clic : sélectionne. Double-clic ou Entrée : dossier → ouvrir, fichier → aperçu.
-- Cmd/Ctrl+clic : bascule, Maj+clic : plage, Cmd/Ctrl+A : tout.
-- Clic droit sur un élément non sélectionné : il devient la sélection, puis le menu s'ouvre et agit sur la sélection. Chaque ligne a aussi un bouton `⋮`.
-- La barre d'outils se transforme en barre de sélection (compteur + actions) dès qu'une sélection existe.
-- Glisser des éléments sur un dossier (liste, fil d'Ariane ou « Mon Drive » dans la barre latérale) les y déplace.
-- Glisser depuis une zone vide trace un rectangle de sélection, en liste comme en grille ; ⌘/Ctrl ou Maj ajoute à la sélection existante. La liste défile d'elle-même près des bords.
-- Tri : dossiers toujours en premier, puis colonne choisie. Préférence mémorisée.
-- Colonnes liste : Nom, Accès, Modifié, Taille (+ Dernière consultation externe en large).
+- Click: selects. Double-click or Enter: folder → open, file → preview.
+- Cmd/Ctrl+click: toggle, Shift+click: range, Cmd/Ctrl+A: all.
+- Right click on an item that is not selected: it becomes the selection, then the menu opens and acts on the selection. Every row also has a `⋮` button.
+- The toolbar turns into a selection bar (counter + actions) as soon as there is a selection.
+- Dragging items onto a folder (in the list, the breadcrumb or "My Drive" in the sidebar) moves them there.
+- Dragging from an empty area draws a selection rectangle, in the list as in the grid; ⌘/Ctrl or Shift adds to the existing selection. The list scrolls by itself near the edges.
+- Sorting: folders always first, then the chosen column. The preference is remembered.
+- List columns: Name, Access, Modified, Size (+ Last external view when wide).
 
-## Curseurs
+## Cursors
 
-- Main sur tout ce qui agit au clic : fichiers, boutons, liens, éléments de menu, onglets, options.
-- « Interdit » sur ce qui est désactivé.
-- « Saisir » pendant l'appui sur un élément déplaçable.
-- Croix fine violette (curseur sur mesure) pendant le tracé d'un rectangle de sélection ; curseur système en mode contraste forcé.
+- Pointer on everything that acts on click: files, buttons, links, menu items, tabs, options.
+- "Not allowed" on anything disabled.
+- "Grabbing" while pressing a draggable item.
+- Thin purple crosshair (custom cursor) while drawing a selection rectangle; system cursor in forced colors mode.
 
-## Raccourcis
+## Shortcuts
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| ⌘/Ctrl K | Palette de commandes |
-| / | Rechercher |
-| ↑ ↓ (← → en grille) | Déplacer le focus ; Maj pour étendre la sélection |
-| Home / End | Premier / dernier élément |
-| Entrée | Ouvrir |
-| Espace | Aperçu rapide (bascule) |
-| Échap | Fermer le panneau / l'aperçu / vider la sélection |
-| ⌘/Ctrl A | Tout sélectionner |
-| Suppr / ⌫ | Corbeille |
-| F2 | Renommer |
-| S | Favori (propriétaire et lecteurs, chacun les siens) |
-| L | Étiquettes de la sélection |
-| ⌘/Ctrl / | Aide des raccourcis |
-| ← → (aperçu plein écran) | Fichier précédent / suivant |
+| ⌘/Ctrl K | Command palette |
+| / | Search |
+| ↑ ↓ (← → in the grid) | Move the focus; Shift to extend the selection |
+| Home / End | First / last item |
+| Enter | Open |
+| Space | Quick preview (toggle) |
+| Esc | Close the panel / the preview / clear the selection |
+| ⌘/Ctrl A | Select all |
+| Delete / ⌫ | Trash |
+| F2 | Rename |
+| S | Favorite (owner and readers, each their own) |
+| L | Tags of the selection |
+| ⌘/Ctrl / | Shortcuts help |
+| ← → (full screen preview) | Previous / next file |
 
-## Aperçu
+## Preview
 
-- Aperçu rapide : panneau à droite (~45 % du contenu), la liste reste visible et navigable ; ↑↓ change l'élément prévisualisé.
-- Aperçu plein écran : `?preview=<id>&full=1`, navigation ← → dans le dossier. Échap ou « retour » navigateur rend la liste intacte.
-- Images, PDF (pdf.js), texte, Markdown, audio, vidéo, HTML (origine isolée, iframe sandbox). Sinon : icône, « Ce fichier ne peut pas être prévisualisé », Télécharger.
-- Site en ZIP : s'ouvre comme une page web (même bandeau, plein écran, nouvel onglet), liens relatifs et sous-dossiers compris ; le téléchargement rend l'archive d'origine.
-- Word, Excel et PowerPoint : page convertie côté serveur, affichée comme le HTML. Un classeur montre ses feuilles l'une sous l'autre avec des onglets d'accès rapide ; une présentation montre le texte de chaque diapositive, avec la mention que la mise en page complète demande le téléchargement.
-- Étiquettes : pastilles colorées après le nom, réduites à des points quand la colonne manque de place ; section « Étiquettes » dans la barre latérale, chacune menant à sa recherche ; dialogue à cases pour une sélection (case à tiret quand seule une partie la porte), création à la volée.
-- Glisser-déposer depuis l'ordinateur, fichiers ou dossiers entiers : partout dans l'application. Dans un dossier, ils y sont importés (ou dans le sous-dossier survolé) ; ailleurs, et sur « Mon Drive » dans la barre latérale, ils vont à la racine. Un fichier lâché ne fait jamais quitter l'application au navigateur, même pour un lecteur (le dépôt lui est simplement refusé).
-- En grille, un dossier montre une mosaïque de ses dernières images et vidéos (une à quatre, celles rangées directement dedans d'abord, puis celles des sous-dossiers), avec un badge de dossier pour ne pas le confondre avec une photo. Sans image, il garde son icône.
-- Les miniatures de PDF montrent le haut de la première page, pas son centre souvent vide. Les vidéos ont une miniature prise à une seconde, la première image étant souvent noire.
+- Quick preview: a panel on the right (~45% of the content), the list stays visible and navigable; ↑↓ changes the previewed item.
+- Full screen preview: `?preview=<id>&full=1`, ← → navigation within the folder. Esc or the browser's "back" returns to the list, intact.
+- Images, PDF (pdf.js), text, Markdown, audio, video, HTML (isolated origin, sandboxed iframe). Otherwise: an icon, "This file can't be previewed", Download.
+- ZIP site: opens like a web page (same banner, full screen, new tab), relative links and subfolders included; downloading returns the original archive.
+- Word, Excel and PowerPoint: a page converted on the server, displayed like HTML. A workbook shows its sheets one below the other, with tabs to jump between them; a presentation shows the text of each slide, with a note that the full layout requires downloading the file.
+- Tags: colored pills after the name, shrunk to dots when the column runs out of room; a "Tags" section in the sidebar, each tag leading to its search; a checkbox dialog for a selection (dash checkbox when only part of the selection has the tag), with creation on the fly.
+- Drag and drop from the computer, files or whole folders: anywhere in the application. In a folder, they are uploaded there (or into the subfolder under the pointer); elsewhere, and on "My Drive" in the sidebar, they go to the root. A dropped file never makes the browser leave the application, even for a reader (the drop is simply refused).
+- In the grid, a folder shows a mosaic of its latest images and videos (one to four, those stored directly inside first, then those in subfolders), with a folder badge so it is not mistaken for a photo. Without any image, it keeps its icon.
+- PDF thumbnails show the top of the first page, not its often empty middle. Videos get a thumbnail taken at one second, since the first frame is often black.
 
-## Partage
+## Sharing
 
-- Un seul panneau : personnes (sans sélecteur de rôle : tout le monde est lecteur), accès hérités affichés avec leur origine, lien public (désactivé / toute personne disposant du lien), téléchargement autorisé, expiration, Copier le lien.
-- Ajouter quelqu'un = une adresse email. Sans compte : invitation « compte » par défaut ; « lien personnel » en option, avec la mention honnête qu'il peut être transféré.
-- Les liens public/personnels ne présentent jamais le visiteur comme identifié (« Lien public », « Paul (lien personnel) »).
+- A single panel: people (no role picker: everyone is a reader), inherited access shown with where it comes from, public link (off / anyone with the link), download allowed, expiry, Copy link.
+- Adding someone = an email address. Without an account: an "account" invitation by default; "personal link" as an option, with the honest note that it can be forwarded.
+- Public and personal links never present the visitor as identified ("Public link", "Paul (personal link)").
 
 ## Feedback
 
-- Action courte → toast (bas centre, 4 s ; 6 s si « Annuler »). Erreur → toast qui reste plus longtemps, message humain et action quand possible. Jamais « Error 500 ».
-- Confirmation modale seulement pour l'irréversible : supprimer définitivement, vider la corbeille, désactiver/supprimer une personne.
-- Chargement : squelettes et mises à jour optimistes, jamais de spinner central. La navigation ne disparaît jamais.
+- Short action → toast (bottom center, 4 s; 6 s with "Undo"). Error → a toast that stays longer, with a human message and an action when possible. Never "Error 500".
+- A modal confirmation only for what cannot be undone: delete permanently, empty the trash, disable or delete a person.
+- Loading: skeletons and optimistic updates, never a central spinner. Navigation never disappears.
 
 ## Mobile
 
-- < 768 px : barre latérale en tiroir, en-tête compact avec recherche, bouton flottant « + » pour importer.
-- Liste en une colonne (nom + méta sur deux lignes), menu `⋮` en feuille d'actions. L'aperçu est plein écran.
-- Pages de partage public : pensées d'abord pour le téléphone (document visible sans défilement, bouton Télécharger accessible au pouce).
+- < 768 px: sidebar in a drawer, compact header with search, floating "+" button to upload.
+- Single-column list (name + metadata on two lines), `⋮` menu as an action sheet. The preview is full screen.
+- Public share pages: designed for the phone first (document visible without scrolling, Download button within thumb reach).
 
-## États vides
+## Empty states
 
-Chaque vue vide explique quoi faire, en une phrase, avec l'action principale (Importer, Nouveau dossier, retirer des filtres…).
+Every empty view explains what to do in one sentence, with the main action (Upload, New folder, remove filters…).
