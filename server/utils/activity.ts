@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm'
 import { kindOf } from '#shared/utils/search'
 import type { ActivityEvent, ActivityStats } from '#shared/types/api'
 import { hashIp } from '../lib/crypto'
@@ -97,6 +97,29 @@ export async function logInvitationAccepted(event: H3Event, resourceIds: string[
     userId,
     ...networkTraits(event),
   })))
+}
+
+const ACTIVITY_FILTERS = {
+  all: undefined,
+  views: ['view'],
+  downloads: ['download'],
+  sharing: ['share_added', 'share_removed', 'share_updated', 'link_created', 'link_updated', 'link_removed', 'invite_accepted'],
+} as const
+
+export type ActivityFilter = keyof typeof ACTIVITY_FILTERS
+
+/** The journal, newest first, for the whole drive or a single item; `next` continues the page. */
+export async function listActivity(query: { resourceId?: string, filter: ActivityFilter, before?: number, limit: number }) {
+  const types = ACTIVITY_FILTERS[query.filter]
+  const scope = query.resourceId ? activityScope(await requireOwned(query.resourceId)) : undefined
+  const events = await useDB().select().from(accessEvents).where(and(
+    scope,
+    types ? inArray(accessEvents.type, [...types]) : undefined,
+    query.before ? lt(accessEvents.id, query.before) : undefined,
+  )).orderBy(desc(accessEvents.id)).limit(query.limit + 1)
+
+  const page = events.slice(0, query.limit)
+  return { events: await toActivityEvents(page), next: events.length > query.limit ? page.at(-1)!.id : null }
 }
 
 /** Views and downloads of a resource; for a folder, of everything inside it too. */

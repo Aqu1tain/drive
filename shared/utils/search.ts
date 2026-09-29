@@ -57,6 +57,10 @@ export function parseSearchQuery(input: string): SearchQuery {
   return query
 }
 
+/** A folder alone is not a search: listing it is. */
+export const isEmptySearch = (query: SearchQuery) =>
+  query.terms.length === 0 && !query.type && !query.access && !query.sharedWith && !query.after && !query.before && !query.tag
+
 export function stringifySearchQuery(query: SearchQuery) {
   return [
     ...query.terms,
