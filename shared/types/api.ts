@@ -38,6 +38,7 @@ export interface ResourceItem {
   updatedAt: string
   thumbnailUrl: string | null
   starred?: boolean
+  tagIds?: string[]
   allowScripts?: boolean
   access?: AccessSummary
   lastExternalViewAt?: string | null
@@ -45,6 +46,13 @@ export interface ResourceItem {
   deletedAt?: string | null
   canDownload: boolean
   location?: string
+}
+
+export interface TagInfo {
+  id: string
+  name: string
+  color: string
+  count: number
 }
 
 export interface Crumb {

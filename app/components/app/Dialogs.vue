@@ -35,6 +35,8 @@ onBeforeUnmount(() => {
   <DialogsRename v-if="dialogs.state.rename" :item="dialogs.state.rename" @close="dialogs.state.rename = null" />
   <DialogsNewFolder v-if="dialogs.state.newFolder" :parent-id="dialogs.state.newFolder.parentId" @close="dialogs.state.newFolder = null" />
   <DialogsMove v-if="dialogs.state.move" :items="dialogs.state.move" @close="dialogs.state.move = null" />
+  <DialogsTags v-if="dialogs.state.tags" :items="dialogs.state.tags" @close="dialogs.state.tags = null" />
+  <DialogsTagEdit v-if="dialogs.state.tagEdit" :tag="dialogs.state.tagEdit" @close="dialogs.state.tagEdit = null" />
   <DialogsConflict v-if="dialogs.state.conflict" :request="dialogs.state.conflict" @close="dialogs.state.conflict = null" />
   <input ref="fileInput" type="file" multiple class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">
   <input ref="folderInput" type="file" webkitdirectory class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">

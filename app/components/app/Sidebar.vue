@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { Activity, Clock, FolderUp, FolderPlus, Globe, HardDrive, House, Plus, Share2, Star, Trash2, Upload, Users, Inbox } from '@lucide/vue'
-import { useQuery } from '@tanstack/vue-query'
+import { Activity, Clock, Ellipsis, FolderUp, FolderPlus, Globe, HardDrive, House, Pencil, Plus, Share2, Star, Trash2, Upload, Users, Inbox } from '@lucide/vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { parseSearchQuery } from '#shared/utils/search'
+import type { TagInfo } from '#shared/types/api'
 import type { Component } from 'vue'
 
 const props = defineProps<{ owner: boolean, collapsed?: boolean }>()
@@ -52,6 +54,28 @@ const { data: storage } = useQuery({
   enabled: computed(() => props.owner),
 })
 const usage = computed(() => storage.value ? Math.min(1, storage.value.used / storage.value.quota) : 0)
+
+const { tags } = useTags(computed(() => props.owner))
+const queryClient = useQueryClient()
+const activeTag = computed(() => route.path === '/search' ? parseSearchQuery(String(route.query.q ?? '')).tag : undefined)
+
+async function deleteTag(tag: TagInfo) {
+  const confirmed = await dialogs.confirm({
+    title: `Supprimer l’étiquette « ${tag.name} » ?`,
+    message: tag.count ? `Elle sera retirée de ${plural(tag.count, 'élément', 'éléments')}. Les fichiers eux-mêmes ne changent pas.` : 'Aucun élément ne la porte.',
+    confirmLabel: 'Supprimer',
+    danger: true,
+  })
+  if (!confirmed) return
+  await api(`/api/tags/${tag.id}`, { method: 'DELETE' })
+  queryClient.invalidateQueries({ queryKey: ['tags'] })
+  actions.refresh()
+}
+
+const tagEntries = (tag: TagInfo): MenuEntry[] => [
+  { id: 'edit', label: 'Modifier', icon: Pencil, onSelect: () => dialogs.tagEdit(tag) },
+  { id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, onSelect: () => deleteTag(tag) },
+]
 
 const dropTarget = ref<string | null>(null)
 function onDrop(event: DragEvent) {
@@ -105,6 +129,35 @@ function onDrop(event: DragEvent) {
           </NuxtLink>
         </li>
       </ul>
+
+      <section v-if="owner && !collapsed && tags.length" class="mt-5" aria-labelledby="sidebar-tags">
+        <h2 id="sidebar-tags" class="mb-1 px-3 text-xs font-semibold tracking-wide text-nav-ink-weak uppercase">Étiquettes</h2>
+        <ul class="flex flex-col gap-0.5">
+          <li v-for="tag in tags" :key="tag.id" class="group relative">
+            <NuxtLink
+              :to="tagSearchUrl(tag.name)"
+              :aria-current="activeTag === tag.name.toLowerCase() ? 'page' : undefined"
+              class="flex h-9 items-center gap-3 rounded-md pr-9 pl-3 text-base transition-colors duration-150"
+              :class="activeTag === tag.name.toLowerCase() ? 'bg-nav-active font-semibold text-nav-ink' : 'text-nav-ink-weak hover:bg-nav-hover hover:text-nav-ink'"
+              @click="emit('navigate')"
+            >
+              <span class="flex size-[18px] shrink-0 items-center justify-center" aria-hidden="true">
+                <span class="size-2.5 rounded-full" :style="{ background: tag.color }" />
+              </span>
+              <span class="min-w-0 flex-1 truncate">{{ tag.name }}</span>
+            </NuxtLink>
+            <UiDropdownMenu :entries="tagEntries(tag)" align="start" side="right">
+              <button
+                type="button"
+                :aria-label="`Actions pour l’étiquette ${tag.name}`"
+                class="absolute top-1.5 right-1.5 inline-flex size-6 items-center justify-center rounded text-nav-ink-weak opacity-0 group-hover:opacity-100 hover:bg-nav-hover hover:text-nav-ink focus-visible:opacity-100 data-[state=open]:opacity-100 pointer-coarse:opacity-100"
+              >
+                <Ellipsis class="size-4" aria-hidden="true" />
+              </button>
+            </UiDropdownMenu>
+          </li>
+        </ul>
+      </section>
     </nav>
 
     <div v-if="owner && storage && !collapsed" class="border-t border-nav-line px-5 py-4">

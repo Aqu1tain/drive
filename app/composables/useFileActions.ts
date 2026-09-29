@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 import {
-  ArchiveRestore, Download, ExternalLink, Eye, FolderInput, FolderOpen, History, Info, Link, Pencil, Share2, Star, StarOff, Trash2,
+  ArchiveRestore, Download, ExternalLink, Eye, FolderInput, FolderOpen, History, Info, Link, Pencil, Share2, Star, StarOff, Tag, Trash2,
 } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
@@ -263,6 +263,7 @@ export function useFileActions() {
       single && { id: 'copy-link', label: 'Copier le lien', icon: Link, onSelect: () => copyLink(single) },
       { kind: 'separator' },
       starEntry,
+      { id: 'tags', label: 'Étiquettes…', icon: Tag, shortcut: 'L', onSelect: () => dialogs.tags(items) },
       { kind: 'separator' },
       single && { id: 'rename', label: 'Renommer', icon: Pencil, shortcut: 'F2', onSelect: () => dialogs.rename(single) },
       { id: 'move', label: 'Déplacer', icon: FolderInput, onSelect: () => dialogs.move(items) },

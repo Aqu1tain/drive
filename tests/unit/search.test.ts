@@ -30,6 +30,14 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('in:8f311e17-e1c9-4a2b-9c3d-1234567890ab').folderId).toBe('8f311e17-e1c9-4a2b-9c3d-1234567890ab')
   })
 
+  it('reads tags, quoted when they contain spaces', () => {
+    expect(parseSearchQuery('devis tag:"À relancer" tag:urgent')).toEqual({ terms: ['devis'], tag: 'urgent' })
+    expect(parseSearchQuery('devis tag:"À relancer"')).toEqual({ terms: ['devis'], tag: 'à relancer' })
+    expect(parseSearchQuery('étiquette:Clients')).toEqual({ terms: [], tag: 'clients' })
+    expect(stringifySearchQuery({ terms: ['devis'], tag: 'à relancer' })).toBe('devis tag:"à relancer"')
+    expect(parseSearchQuery('tag:"')).toEqual({ terms: ['tag:"'] })
+  })
+
   it('round-trips through stringify', () => {
     const input = 'facture type:pdf access:shared'
     expect(stringifySearchQuery(parseSearchQuery(input))).toBe(input)

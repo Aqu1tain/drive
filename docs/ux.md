@@ -53,6 +53,7 @@ Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire
 | Suppr / ⌫ | Corbeille |
 | F2 | Renommer |
 | S | Favori (propriétaire et lecteurs, chacun les siens) |
+| L | Étiquettes de la sélection |
 | ⌘/Ctrl / | Aide des raccourcis |
 | ← → (aperçu plein écran) | Fichier précédent / suivant |
 
@@ -62,6 +63,7 @@ Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire
 - Aperçu plein écran : `?preview=<id>&full=1`, navigation ← → dans le dossier. Échap ou « retour » navigateur rend la liste intacte.
 - Images, PDF (pdf.js), texte, Markdown, audio, vidéo, HTML (origine isolée, iframe sandbox). Sinon : icône, « Ce fichier ne peut pas être prévisualisé », Télécharger.
 - Word, Excel et PowerPoint : page convertie côté serveur, affichée comme le HTML. Un classeur montre ses feuilles l'une sous l'autre avec des onglets d'accès rapide ; une présentation montre le texte de chaque diapositive, avec la mention que la mise en page complète demande le téléchargement.
+- Étiquettes : pastilles colorées après le nom, réduites à des points quand la colonne manque de place ; section « Étiquettes » dans la barre latérale, chacune menant à sa recherche ; dialogue à cases pour une sélection (case à tiret quand seule une partie la porte), création à la volée.
 - Les miniatures de PDF montrent le haut de la première page, pas son centre souvent vide. Les vidéos ont une miniature prise à une seconde, la première image étant souvent noire.
 
 ## Partage

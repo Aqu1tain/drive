@@ -424,6 +424,11 @@ function onKeydown(event: KeyboardEvent) {
       if (mod || props.mode === 'share' || props.trash || !selectedItems.value.length) return
       actions.star(selectedItems.value, !selectedItems.value.every(item => item.starred))
       break
+    case 'l':
+    case 'L':
+      if (mod || !isOwner.value || props.trash || !selectedItems.value.length) return
+      dialogs.tags(selectedItems.value)
+      break
     case 'F10':
     case 'ContextMenu': {
       if (event.key === 'F10' && !event.shiftKey) return
@@ -620,10 +625,11 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
             >
               <div role="gridcell" class="flex min-w-0 items-center gap-3">
                 <FilesFileIcon :kind="sorted[row.index]!.kind" />
-                <div class="min-w-0">
+                <div class="@container min-w-0 flex-1">
                   <div class="flex min-w-0 items-center gap-1.5">
                     <span class="truncate text-ink" :title="sorted[row.index]!.name">{{ sorted[row.index]!.name }}</span>
                     <Star v-if="sorted[row.index]!.starred" class="size-3.5 shrink-0 fill-current text-[#f0a500]" aria-label="Favori" />
+                    <TagsPills v-if="isOwner" :ids="sorted[row.index]!.tagIds" />
                   </div>
                   <div v-if="!room.wide" class="truncate text-sm text-ink-weak">
                     {{ formatShortDate(dateOf(sorted[row.index]!)) }}<template v-if="sorted[row.index]!.type === 'file'"> · {{ formatSize(sorted[row.index]!.size) }}</template>

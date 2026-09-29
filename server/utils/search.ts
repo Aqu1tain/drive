@@ -58,8 +58,9 @@ function readerScope(userId: string) {
 }
 
 export async function searchResources(viewer: Viewer, query: SearchQuery, limit = 50): Promise<ResourceItem[]> {
-  const { resources } = tables
+  const { resources, tags } = tables
   const isOwner = viewer.ctx.isOwner
+  if (query.tag && !isOwner) return []
   const nameKey = searchKeyOf(query.terms.join(' '))
 
   const candidates = await useDB().select().from(resources).where(and(
@@ -69,6 +70,7 @@ export async function searchResources(viewer: Viewer, query: SearchQuery, limit 
     query.after ? gte(resources.updatedAt, new Date(query.after)) : undefined,
     query.before ? lt(resources.updatedAt, new Date(query.before)) : undefined,
     query.folderId ? sql`${resources.ancestorIds} @> array[${query.folderId}::uuid]` : undefined,
+    query.tag ? sql`${resources.tagIds} && array(select ${tags.id} from ${tags} where ${tags.nameLower} = ${query.tag})` : undefined,
     isOwner ? undefined : readerScope(viewer.user!.id),
   )).orderBy(
     desc(sql`${resources.searchKey} like ${`%${nameKey}%`}`),

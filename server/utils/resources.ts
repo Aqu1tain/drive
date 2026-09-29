@@ -178,6 +178,7 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
   return {
     ...item,
     starred: resource.starred,
+    tagIds: resource.tagIds,
     allowScripts: resource.allowScripts,
     access: options.summary,
     lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null,
