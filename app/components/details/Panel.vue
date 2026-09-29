@@ -11,6 +11,7 @@ const panel = useDetailsPanel()
 const dialogs = useDialogs()
 const actions = useFileActions()
 const queryClient = useQueryClient()
+const { t } = useI18n()
 const isOwner = computed(() => props.mode === 'owner')
 const id = computed(() => props.item?.id ?? '')
 
@@ -32,10 +33,7 @@ const { data: activity } = useQuery({
 
 const current = computed(() => details.value?.item ?? props.item)
 const stats = computed(() => activity.value?.stats ?? details.value?.stats ?? null)
-const KIND_LABELS: Record<string, string> = {
-  folder: 'Dossier', pdf: 'PDF', image: 'Image', video: 'Vidéo', audio: 'Audio', document: 'Document', spreadsheet: 'Tableur',
-  presentation: 'Présentation', text: 'Texte', html: 'Page web', archive: 'Archive', other: 'Fichier',
-}
+const tabs = [['details', t('common.details')], ['access', t('details.access')], ['activity', t('details.activity')]] as const
 
 async function toggleScripts(value: boolean) {
   await api(`/api/resources/${id.value}`, { method: 'PATCH', body: { allowScripts: value } })
@@ -44,25 +42,36 @@ async function toggleScripts(value: boolean) {
 }
 
 const allowScripts = computed({ get: () => current.value?.allowScripts ?? false, set: toggleScripts })
+
+/** Inside a sentence "Today" loses its capital, month names keep theirs. */
+function midSentence(date: string) {
+  const day = [t('format.today'), t('format.yesterday')].find(word => date.startsWith(word))
+  return day ? day.toLowerCase() + date.slice(day.length) : date
+}
+
+function linkTerms(link: { allowDownload: boolean, expiresAt: string | null }) {
+  const terms = t(link.allowDownload ? 'details.viewAndDownload' : 'details.viewOnly')
+  return link.expiresAt ? `${terms} · ${t('details.until', { date: formatLongDate(link.expiresAt) })}` : terms
+}
 </script>
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
     <header class="flex h-14 shrink-0 items-center gap-2 pr-2 pl-4">
-      <h2 class="min-w-0 flex-1 truncate font-semibold text-ink">{{ count > 1 ? plural(count, 'élément sélectionné', 'éléments sélectionnés') : current?.name ?? 'Détails' }}</h2>
-      <UiIconButton :icon="X" label="Fermer les détails" size="sm" @click="$emit('close')" />
+      <h2 class="min-w-0 flex-1 truncate font-semibold text-ink">{{ count > 1 ? t('files.selectedItems', { count }) : current?.name ?? t('common.details') }}</h2>
+      <UiIconButton :icon="X" :label="t('details.close')" size="sm" @click="$emit('close')" />
     </header>
 
     <div v-if="count > 1" class="px-4 py-10 text-center text-base text-ink-weak">
-      Sélectionnez un seul élément pour voir ses détails.
+      {{ t('details.selectOne') }}
     </div>
     <div v-else-if="!current" class="flex flex-1 flex-col items-center justify-center gap-2 px-8 text-center">
-      <p class="text-base text-ink-weak">Sélectionnez un fichier ou un dossier pour voir ses détails, ses accès et son activité.</p>
+      <p class="text-base text-ink-weak">{{ t('details.selectAny') }}</p>
     </div>
 
     <TabsRoot v-else v-model="panel.state.tab" class="flex min-h-0 flex-1 flex-col">
-      <TabsList v-if="isOwner" class="relative flex shrink-0 gap-1 border-b border-line-weak px-3" aria-label="Sections">
-        <TabsTrigger v-for="tab in [['details', 'Détails'], ['access', 'Accès'], ['activity', 'Activité']]" :key="tab[0]" :value="tab[0]!" class="h-10 px-2.5 text-base text-ink-weak transition-colors hover:text-ink data-[state=active]:font-semibold data-[state=active]:text-ink">
+      <TabsList v-if="isOwner" class="relative flex shrink-0 gap-1 border-b border-line-weak px-3" :aria-label="t('details.sections')">
+        <TabsTrigger v-for="tab in tabs" :key="tab[0]" :value="tab[0]" class="h-10 px-2.5 text-base text-ink-weak transition-colors hover:text-ink data-[state=active]:font-semibold data-[state=active]:text-ink">
           {{ tab[1] }}
         </TabsTrigger>
         <TabsIndicator class="absolute bottom-0 left-0 h-0.5 w-(--reka-tabs-indicator-size) translate-x-(--reka-tabs-indicator-position) rounded-full bg-accent transition-[width,translate] duration-200" />
@@ -79,21 +88,21 @@ const allowScripts = computed({ get: () => current.value?.allowScripts ?? false,
           <UiIconButton
             v-if="mode !== 'share'"
             :icon="Star"
-            :label="current.starred ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+            :label="t(current.starred ? 'actions.removeFavorite' : 'actions.addFavorite')"
             size="sm"
             :active="current.starred"
             @click="actions.star([current], !current.starred).then(() => queryClient.invalidateQueries({ queryKey: ['resource', id] }))"
           />
         </div>
         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-base">
-          <dt class="text-ink-weak">Type</dt>
-          <dd class="text-ink">{{ KIND_LABELS[current.kind] }}<span v-if="current.extension" class="text-ink-weak"> · .{{ current.extension }}</span></dd>
+          <dt class="text-ink-weak">{{ t('details.type') }}</dt>
+          <dd class="text-ink">{{ t(`details.kinds.${current.kind}`) }}<span v-if="current.extension" class="text-ink-weak"> · .{{ current.extension }}</span></dd>
           <template v-if="current.type === 'file'">
-            <dt class="text-ink-weak">Taille</dt>
+            <dt class="text-ink-weak">{{ t('details.size') }}</dt>
             <dd class="text-ink tabular">{{ formatSize(current.size) }}</dd>
           </template>
           <template v-if="details?.path.length">
-            <dt class="text-ink-weak">Emplacement</dt>
+            <dt class="text-ink-weak">{{ t('details.location') }}</dt>
             <dd class="min-w-0 text-ink">
               <template v-for="(crumb, index) in details.path" :key="String(crumb.id)">
                 <NuxtLink v-if="crumb.id && folderTo" :to="folderTo(crumb.id)" class="hover:underline">{{ crumb.name }}</NuxtLink>
@@ -102,35 +111,35 @@ const allowScripts = computed({ get: () => current.value?.allowScripts ?? false,
               </template>
             </dd>
           </template>
-          <dt class="text-ink-weak">Créé</dt>
+          <dt class="text-ink-weak">{{ t('details.created') }}</dt>
           <dd class="text-ink">{{ formatDateTime(current.createdAt) }}</dd>
-          <dt class="text-ink-weak">Modifié</dt>
+          <dt class="text-ink-weak">{{ t('details.modified') }}</dt>
           <dd class="text-ink">{{ formatDateTime(current.updatedAt) }}</dd>
           <template v-if="isOwner && stats?.lastViewAt">
-            <dt class="text-ink-weak">Dernier accès</dt>
+            <dt class="text-ink-weak">{{ t('details.lastViewed') }}</dt>
             <dd class="text-ink">{{ stats.lastViewBy }}<br><span class="text-sm text-ink-weak">{{ formatDateTime(stats.lastViewAt) }}</span></dd>
           </template>
         </dl>
         <section v-if="isOwner" class="mt-5" aria-labelledby="details-tags">
           <div class="mb-2 flex items-center justify-between gap-2">
-            <h3 id="details-tags" class="text-base text-ink-weak">Étiquettes</h3>
-            <UiButton size="sm" variant="ghost" :icon="Tag" @click="dialogs.tags([current])">Modifier</UiButton>
+            <h3 id="details-tags" class="text-base text-ink-weak">{{ t('details.tags') }}</h3>
+            <UiButton size="sm" variant="ghost" :icon="Tag" @click="dialogs.tags([current])">{{ t('common.edit') }}</UiButton>
           </div>
           <TagsPills v-if="current.tagIds?.length" :ids="current.tagIds" :max="20" class="flex-wrap" />
-          <p v-else class="text-base text-ink-weak">Aucune</p>
+          <p v-else class="text-base text-ink-weak">{{ t('common.none') }}</p>
         </section>
 
         <template v-if="isOwner">
           <div class="mt-5 border-t border-line-weak pt-4">
             <div class="mb-2 flex items-center gap-2 text-base">
               <component :is="current.access?.level === 'private' ? Lock : current.access?.hasLink ? Globe : Share2" class="size-4 text-ink-weak" aria-hidden="true" />
-              <span class="flex-1 text-ink">{{ current.access?.level === 'private' ? 'Privé' : current.access?.hasLink ? 'Lien public actif' : 'Partagé' }}</span>
-              <UiButton size="sm" variant="secondary" @click="dialogs.share(current)">Partager</UiButton>
+              <span class="flex-1 text-ink">{{ t(current.access?.level === 'private' ? 'details.private' : current.access?.hasLink ? 'details.publicLinkOn' : 'details.shared') }}</span>
+              <UiButton size="sm" variant="secondary" @click="dialogs.share(current)">{{ t('common.share') }}</UiButton>
             </div>
             <p v-if="current.access?.people.length" class="text-sm text-ink-weak">{{ current.access.people.map(p => p.label).join(', ') }}</p>
           </div>
           <div v-if="current.kind === 'html'" class="mt-5 border-t border-line-weak pt-4">
-            <UiSwitch v-model="allowScripts" label="Page interactive" description="Autorise le JavaScript de la page, toujours exécuté sur un domaine isolé." />
+            <UiSwitch v-model="allowScripts" :label="t('details.interactive')" :description="t('details.interactiveHint')" />
           </div>
         </template>
       </TabsContent>
@@ -142,8 +151,8 @@ const allowScripts = computed({ get: () => current.value?.allowScripts ?? false,
             <li v-if="access.link" class="flex items-center gap-3 py-1.5">
               <span class="flex size-8 items-center justify-center rounded-full bg-accent-softer text-accent-ink"><Globe class="size-4" aria-hidden="true" /></span>
               <div class="min-w-0 flex-1">
-                <p class="text-base text-ink">Lien public</p>
-                <p class="text-sm text-ink-weak">{{ access.link.allowDownload ? 'Consultation et téléchargement' : 'Consultation seule' }}{{ access.link.expiresAt ? ` · jusqu’au ${formatLongDate(access.link.expiresAt)}` : '' }}</p>
+                <p class="text-base text-ink">{{ t('details.publicLink') }}</p>
+                <p class="text-sm text-ink-weak">{{ linkTerms(access.link) }}</p>
               </div>
             </li>
             <li v-for="entry in access.entries" :key="entry.ruleId" class="flex items-center gap-3 py-1.5">
@@ -151,13 +160,13 @@ const allowScripts = computed({ get: () => current.value?.allowScripts ?? false,
               <div class="min-w-0 flex-1">
                 <p class="truncate text-base text-ink">{{ entry.label }}</p>
                 <p class="truncate text-sm text-ink-weak">
-                  {{ entry.inheritedFrom ? `Hérité de « ${entry.inheritedFrom.name} »` : entry.status === 'pending' ? 'Invitation en attente' : entry.invitationMode === 'link' ? 'Lien personnel' : entry.email }}
+                  {{ entry.inheritedFrom ? t('details.inheritedFrom', { name: entry.inheritedFrom.name }) : entry.status === 'pending' ? t('details.pending') : entry.invitationMode === 'link' ? t('details.personalLink') : entry.email }}
                 </p>
               </div>
             </li>
           </ul>
-          <p v-if="!access.link && !access.entries.length" class="py-6 text-center text-base text-ink-weak">Seul vous avez accès à cet élément.</p>
-          <UiButton variant="secondary" block :icon="Share2" class="mt-4" @click="dialogs.share(current)">Gérer l’accès</UiButton>
+          <p v-if="!access.link && !access.entries.length" class="py-6 text-center text-base text-ink-weak">{{ t('details.onlyYou') }}</p>
+          <UiButton variant="secondary" block :icon="Share2" class="mt-4" @click="dialogs.share(current)">{{ t('details.manageAccess') }}</UiButton>
         </template>
       </TabsContent>
 
@@ -165,16 +174,16 @@ const allowScripts = computed({ get: () => current.value?.allowScripts ?? false,
         <div v-if="!activity" class="flex flex-col gap-3"><UiSkeleton v-for="n in 4" :key="n" height="2rem" /></div>
         <template v-else>
           <div class="mb-5 grid grid-cols-3 gap-2">
-            <div v-for="stat in [['Consultations', activity.stats.views], ['Visiteurs', activity.stats.visitors], ['Téléchargements', activity.stats.downloads]]" :key="stat[0]" class="rounded-lg bg-subtle p-3">
+            <div v-for="stat in [[t('details.views'), activity.stats.views], [t('details.visitors'), activity.stats.visitors], [t('details.downloads'), activity.stats.downloads]]" :key="stat[0]" class="rounded-lg bg-subtle p-3">
               <p class="text-xl font-semibold text-ink tabular">{{ stat[1] }}</p>
               <p class="truncate text-xs text-ink-weak">{{ stat[0] }}</p>
             </div>
           </div>
           <p v-if="activity.stats.lastViewAt" class="mb-4 text-sm text-ink-weak">
-            Dernière consultation {{ formatDateTime(activity.stats.lastViewAt).toLowerCase() }} par {{ activity.stats.lastViewBy }}
+            {{ t('details.lastView', { date: midSentence(formatDateTime(activity.stats.lastViewAt)), name: activity.stats.lastViewBy ?? '' }) }}
           </p>
           <ActivityList v-if="activity.events.length" :events="activity.events" :show-resource="current.type === 'folder'" dense />
-          <p v-else class="py-6 text-center text-base text-ink-weak">Personne n’a encore consulté cet élément.</p>
+          <p v-else class="py-6 text-center text-base text-ink-weak">{{ t('details.noViews') }}</p>
         </template>
       </TabsContent>
     </TabsRoot>
