@@ -345,17 +345,31 @@ backup() {
   info "To restore: see docs/install.md, section \"Back up and restore\"." "Restauration : voir docs/install.fr.md, section « Sauvegarder et restaurer »."
 }
 
+# An explicit --lang on an existing installation becomes its default language.
+remember_language() {
+  [ -f "$INSTALL_DIR/.env" ] && [ "$REQUESTED_LANG" = "$UI_LANG" ] || return 0
+  [ "$(env_get DEFAULT_LOCALE)" = "$UI_LANG" ] && return 0
+  if grep -qE '^DEFAULT_LOCALE=' "$INSTALL_DIR/.env"; then
+    sed -i.bak "s/^DEFAULT_LOCALE=.*/DEFAULT_LOCALE=$UI_LANG/" "$INSTALL_DIR/.env" && rm -f "$INSTALL_DIR/.env.bak"
+  else
+    printf 'DEFAULT_LOCALE=%s\n' "$UI_LANG" >> "$INSTALL_DIR/.env"
+  fi
+  ok "Default language: $UI_LANG" "Langue par défaut : $UI_LANG"
+}
+
 case "$COMMAND" in
   install)
     printf '\n\033[1m  Drive · installation\033[0m\n'
     check_docker
     fetch_sources
     configure
+    remember_language
     start
     check_https
     summary
     ;;
   update)
+    remember_language
     check_docker
     step "Updating" "Mise à jour"
     [ -d "$INSTALL_DIR/.git" ] && git -C "$INSTALL_DIR" pull --ff-only --quiet && ok "Sources up to date" "Sources à jour"

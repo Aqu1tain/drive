@@ -75,7 +75,7 @@ Without a domain (HTTP by IP, ports 3000 and 3001):
 
 Useful options: `--smtp smtp://user:password@smtp.example.com:587` to send invitations by email, `--smtp-from "Drive <drive@example.com>"`, `--name "My Drive"`, `--port 8080` if port 3000 is already taken.
 
-Language: the script runs in English unless you pass `--lang fr` (or set `DRIVE_LANG=fr`). The choice is saved as `DEFAULT_LOCALE` in `.env`: it becomes the default language of the interface, the emails and the shared pages, and `update`, `backup`, `status`, `logs` and `uninstall` reuse it.
+Language: the script runs in English unless you pass `--lang fr` (or set `DRIVE_LANG=fr`). The choice is saved as `DEFAULT_LOCALE` in `.env`: it becomes the default language of the interface, the emails and the shared pages, and `update`, `backup`, `status`, `logs` and `uninstall` reuse it. An installation made before languages existed runs in English after its next update: `~/drive/install.sh update --lang fr` switches it back to French and saves the choice.
 
 The script writes `~/drive/.env` (randomly generated secrets), pulls the image, starts the services and waits for the application to respond.
 
