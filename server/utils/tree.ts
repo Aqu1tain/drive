@@ -45,9 +45,10 @@ export async function siblingNames(parentId: string | null) {
   return rows.map(r => r.name)
 }
 
+/** Files and their kept versions both take room. */
 export async function usedBytes() {
   const [row] = await useDB().select({ total: sql<string>`coalesce(sum(${resources.size}), 0)` }).from(resources).where(eq(resources.type, 'file'))
-  return Number(row?.total ?? 0)
+  return Number(row?.total ?? 0) + await versionBytes()
 }
 
 export function isUniqueViolation(error: unknown) {
@@ -77,13 +78,15 @@ export async function reparent(tx: Transaction, resource: Resource, target: Reso
 /** Storage keys of a resource and everything below it, to delete blobs once rows are gone. */
 export async function subtreeKeys(ids: string[]) {
   if (ids.length === 0) return []
-  const { siteFiles } = tables
+  const { siteFiles, fileVersions } = tables
   const subtree = sql`${resources.id} = any(${uuidArray(ids)}) or ${resources.ancestorIds} && ${uuidArray(ids)}`
-  const [rows, sites] = await Promise.all([
+  const inSubtree = sql`in (select id from ${resources} where ${subtree})`
+  const [rows, sites, versions] = await Promise.all([
     useDB().select({ storageKey: resources.storageKey, thumbnailKey: resources.thumbnailKey, previewKey: resources.previewKey }).from(resources).where(subtree),
-    useDB().select({ storageKey: siteFiles.storageKey }).from(siteFiles).where(sql`${siteFiles.resourceId} in (select id from ${resources} where ${subtree})`),
+    useDB().select({ storageKey: siteFiles.storageKey }).from(siteFiles).where(sql`${siteFiles.resourceId} ${inSubtree}`),
+    useDB().select({ storageKey: fileVersions.storageKey }).from(fileVersions).where(sql`${fileVersions.resourceId} ${inSubtree}`),
   ])
-  return [...rows.flatMap(row => [row.storageKey, row.thumbnailKey, row.previewKey]), ...sites.map(row => row.storageKey)].filter((key): key is string => !!key)
+  return [...rows.flatMap(row => [row.storageKey, row.thumbnailKey, row.previewKey]), ...[...sites, ...versions].map(row => row.storageKey)].filter((key): key is string => !!key)
 }
 
 export async function deleteBlobs(keys: string[]) {

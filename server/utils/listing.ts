@@ -108,5 +108,6 @@ export async function resourceDetails(viewer: Viewer, id: string): Promise<Resou
     item: (await withFolderPreviews(viewer, [toItem(resource, { viewer, access, summary: summaries.get(resource.id) })]))[0]!,
     path,
     stats: await activityStats(resource),
+    versioning: await versioningOf(resource),
   }
 }

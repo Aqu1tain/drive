@@ -5,6 +5,7 @@ const bodySchema = z.object({
   starred: z.boolean().optional(),
   inheritAccess: z.boolean().optional(),
   allowScripts: z.boolean().optional(),
+  versioning: z.boolean().optional(),
 })
 
 export default defineEventHandler(async (event) => {

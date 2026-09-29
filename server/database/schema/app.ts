@@ -31,6 +31,8 @@ export const resources = pgTable('resources', {
   tagIds: uuid('tag_ids').array().notNull().default(sql`'{}'::uuid[]`),
   inheritAccess: boolean('inherit_access').notNull().default(true),
   allowScripts: boolean('allow_scripts').notNull().default(false),
+  /** Folders only: true keeps earlier versions of the files inside, false stops, null follows the parent folder. */
+  versioning: boolean('versioning'),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   ownerOpenedAt: timestamp('owner_opened_at', { withTimezone: true }),
   lastExternalViewAt: timestamp('last_external_view_at', { withTimezone: true }),
@@ -57,6 +59,21 @@ export const resourceTexts = pgTable('resource_texts', {
   words: tsvector('words').notNull(),
 }, t => [
   index('resource_texts_words_idx').using('gin', t.words),
+])
+
+/** Earlier contents of a file, kept when it is replaced in a folder with version history, or when a version is restored. */
+export const fileVersions = pgTable('file_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  resourceId: uuid('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' }),
+  storageKey: text('storage_key').notNull(),
+  size: bigint('size', { mode: 'number' }).notNull(),
+  checksum: text('checksum').notNull(),
+  mimeType: text('mime_type'),
+  label: text('label'),
+  savedAt: timestamp('saved_at', { withTimezone: true }).notNull(),
+  replacedAt: timestamp('replaced_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [
+  index('file_versions_resource_idx').on(t.resourceId, t.savedAt),
 ])
 
 /** Files of a static site uploaded as a zip, extracted once so that each one is served straight from storage. */
@@ -151,4 +168,5 @@ export type Resource = typeof resources.$inferSelect
 export type AccessRule = typeof accessRules.$inferSelect
 export type Invitation = typeof invitations.$inferSelect
 export type Tag = typeof tags.$inferSelect
+export type FileVersion = typeof fileVersions.$inferSelect
 export type AccessEvent = typeof accessEvents.$inferSelect

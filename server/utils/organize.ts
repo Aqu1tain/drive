@@ -30,6 +30,7 @@ export interface ResourceChanges {
   starred?: boolean
   inheritAccess?: boolean
   allowScripts?: boolean
+  versioning?: boolean
 }
 
 export async function updateResource(event: H3Event, viewer: Viewer, id: string, changes: ResourceChanges) {
@@ -45,6 +46,10 @@ export async function updateResource(event: H3Event, viewer: Viewer, id: string,
   }
   if (changes.starred !== undefined) patch.starred = changes.starred
   if (changes.inheritAccess !== undefined) patch.inheritAccess = changes.inheritAccess
+  if (changes.versioning !== undefined) {
+    if (resource.type !== 'folder') throw createError({ statusCode: 400, statusMessage: tr('errors.foldersOnly') })
+    patch.versioning = await setVersioning(resource, changes.versioning)
+  }
   if (changes.allowScripts !== undefined) {
     if (resourceKind(resource) !== 'html') throw createError({ statusCode: 400, statusMessage: tr('errors.htmlOnly') })
     patch.allowScripts = changes.allowScripts
