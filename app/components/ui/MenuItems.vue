@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ContextMenuItem, ContextMenuSeparator, DropdownMenuItem, DropdownMenuSeparator } from 'reka-ui'
+import { Check } from '@lucide/vue'
 
 const props = defineProps<{ entries: MenuEntry[], variant: 'dropdown' | 'context' }>()
 const Item = computed(() => props.variant === 'dropdown' ? DropdownMenuItem : ContextMenuItem)
@@ -14,11 +15,13 @@ const Separator = computed(() => props.variant === 'dropdown' ? DropdownMenuSepa
       v-else
       :disabled="entry.disabled"
       :class="[MENU_ITEM, entry.danger && 'text-danger']"
+      v-bind="entry.checked === undefined ? {} : { 'role': 'menuitemcheckbox', 'aria-checked': entry.checked }"
       @select="entry.onSelect()"
     >
       <component :is="entry.icon" v-if="entry.icon" class="size-4 shrink-0" :class="entry.danger ? 'text-danger' : 'text-ink-weak'" aria-hidden="true" />
       <span class="flex-1 truncate">{{ entry.label }}</span>
       <UiKbd v-if="entry.shortcut" :keys="entry.shortcut" class="ml-4 pointer-coarse:hidden" />
+      <Check v-if="entry.checked" class="ml-4 size-4 shrink-0 text-accent-ink" aria-hidden="true" />
     </component>
   </template>
 </template>
