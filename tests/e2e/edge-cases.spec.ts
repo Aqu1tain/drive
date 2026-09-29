@@ -128,12 +128,13 @@ test('a connection cut after the file was stored does not create a duplicate', a
   expect(items.filter((item: { name: string }) => item.name.startsWith('une-seule-fois'))).toHaveLength(1)
 })
 
-test('files dropped on a folder list are imported once', async ({ page }) => {
+test('files dropped on a folder list are imported once, system files left out', async ({ page }) => {
   await uploadText(owner, folder.id, 'cible.txt', 'cible')
   await openFolder(page)
   const transfer = await page.evaluateHandle(() => {
     const data = new DataTransfer()
     data.items.add(new File(['déposé'], 'depose-une-fois.txt', { type: 'text/plain' }))
+    data.items.add(new File(['mac'], '.DS_Store'))
     return data
   })
   const row = page.getByRole('row', { name: /cible\.txt/ })
@@ -144,4 +145,5 @@ test('files dropped on a folder list are imported once', async ({ page }) => {
   await page.waitForTimeout(1500)
   const { items } = await (await owner.get(`/api/folders/${folder.id}`)).json()
   expect(items.filter((item: { name: string }) => item.name.startsWith('depose-une-fois'))).toHaveLength(1)
+  expect(items.some((item: { name: string }) => item.name === '.DS_Store')).toBe(false)
 })
