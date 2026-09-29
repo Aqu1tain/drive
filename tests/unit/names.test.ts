@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { InvalidNameError, extensionOf, keepBothName, sanitizeName, searchKeyOf, splitName } from '../../shared/utils/names'
+import { isSystemFile, InvalidNameError, extensionOf, keepBothName, sanitizeName, searchKeyOf, splitName } from '../../shared/utils/names'
 
 describe('sanitizeName', () => {
   it('neutralises path traversal', () => {
@@ -73,5 +73,19 @@ describe('keepBothName', () => {
 describe('searchKeyOf', () => {
   it('ignores accents and case', () => {
     expect(searchKeyOf('Facture Été 2026.PDF')).toBe('facture ete 2026.pdf')
+  })
+})
+
+describe('isSystemFile', () => {
+  it('spots what operating systems leave behind, anywhere in a path', () => {
+    for (const path of ['.DS_Store', 'photos/.DS_Store', '._IMG_1938.jpg', '__MACOSX/photos/x.jpg', 'Thumbs.db', 'Desktop.ini', 'Icon\r', 'a/.Spotlight-V100/store']) {
+      expect(isSystemFile(path), path).toBe(true)
+    }
+  })
+
+  it('keeps ordinary files, dotfiles included', () => {
+    for (const path of ['IMG_1938.jpg', '.env.example', 'notes/.gitkeep', 'DS_Store.txt', 'thumbs.db.bak', 'MACOSX/x.jpg']) {
+      expect(isSystemFile(path), path).toBe(false)
+    }
   })
 })
