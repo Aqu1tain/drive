@@ -37,6 +37,8 @@ export interface ResourceItem {
   createdAt: string
   updatedAt: string
   thumbnailUrl: string | null
+  /** Thumbnails of the latest images in a folder. */
+  previews?: string[]
   starred?: boolean
   tagIds?: string[]
   allowScripts?: boolean

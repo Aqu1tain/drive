@@ -8,9 +8,8 @@ export default defineEventHandler(async (event) => {
     .where(and(notInTrash, sql`exists (select 1 from ${accessRules} where ${accessRules.resourceId} = ${resources.id})`))
     .orderBy(desc(resources.updatedAt))
   const [summaries, locations] = await Promise.all([summarizeMany(items), locationsOf(items)])
-  return {
-    items: items
-      .map(item => toItem(item, { viewer, summary: summaries.get(item.id), location: locations.get(item.id) }))
-      .filter(item => item.access?.level !== 'private' || !item.access.inherited),
-  }
+  const shared = items
+    .map(item => toItem(item, { viewer, summary: summaries.get(item.id), location: locations.get(item.id) }))
+    .filter(item => item.access?.level !== 'private' || !item.access.inherited)
+  return { items: await withFolderPreviews(viewer, shared) }
 })

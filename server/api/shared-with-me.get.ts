@@ -18,5 +18,5 @@ export default defineEventHandler(async (event) => {
   const items = readable
     .filter(({ resource }) => !resource.ancestorIds.some(id => ids.has(id)))
     .map(({ resource, access }) => toItem(resource, { viewer, access }))
-  return { items: await withFavorites(viewer, items) }
+  return { items: await withFolderPreviews(viewer, await withFavorites(viewer, items)) }
 })

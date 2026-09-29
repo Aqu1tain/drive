@@ -7,13 +7,13 @@ export default defineEventHandler(async (event): Promise<ResourceDetails> => {
   const path = crumbsFor(viewer, chain.slice(1), rules)
 
   if (!viewer.ctx.isOwner) {
-    const [item] = await withFavorites(viewer, [toItem(resource, { viewer, access })])
+    const [item] = await withFolderPreviews(viewer, await withFavorites(viewer, [toItem(resource, { viewer, access })]))
     return { item: item!, path, stats: null }
   }
 
   const summaries = await summarizeMany([resource])
   return {
-    item: toItem(resource, { viewer, access, summary: summaries.get(resource.id) }),
+    item: (await withFolderPreviews(viewer, [toItem(resource, { viewer, access, summary: summaries.get(resource.id) })]))[0]!,
     path,
     stats: await activityStats(resource),
   }

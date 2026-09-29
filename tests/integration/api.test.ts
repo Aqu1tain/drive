@@ -408,6 +408,74 @@ describe('upload safety', () => {
   })
 })
 
+describe('folder previews', () => {
+  const png = (color: string) => sharp({ create: { width: 32, height: 32, channels: 3, background: color } }).png().toBuffer()
+  const previewsOf = async (client: Client, parentId: string, folderId: string) =>
+    ((await client.get(`/api/folders/${parentId}`)).body.items as Array<{ id: string, previews?: string[] }>).find(item => item.id === folderId)?.previews ?? []
+
+  async function until<T>(read: () => Promise<T>, done: (value: T) => boolean) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const value = await read()
+      if (done(value)) return value
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    throw new Error('Thumbnails were not ready in time')
+  }
+
+  it('shows the latest images of a folder, never documents or trashed files', async () => {
+    const parent = await folderIn(root, 'Albums')
+    const album = await folderIn(parent, 'Vacances')
+    const photos = []
+    for (const color of ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff']) photos.push((await owner.upload(album, `${unique('photo')}.png`, await png(color))).body)
+    await fileIn(album, 'notes.txt', 'pas une image')
+    await owner.post('/api/resources/trash', { ids: [photos[4].id] })
+
+    const previews = await until(() => previewsOf(owner, parent, album), list => list.length === 4)
+    expect(previews.every(url => /\/api\/resources\/[\w-]+\/thumbnail\?v=/.test(url))).toBe(true)
+    expect(previews.some(url => url.includes(photos[4].id))).toBe(false)
+    expect((await owner.get(previews[0]!)).headers.get('content-type')).toBe('image/webp')
+  })
+
+  it('only shows readers images they can open', async () => {
+    const { client: reader, email } = await readerClient(owner)
+    const shared = await folderIn(root, 'Partage photos')
+    const album = await folderIn(shared, 'Album')
+    const visible = (await owner.upload(album, `${unique('visible')}.png`, await png('#ff00ff'))).body
+    const hidden = (await owner.upload(album, `${unique('cachee')}.png`, await png('#000000'))).body
+    await owner.patch(`/api/resources/${hidden.id}`, { inheritAccess: false })
+    await owner.post(`/api/resources/${shared}/access`, { email, notify: false })
+
+    await until(() => previewsOf(owner, shared, album), list => list.length === 2)
+    const previews = await previewsOf(reader, shared, album)
+    expect(previews).toHaveLength(1)
+    expect(previews[0]).toContain(visible.id)
+  })
+
+  it('looks into subfolders, direct images first, never below a trashed or closed subfolder', async () => {
+    const { client: reader, email } = await readerClient(owner)
+    const parent = await folderIn(root, 'Camps')
+    const camp = await folderIn(parent, 'Camp ski')
+    const days = await folderIn(camp, 'Jour 1')
+    const closed = await folderIn(camp, 'Encadrants')
+    const trashed = await folderIn(camp, 'Brouillons')
+    const deep = (await owner.upload(days, `${unique('piste')}.png`, await png('#112233'))).body
+    const direct = (await owner.upload(camp, `${unique('affiche')}.png`, await png('#445566'))).body
+    const hidden = (await owner.upload(closed, `${unique('staff')}.png`, await png('#778899'))).body
+    const gone = (await owner.upload(trashed, `${unique('brouillon')}.png`, await png('#aabbcc'))).body
+    await owner.patch(`/api/resources/${closed}`, { inheritAccess: false })
+    await owner.post('/api/resources/trash', { ids: [trashed] })
+    await owner.post(`/api/resources/${parent}/access`, { email, notify: false })
+
+    const previews = await until(() => previewsOf(owner, parent, camp), list => list.length === 3)
+    expect(previews[0]).toContain(direct.id)
+    expect(previews.some(url => url.includes(gone.id))).toBe(false)
+    expect(previews.some(url => url.includes(hidden.id))).toBe(true)
+
+    const seen = await previewsOf(reader, parent, camp)
+    expect(seen.map(url => url.split('/')[3])).toEqual([direct.id, deep.id])
+  })
+})
+
 describe('tags', () => {
   const created: string[] = []
   afterAll(async () => {
