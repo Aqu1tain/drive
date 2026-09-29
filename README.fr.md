@@ -10,7 +10,7 @@
 
 Auto-hébergé, une commande pour l'installer sur n'importe quel serveur avec Docker.
 
-<img src="docs/presentation.avif" alt="Présentation de Drive" width="100%">
+<img src="docs/presentation.fr.avif" alt="Présentation de Drive" width="100%">
 
 </div>
 
