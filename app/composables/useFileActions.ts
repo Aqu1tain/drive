@@ -41,11 +41,20 @@ export function useFileActions() {
     queryClient.setQueriesData<ItemsPayload>({ queryKey: ['search'] }, apply)
   }
 
-  async function run<T>(task: () => Promise<T>, fallback: string) {
+  /** Optimistic edits are undone from this snapshot when the server refuses or the network is gone. */
+  function snapshot() {
+    const saved = ['folder', 'list', 'search'].flatMap(key => queryClient.getQueriesData({ queryKey: [key] }))
+    return () => {
+      for (const [key, data] of saved) queryClient.setQueryData(key, data)
+    }
+  }
+
+  async function run<T>(task: () => Promise<T>, fallback: string, rollback?: () => void) {
     try {
       return await task()
     }
     catch (error) {
+      rollback?.()
       toast.error(errorMessage(error, fallback))
       refresh()
       throw error
@@ -73,8 +82,9 @@ export function useFileActions() {
   }
 
   async function star(items: ResourceItem[], starred: boolean) {
+    const rollback = snapshot()
     for (const item of items) patchInCaches(item.id, { starred })
-    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'PATCH', body: { starred } }))), 'Impossible de mettre à jour les favoris')
+    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'PATCH', body: { starred } }))), 'Impossible de mettre à jour les favoris', rollback)
     queryClient.invalidateQueries({ queryKey: ['list', 'starred'] })
     toast(starred ? `${label(items)} ajouté aux favoris` : `${label(items)} retiré des favoris`)
   }
@@ -94,8 +104,9 @@ export function useFileActions() {
 
   async function trash(items: ResourceItem[]) {
     if (items.length === 0) return
+    const rollback = snapshot()
     removeFromCaches(new Set(items.map(i => i.id)))
-    await run(() => api('/api/resources/trash', { method: 'POST', body: { ids: items.map(i => i.id) } }), 'Impossible de déplacer vers la corbeille')
+    await run(() => api('/api/resources/trash', { method: 'POST', body: { ids: items.map(i => i.id) } }), 'Impossible de déplacer vers la corbeille', rollback)
     refresh()
     toast(`${label(items)} déplacé vers la corbeille`, {
       duration: 6000,
@@ -111,8 +122,9 @@ export function useFileActions() {
       danger: true,
     })
     if (!confirmed) return
+    const rollback = snapshot()
     removeFromCaches(new Set(items.map(i => i.id)))
-    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'DELETE' }))), 'La suppression a échoué')
+    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'DELETE' }))), 'La suppression a échoué', rollback)
     refresh()
     toast(`${label(items)} supprimé définitivement`)
   }
