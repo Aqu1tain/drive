@@ -94,12 +94,54 @@ test('a failed upload shows a clear error and can be retried', async ({ page }) 
   await openFolder(page)
   let failures = 1
   await page.route('**/api/uploads?**', async (route) => {
-    if (failures-- > 0) return route.fulfill({ status: 500, contentType: 'application/json', body: '{"statusCode":500}' })
+    if (failures-- > 0) return route.fulfill({ status: 413, contentType: 'application/json', body: '{"statusCode":413,"statusMessage":"Fichier trop volumineux"}' })
     return route.continue()
   })
   await page.locator('input[type=file][multiple]').setInputFiles({ name: 'rapport-final.txt', mimeType: 'text/plain', buffer: Buffer.from('ok') })
   const queue = page.getByRole('region', { name: 'Imports' })
-  await expect(queue.getByText('L’import a échoué')).toBeVisible()
+  await expect(queue.getByText('Fichier trop volumineux')).toBeVisible()
   await queue.getByRole('button', { name: 'Réessayer rapport-final.txt' }).click()
   await expect(page.getByRole('row', { name: /rapport-final\.txt/ })).toBeVisible()
+})
+
+test('a dropped connection is retried on its own, without an error', async ({ page }) => {
+  await openFolder(page)
+  let drops = 2
+  await page.route('**/api/uploads?**', route => drops-- > 0 ? route.abort('connectionreset') : route.continue())
+  await page.locator('input[type=file][multiple]').setInputFiles({ name: 'coupure.txt', mimeType: 'text/plain', buffer: Buffer.from('ok') })
+  await expect(page.getByRole('row', { name: /coupure\.txt/ })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('region', { name: 'Imports' }).getByText('Connexion interrompue')).toHaveCount(0)
+})
+
+test('a connection cut after the file was stored does not create a duplicate', async ({ page }) => {
+  await openFolder(page)
+  let cut = false
+  await page.route('**/api/uploads?**', async (route) => {
+    if (cut) return route.continue()
+    cut = true
+    await route.fetch()
+    await route.abort('connectionreset')
+  })
+  await page.locator('input[type=file][multiple]').setInputFiles({ name: 'une-seule-fois.txt', mimeType: 'text/plain', buffer: Buffer.from('une fois') })
+  await expect(page.getByRole('row', { name: /une-seule-fois/ })).toBeVisible({ timeout: 15_000 })
+  const { items } = await (await owner.get(`/api/folders/${folder.id}`)).json()
+  expect(items.filter((item: { name: string }) => item.name.startsWith('une-seule-fois'))).toHaveLength(1)
+})
+
+test('files dropped on a folder list are imported once', async ({ page }) => {
+  await uploadText(owner, folder.id, 'cible.txt', 'cible')
+  await openFolder(page)
+  const transfer = await page.evaluateHandle(() => {
+    const data = new DataTransfer()
+    data.items.add(new File(['déposé'], 'depose-une-fois.txt', { type: 'text/plain' }))
+    return data
+  })
+  const row = page.getByRole('row', { name: /cible\.txt/ })
+  await row.dispatchEvent('dragenter', { dataTransfer: transfer })
+  await row.dispatchEvent('dragover', { dataTransfer: transfer })
+  await row.dispatchEvent('drop', { dataTransfer: transfer })
+  await expect(page.getByRole('row', { name: /depose-une-fois\.txt/ })).toBeVisible()
+  await page.waitForTimeout(1500)
+  const { items } = await (await owner.get(`/api/folders/${folder.id}`)).json()
+  expect(items.filter((item: { name: string }) => item.name.startsWith('depose-une-fois'))).toHaveLength(1)
 })

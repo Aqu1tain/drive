@@ -7,9 +7,6 @@ import type { ResourceItem } from '#shared/types/api'
 
 export type BrowserMode = 'owner' | 'reader' | 'share'
 
-interface ItemsPayload<T = ResourceItem> {
-  items: T[]
-}
 
 const label = (items: ResourceItem[]) => items.length === 1 ? items[0]!.name : plural(items.length, 'élément')
 
@@ -27,19 +24,12 @@ export function useFileActions() {
     }
   }
 
-  function removeFromCaches(ids: Set<string>) {
-    const strip = <T extends { items: ResourceItem[] }>(data: T | undefined) => data && { ...data, items: data.items.filter(i => !ids.has(i.id)) }
-    queryClient.setQueriesData<{ items: ResourceItem[] }>({ queryKey: ['folder'] }, strip)
-    queryClient.setQueriesData<{ items: ResourceItem[] }>({ queryKey: ['list'] }, strip)
-    queryClient.setQueriesData<{ items: ResourceItem[] }>({ queryKey: ['search'] }, strip)
+  function updateLists(change: (items: ResourceItem[]) => ResourceItem[]) {
+    for (const key of ['folder', 'list', 'search']) queryClient.setQueriesData({ queryKey: [key] }, (data: unknown) => mapCachedLists(data, change))
   }
 
-  function patchInCaches(id: string, patch: Partial<ResourceItem>) {
-    const apply = <T extends ItemsPayload>(data: T | undefined) => data && { ...data, items: data.items.map(i => i.id === id ? { ...i, ...patch } : i) }
-    queryClient.setQueriesData<ItemsPayload>({ queryKey: ['folder'] }, apply)
-    queryClient.setQueriesData<ItemsPayload>({ queryKey: ['list'] }, apply)
-    queryClient.setQueriesData<ItemsPayload>({ queryKey: ['search'] }, apply)
-  }
+  const removeFromCaches = (ids: Set<string>) => updateLists(items => items.filter(item => !ids.has(item.id)))
+  const patchInCaches = (id: string, patch: Partial<ResourceItem>) => updateLists(items => items.map(item => item.id === id ? { ...item, ...patch } : item))
 
   /** Optimistic edits are undone from this snapshot when the server refuses or the network is gone. */
   function snapshot() {
