@@ -66,4 +66,14 @@ export default {
   linkExpired: 'Ce lien a expiré',
   linkRevoked: 'Ce lien a été révoqué',
   contentGone: 'Ce contenu n’est plus disponible',
+  client: {
+    generic: 'Une erreur est survenue. Réessayez.',
+    sessionExpired: 'Votre session a expiré. Reconnectez-vous.',
+    forbidden: 'Vous n’avez pas les droits pour cette action.',
+    gone: 'Cet élément n’existe plus.',
+    tooLarge: 'Ce fichier dépasse la taille autorisée.',
+    tooManyAttempts: 'Trop de tentatives. Réessayez dans une minute.',
+    storageFull: 'L’espace de stockage est plein.',
+    offline: 'Vous êtes hors ligne. Vérifiez votre connexion.',
+  },
 } satisfies Catalog<typeof en>

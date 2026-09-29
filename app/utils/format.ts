@@ -1,17 +1,3 @@
-import { DEFAULT_LOCALE, translate, type Locale, type MessageKey, type MessageParams } from '#shared/i18n'
-
-/** Formatting follows the interface language; outside a Nuxt context (tests, early errors) it falls back to English. */
-function currentLocale(): Locale {
-  try {
-    return useLocale().value
-  }
-  catch {
-    return DEFAULT_LOCALE
-  }
-}
-
-const say = (key: MessageKey, params?: MessageParams) => translate(currentLocale(), key, params)
-
 const UNITS = ['format.kb', 'format.mb', 'format.gb', 'format.tb'] as const
 
 export function formatSize(bytes: number | null | undefined) {

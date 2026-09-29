@@ -10,6 +10,19 @@ export const useLocale = () => useState<Locale>('locale', () => {
   return isLocale(configured) ? configured : DEFAULT_LOCALE
 })
 
+/** The current language outside a component (utilities, early errors); English when no Nuxt context exists. */
+export function currentLocale(): Locale {
+  try {
+    return useLocale().value
+  }
+  catch {
+    return DEFAULT_LOCALE
+  }
+}
+
+/** `t` for plain modules: reads the language at call time. */
+export const say = (key: MessageKey, params?: MessageParams) => translate(currentLocale(), key, params)
+
 export function useI18n() {
   const locale = useLocale()
   const cookie = useCookie<string | null>(LOCALE_COOKIE, { maxAge: YEAR, sameSite: 'lax', path: '/' })

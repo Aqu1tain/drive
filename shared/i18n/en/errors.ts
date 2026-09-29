@@ -63,4 +63,14 @@ export default {
   linkExpired: 'This link has expired',
   linkRevoked: 'This link was revoked',
   contentGone: 'This content is no longer available',
+  client: {
+    generic: 'Something went wrong. Please try again.',
+    sessionExpired: 'Your session has expired. Please sign in again.',
+    forbidden: 'You are not allowed to do this.',
+    gone: 'This item no longer exists.',
+    tooLarge: 'This file is larger than allowed.',
+    tooManyAttempts: 'Too many attempts. Try again in a minute.',
+    storageFull: 'The storage space is full.',
+    offline: 'You are offline. Check your connection.',
+  },
 }
