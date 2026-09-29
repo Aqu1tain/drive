@@ -9,4 +9,6 @@ export default {
   access: 'Accès',
   inheritRestored: 'Accès hérités rétablis',
   inheritRemoved: 'Accès hérités retirés',
+  aiAssistant: 'assistant IA',
+  viaAssistant: '{name} via {app}',
 } satisfies Catalog<typeof en>

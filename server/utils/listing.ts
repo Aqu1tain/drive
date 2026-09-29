@@ -1,4 +1,5 @@
-import type { Crumb, FolderListing } from '#shared/types/api'
+import { and, eq } from 'drizzle-orm'
+import type { Crumb, FolderListing, ResourceDetails } from '#shared/types/api'
 import { resolveAccess, resolveChildAccess, type AccessContext } from '../domain/access'
 import type { AccessRule, Resource } from '../database/schema'
 
@@ -71,4 +72,41 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
   })
   const [marked, ...markedItems] = await withFavorites(viewer, [toItem(folder, { viewer, access }), ...items])
   return { folder: marked!, breadcrumbs, items: await withFolderPreviews(viewer, markedItems) }
+}
+
+/** Top-level resources shared with a reader; items already reachable through a shared parent are folded into it. */
+export async function listSharedWithMe(viewer: Viewer) {
+  const { accessRules, resources } = tables
+  const rows = await useDB().select({ resource: resources }).from(accessRules)
+    .innerJoin(resources, eq(accessRules.resourceId, resources.id))
+    .where(and(eq(accessRules.userId, viewer.user!.id), notInTrash))
+
+  const readable = []
+  for (const { resource } of rows) {
+    const { access } = await accessOf(viewer, resource)
+    if (access.read) readable.push({ resource, access })
+  }
+  const ids = new Set(readable.map(r => r.resource.id))
+  const items = readable
+    .filter(({ resource }) => !resource.ancestorIds.some(id => ids.has(id)))
+    .map(({ resource, access }) => toItem(resource, { viewer, access }))
+  return withFolderPreviews(viewer, await withFavorites(viewer, items))
+}
+
+export async function resourceDetails(viewer: Viewer, id: string): Promise<ResourceDetails> {
+  const { resource, access, chain } = await requireReadable(viewer, id)
+  const rules = viewer.ctx.isOwner ? [] : await loadRules(chain.map(r => r.id))
+  const path = crumbsFor(viewer, chain.slice(1), rules)
+
+  if (!viewer.ctx.isOwner) {
+    const [item] = await withFolderPreviews(viewer, await withFavorites(viewer, [toItem(resource, { viewer, access })]))
+    return { item: item!, path, stats: null }
+  }
+
+  const summaries = await summarizeMany([resource])
+  return {
+    item: (await withFolderPreviews(viewer, [toItem(resource, { viewer, access, summary: summaries.get(resource.id) })]))[0]!,
+    path,
+    stats: await activityStats(resource),
+  }
 }

@@ -47,8 +47,8 @@ export async function removeFolder(owner: APIRequestContext, id: string) {
 
 export async function signIn(page: Page, email: string, password: string) {
   await page.goto('/login')
-  await page.getByLabel('Adresse email').fill(email)
-  await page.getByLabel('Mot de passe').fill(password)
-  await page.getByRole('button', { name: 'Se connecter' }).click()
+  await page.getByLabel(/^(Adresse email|Email address)$/).fill(email)
+  await page.getByLabel(/^(Mot de passe|Password)$/).fill(password)
+  await page.getByRole('button', { name: /^(Se connecter|Sign in)$/ }).click()
   await page.waitForURL(url => !url.pathname.startsWith('/login'))
 }

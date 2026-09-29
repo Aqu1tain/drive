@@ -109,6 +109,10 @@ const views = [
         <div><UiButton @click="signOutEverywhere">{{ t('settings.sessions.signOutOthers') }}</UiButton></div>
       </SettingsSection>
 
+      <SettingsSection :title="t('oauth.apps.title')" :description="t('oauth.apps.description')">
+        <SettingsConnectedApps />
+      </SettingsSection>
+
       <SettingsSection :title="t('settings.language.title')">
         <div class="flex flex-col gap-1.5">
           <select

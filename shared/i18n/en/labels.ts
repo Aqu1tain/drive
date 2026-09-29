@@ -7,4 +7,6 @@ export default {
   access: 'Access',
   inheritRestored: 'Inherited access restored',
   inheritRemoved: 'Inherited access removed',
+  aiAssistant: 'AI assistant',
+  viaAssistant: '{name} via {app}',
 }
