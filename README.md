@@ -20,7 +20,7 @@ Drive n'est pas un Drive collaboratif. Il y a **un seul propriétaire** : vous. 
 - **Partagez** un fichier ou un dossier avec une personne (compte lecteur), une invitation, un lien personnel ou un lien public. Téléchargement autorisé ou non, expiration, révocation immédiate.
 - **Sachez qui a consulté** quoi et quand : un journal d'activité lisible, honnête sur ce qu'il sait (un lien public reste anonyme).
 - **Publiez des pages HTML** en toute sécurité : elles s'affichent sur une origine isolée, en plein écran si vous le souhaitez.
-- **Retrouvez** un fichier par son nom ou par ce qu'il contient : texte des PDF, documents Word, classeurs Excel, présentations PowerPoint. Ces documents s'ouvrent aussi en aperçu, sans rien installer.
+- **Retrouvez** un fichier par son nom, ses étiquettes ou ce qu'il contient : texte des PDF, documents Word, classeurs Excel, présentations PowerPoint. Ces documents s'ouvrent aussi en aperçu, sans rien installer.
 
 <table>
 <tr>
