@@ -1,7 +1,7 @@
 import type { SessionUser } from '#shared/types/api'
 
 const PUBLIC = [/^\/login/, /^\/setup/, /^\/invite\//, /^\/s\//]
-const READER_ROUTES = [/^\/shared-with-me/, /^\/recent/, /^\/starred/, /^\/open\//, /^\/search/, /^\/settings/]
+const READER_ROUTES = [/^\/shared-with-me/, /^\/recent/, /^\/starred/, /^\/open\//, /^\/search/, /^\/settings/, /^\/oauth\//]
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (PUBLIC.some(pattern => pattern.test(to.path))) return
