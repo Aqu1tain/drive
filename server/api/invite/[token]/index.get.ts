@@ -3,7 +3,7 @@ import { kindOf } from '#shared/utils/search'
 
 export default defineEventHandler(async (event) => {
   const invitation = await findAccountInvitation(getRouterParam(event, 'token')!)
-  if (!invitation) throw createError({ statusCode: 404, statusMessage: 'Invitation introuvable' })
+  if (!invitation) throw createError({ statusCode: 404, statusMessage: tr('errors.invitationNotFound') })
   const { accessRules, resources } = tables
   const shared = await useDB().select({ name: resources.name, type: resources.type, mimeType: resources.mimeType })
     .from(accessRules).innerJoin(resources, eq(accessRules.resourceId, resources.id))

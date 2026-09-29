@@ -42,18 +42,18 @@ export async function openSession(plan: UploadPlan) {
 
 export function requireSession(id: string) {
   const session = sessions.get(id)
-  if (!session) throw createError({ statusCode: 404, statusMessage: 'Import expiré, recommencez', data: { reason: 'session_gone' } })
+  if (!session) throw createError({ statusCode: 404, statusMessage: tr('errors.uploadExpired'), data: { reason: 'session_gone' } })
   session.touchedAt = Date.now()
   return session
 }
 
 export async function addPart(session: UploadSession, partNumber: number, body: Uint8Array) {
   const expected = session.parts.length + 1
-  if (partNumber !== expected) throw createError({ statusCode: 409, statusMessage: 'Partie inattendue', data: { reason: 'part_order', expected } })
+  if (partNumber !== expected) throw createError({ statusCode: 409, statusMessage: tr('errors.partUnexpected'), data: { reason: 'part_order', expected } })
   const remaining = session.plan.size - session.received
   const isLast = body.byteLength === remaining
   if (body.byteLength === 0 || body.byteLength > remaining || (!isLast && body.byteLength !== PART_SIZE)) {
-    throw createError({ statusCode: 400, statusMessage: 'Taille de partie incohérente' })
+    throw createError({ statusCode: 400, statusMessage: tr('errors.partSizeMismatch') })
   }
   const part = await useStorageProvider().uploadPart(session.storageKey, session.uploadId, partNumber, body)
   session.parts.push(part)
@@ -63,7 +63,7 @@ export async function addPart(session: UploadSession, partNumber: number, body: 
 }
 
 export async function finishSession(viewer: Viewer, session: UploadSession) {
-  if (session.received !== session.plan.size) throw createError({ statusCode: 400, statusMessage: 'Import incomplet' })
+  if (session.received !== session.plan.size) throw createError({ statusCode: 400, statusMessage: tr('errors.uploadIncomplete') })
   sessions.delete(session.id)
   const storage = useStorageProvider()
   try {

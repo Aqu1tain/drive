@@ -15,14 +15,14 @@ export function invitationState(invitation: { status: string, expiresAt: Date | 
 }
 
 export async function requireInvitation(id: string) {
-  if (!isUuid(id)) throw createError({ statusCode: 404, statusMessage: 'Invitation introuvable' })
+  if (!isUuid(id)) throw createError({ statusCode: 404, statusMessage: tr('errors.invitationNotFound') })
   const [invitation] = await useDB().select().from(tables.invitations).where(eq(tables.invitations.id, id)).limit(1)
-  if (!invitation) throw createError({ statusCode: 404, statusMessage: 'Invitation introuvable' })
+  if (!invitation) throw createError({ statusCode: 404, statusMessage: tr('errors.invitationNotFound') })
   return invitation
 }
 
 export async function requireReader(id: string) {
   const [reader] = await useDB().select().from(tables.user).where(eq(tables.user.id, id)).limit(1)
-  if (!reader || reader.role !== 'reader') throw createError({ statusCode: 404, statusMessage: 'Personne introuvable' })
+  if (!reader || reader.role !== 'reader') throw createError({ statusCode: 404, statusMessage: tr('errors.personNotFound') })
   return reader
 }

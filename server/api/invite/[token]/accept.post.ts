@@ -9,12 +9,12 @@ const bodySchema = z.object({
 /** The invitation link reached this person's inbox (or was handed over by the owner): it vouches for the address. */
 export default defineEventHandler(async (event) => {
   const invitation = await findAccountInvitation(getRouterParam(event, 'token')!)
-  if (!invitation) throw createError({ statusCode: 404, statusMessage: 'Invitation introuvable' })
+  if (!invitation) throw createError({ statusCode: 404, statusMessage: tr('errors.invitationNotFound') })
   const state = invitationState(invitation)
-  if (state !== 'pending') throw createError({ statusCode: 410, statusMessage: state === 'accepted' ? 'Invitation déjà acceptée' : 'Invitation expirée ou révoquée' })
+  if (state !== 'pending') throw createError({ statusCode: 410, statusMessage: tr(state === 'accepted' ? 'errors.invitationAccepted' : 'errors.invitationExpired') })
 
   let user = await findUserByEmail(invitation.email)
-  if (user?.role === 'owner') throw createError({ statusCode: 400, statusMessage: 'Adresse du propriétaire' })
+  if (user?.role === 'owner') throw createError({ statusCode: 400, statusMessage: tr('errors.ownerAddress') })
   const existing = !!user
   if (!existing) {
     const body = await readValidatedBody(event, bodySchema.parse)

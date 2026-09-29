@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const { tags, resources } = tables
   const db = useDB()
   const known = body.add.length ? await db.select({ id: tags.id }).from(tags).where(inArray(tags.id, body.add)) : []
-  if (known.length !== new Set(body.add).size) throw createError({ statusCode: 404, statusMessage: 'Étiquette introuvable' })
+  if (known.length !== new Set(body.add).size) throw createError({ statusCode: 404, statusMessage: tr('errors.tagNotFound') })
 
   const updated = await db.update(resources)
     .set({ tagIds: sql`(select coalesce(array_agg(distinct tag), '{}') from unnest(${resources.tagIds} || ${uuidArray(body.add)}) as tag where tag <> all(${uuidArray(body.remove)}))` })

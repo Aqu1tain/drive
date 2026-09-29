@@ -75,14 +75,14 @@ export async function serveDownload(event: H3Event, viewer: Viewer, id: string) 
   const { resource, access } = await requireReadable(viewer, id)
   if (resource.type === 'folder') return serveArchive(event, viewer, [resource.id])
   event.context.logResourceId = resource.id
-  if (!access.download) throw createError({ statusCode: 403, statusMessage: 'Le téléchargement est désactivé pour ce partage' })
+  if (!access.download) throw createError({ statusCode: 403, statusMessage: tr('errors.downloadDisabled') })
   if (!isRangeContinuation(event)) await logAccess(event, viewer, resource, 'download')
   return sendResourceContent(event, resource, 'attachment')
 }
 
 export async function serveThumbnail(event: H3Event, viewer: Viewer, id: string) {
   const { resource } = await requireReadable(viewer, id)
-  if (resource.thumbnailStatus !== 'ready' || !resource.thumbnailKey) throw createError({ statusCode: 404, statusMessage: 'Pas de miniature' })
+  if (resource.thumbnailStatus !== 'ready' || !resource.thumbnailKey) throw createError({ statusCode: 404, statusMessage: tr('errors.noThumbnail') })
   setResponseHeaders(event, {
     'Content-Type': 'image/webp',
     'Cache-Control': 'private, max-age=31536000, immutable',

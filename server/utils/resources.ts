@@ -210,14 +210,14 @@ export const isUuid = (value: unknown): value is string => typeof value === 'str
 
 export async function requireReadable(viewer: Viewer, id: string) {
   const resource = await findResource(id)
-  if (!resource) throw createError({ statusCode: 404, statusMessage: 'Élément introuvable' })
+  if (!resource) throw createError({ statusCode: 404, statusMessage: tr('errors.itemNotFound') })
   const { access, chain } = await accessOf(viewer, resource)
-  if (!access.read) throw createError({ statusCode: 403, statusMessage: 'Vous n’avez pas accès à cet élément' })
+  if (!access.read) throw createError({ statusCode: 403, statusMessage: tr('errors.noAccessItem') })
   return { resource, access, chain }
 }
 
 export async function requireOwned(id: string) {
   const resource = await findResource(id)
-  if (!resource) throw createError({ statusCode: 404, statusMessage: 'Élément introuvable' })
+  if (!resource) throw createError({ statusCode: 404, statusMessage: tr('errors.itemNotFound') })
   return resource
 }

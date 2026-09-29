@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 export default defineEventHandler(async (event) => {
   await requireOwner(event)
   const invitation = await requireInvitation(getRouterParam(event, 'id')!)
-  if (invitation.status !== 'pending') throw createError({ statusCode: 409, statusMessage: 'Invitation déjà utilisée ou révoquée' })
+  if (invitation.status !== 'pending') throw createError({ statusCode: 409, statusMessage: tr('errors.invitationUsed') })
   const { tokenHash, tokenSealed } = newSecretToken()
   const expiresAt = invitation.mode === 'account' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : invitation.expiresAt
   const [updated] = await useDB().update(tables.invitations).set({ tokenHash, tokenSealed, expiresAt }).where(eq(tables.invitations.id, invitation.id)).returning()

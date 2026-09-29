@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const resource = await requireOwned(getRouterParam(event, 'id')!)
   const chain = await loadChain(resource)
   if (!chain.some(node => node.deletedAt)) {
-    throw createError({ statusCode: 409, statusMessage: 'Placez d’abord l’élément dans la corbeille' })
+    throw createError({ statusCode: 409, statusMessage: tr('errors.trashFirst') })
   }
   const keys = await subtreeKeys([resource.id])
   await useDB().delete(tables.resources).where(eq(tables.resources.id, resource.id))

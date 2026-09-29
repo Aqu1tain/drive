@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
-export const passwordSchema = z.string().min(10, 'Au moins 10 caractères').max(256)
+export const passwordSchema = z.string().min(10, { error: () => tr('errors.passwordTooShort') }).max(256)
 export const emailSchema = z.string().trim().toLowerCase().email('Adresse email invalide').max(254)
 export const personNameSchema = z.string().trim().max(120)
 

@@ -86,7 +86,7 @@ async function derive(file: StoredFile): Promise<Outcome> {
 
   const storage = useStorageProvider()
   const data = await buffer(await storage.get(file.storageKey))
-  const document: Derived = wantsContent ? await deriveDocument(file.mimeType!, file.name, data) : {}
+  const document: Derived = wantsContent ? await deriveDocument(file.mimeType!, file.name, data, instanceLocale()) : {}
   const image = wantsThumbnail && IMAGE.test(file.mimeType!) ? await imageThumbnail(data) : undefined
   const site = wantsSite ? await extractSite(file, data) : null
   const outcome: Outcome = { patch: {}, text: document.text, site, written: site?.map(entry => entry.storageKey) ?? [] }

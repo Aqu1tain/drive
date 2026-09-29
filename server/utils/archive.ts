@@ -67,9 +67,9 @@ export async function archiveEntries(viewer: Viewer, ids: string[]) {
     roots.push(resource)
     if (resource.type === 'folder') entries.push(...await subtree(viewer, resource, access, resource.name))
     else if (access.download && resource.storageKey) entries.push({ path: resource.name, resource })
-    if (entries.length > MAX_ENTRIES) throw createError({ statusCode: 413, statusMessage: `Plus de ${MAX_ENTRIES.toLocaleString('fr-FR')} fichiers : téléchargez les sous-dossiers séparément` })
+    if (entries.length > MAX_ENTRIES) throw createError({ statusCode: 413, statusMessage: tr('errors.tooManyFiles', { max: MAX_ENTRIES }) })
   }
-  if (!entries.some(entry => entry.resource)) throw createError({ statusCode: 403, statusMessage: 'Aucun fichier téléchargeable dans cette sélection' })
+  if (!entries.some(entry => entry.resource)) throw createError({ statusCode: 403, statusMessage: tr('errors.nothingDownloadable') })
   return { entries, roots }
 }
 
@@ -106,7 +106,7 @@ export async function serveArchive(event: H3Event, viewer: Viewer, ids: string[]
 
 export function parseIds(value: unknown) {
   const ids = String(value ?? '').split(',').filter(Boolean)
-  if (ids.length === 0 || ids.length > 500 || !ids.every(isUuid)) throw createError({ statusCode: 400, statusMessage: 'Sélection invalide' })
+  if (ids.length === 0 || ids.length > 500 || !ids.every(isUuid)) throw createError({ statusCode: 400, statusMessage: tr('errors.invalidSelection') })
   return [...new Set(ids)]
 }
 

@@ -1,5 +1,5 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
-import { extensionOf, sanitizeName, searchKeyOf, InvalidNameError } from '#shared/utils/names'
+import { extensionOf, sanitizeName, searchKeyOf, InvalidNameError, MAX_NAME_LENGTH } from '#shared/utils/names'
 import type { Resource } from '../database/schema'
 import type { Transaction } from './db'
 
@@ -11,7 +11,7 @@ export function nameFields(raw: string) {
     return { name, nameLower: name.toLowerCase(), searchKey: searchKeyOf(name), extension: extensionOf(name) }
   }
   catch (error) {
-    if (error instanceof InvalidNameError) throw createError({ statusCode: 400, statusMessage: error.message })
+    if (error instanceof InvalidNameError) throw createError({ statusCode: 400, statusMessage: tr(error.key, { max: MAX_NAME_LENGTH }) })
     throw error
   }
 }
@@ -22,9 +22,9 @@ export const childAncestors = (parent: Resource | null) => parent ? [...parent.a
 export async function requireFolder(parentId: string | null | undefined) {
   if (!parentId || parentId === 'root') return null
   const folder = await findResource(parentId)
-  if (!folder || folder.type !== 'folder') throw createError({ statusCode: 404, statusMessage: 'Dossier introuvable' })
+  if (!folder || folder.type !== 'folder') throw createError({ statusCode: 404, statusMessage: tr('errors.folderNotFound') })
   const chain = await loadChain(folder)
-  if (chain.some(node => node.deletedAt)) throw createError({ statusCode: 409, statusMessage: 'Ce dossier est dans la corbeille' })
+  if (chain.some(node => node.deletedAt)) throw createError({ statusCode: 409, statusMessage: tr('errors.folderInTrash') })
   return folder
 }
 
@@ -56,7 +56,7 @@ export function isUniqueViolation(error: unknown) {
 }
 
 export function nameTaken(name: string): never {
-  throw createError({ statusCode: 409, statusMessage: `« ${name} » existe déjà à cet emplacement`, data: { reason: 'name_taken' } })
+  throw createError({ statusCode: 409, statusMessage: tr('errors.nameTaken', { name }), data: { reason: 'name_taken' } })
 }
 
 export const uuidArray = (ids: string[]) =>
@@ -97,5 +97,5 @@ export async function locationsOf(items: Resource[]) {
   const ids = [...new Set(items.flatMap(item => item.ancestorIds))]
   const ancestors = ids.length ? await useDB().select({ id: resources.id, name: resources.name }).from(resources).where(sql`${resources.id} = any(${uuidArray(ids)})`) : []
   const names = new Map(ancestors.map(a => [a.id, a.name]))
-  return new Map(items.map(item => [item.id, ['Mon Drive', ...item.ancestorIds.map(id => names.get(id) ?? '…')].join(' / ')]))
+  return new Map(items.map(item => [item.id, [tr('common.myDrive'), ...item.ancestorIds.map(id => names.get(id) ?? '…')].join(' / ')]))
 }

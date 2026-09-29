@@ -6,11 +6,11 @@ export default defineEventHandler(async (event) => {
   const { user, accessRules, resources } = tables
   const db = useDB()
   const [owner] = await db.select({ name: user.name }).from(user).where(eq(user.role, 'owner')).limit(1)
-  const sharedBy = owner?.name ?? 'Le propriétaire'
+  const sharedBy = owner?.name ?? tr('labels.theOwner')
 
   if (viewer.linkRule) {
     const { resource, access } = await requireReadable(viewer, viewer.linkRule.resourceId).catch(() => {
-      throw createError({ statusCode: 410, statusMessage: 'Ce contenu n’est plus disponible', data: { reason: 'gone' } })
+      throw createError({ statusCode: 410, statusMessage: tr('errors.contentGone'), data: { reason: 'gone' } })
     })
     const listing = resource.type === 'folder' ? await listFolder(viewer, resource.id) : null
     return {

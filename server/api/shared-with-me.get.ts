@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm'
 /** Top-level resources shared with the reader; items already reachable through a shared parent are folded into it. */
 export default defineEventHandler(async (event) => {
   const viewer = await requireViewer(event)
-  if (viewer.ctx.isOwner) throw createError({ statusCode: 400, statusMessage: 'Réservé aux lecteurs' })
+  if (viewer.ctx.isOwner) throw createError({ statusCode: 400, statusMessage: tr('errors.readersOnly') })
   const { accessRules, resources } = tables
   const rows = await useDB().select({ resource: resources }).from(accessRules)
     .innerJoin(resources, eq(accessRules.resourceId, resources.id))

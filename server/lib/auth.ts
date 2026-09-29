@@ -62,7 +62,7 @@ export function createAuth(options: AuthOptions) {
         create: {
           before: async (session) => {
             if (options.isUserActive && !(await options.isUserActive(session.userId))) {
-              throw new APIError('FORBIDDEN', { message: 'Ce compte est désactivé' })
+              throw new APIError('FORBIDDEN', { message: 'This account is disabled', code: 'ACCOUNT_DISABLED' })
             }
           },
           after: async (session) => {

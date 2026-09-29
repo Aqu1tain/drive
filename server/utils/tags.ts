@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { MAX_TAG_LENGTH, TAG_COLORS, cleanTagName } from '#shared/utils/tags'
 import type { TagInfo } from '#shared/types/api'
 
-export const tagNameSchema = z.string().transform(cleanTagName).pipe(z.string().min(1, 'Nom d’étiquette vide').max(MAX_TAG_LENGTH, `${MAX_TAG_LENGTH} caractères au plus`))
+export const tagNameSchema = z.string().transform(cleanTagName).pipe(z.string().min(1, { error: () => tr('errors.tagNameEmpty') }).max(MAX_TAG_LENGTH, { error: () => tr('errors.tagNameTooLong', { max: MAX_TAG_LENGTH }) }))
 export const tagColorSchema = z.enum(TAG_COLORS)
 
 export async function listTags(): Promise<TagInfo[]> {
@@ -19,11 +19,11 @@ export async function listTags(): Promise<TagInfo[]> {
 export async function requireTag(id: string) {
   const { tags } = tables
   const [tag] = isUuid(id) ? await useDB().select().from(tags).where(eq(tags.id, id)).limit(1) : []
-  if (!tag) throw createError({ statusCode: 404, statusMessage: 'Étiquette introuvable' })
+  if (!tag) throw createError({ statusCode: 404, statusMessage: tr('errors.tagNotFound') })
   return tag
 }
 
 export function tagNameTaken(error: unknown, name: string): never {
-  if (isUniqueViolation(error)) throw createError({ statusCode: 409, statusMessage: `L’étiquette « ${name} » existe déjà` })
+  if (isUniqueViolation(error)) throw createError({ statusCode: 409, statusMessage: tr('errors.tagExists', { name }) })
   throw error
 }

@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   if (!body.enabled) {
     if (existing) {
       await db.delete(accessRules).where(eq(accessRules.id, existing.id))
-      await logOwnerAction(event, viewer, resource.id, 'link_removed', 'Lien public')
+      await logOwnerAction(event, viewer, resource.id, 'link_removed', ACTIVITY_LABELS.publicLink)
     }
     return resourceAccess(resource)
   }
@@ -26,12 +26,12 @@ export default defineEventHandler(async (event) => {
   const settings = { allowDownload: body.allowDownload, expiresAt: body.expiresAt ? new Date(body.expiresAt) : null }
   if (existing) {
     await db.update(accessRules).set(settings).where(eq(accessRules.id, existing.id))
-    await logOwnerAction(event, viewer, resource.id, 'link_updated', 'Lien public')
+    await logOwnerAction(event, viewer, resource.id, 'link_updated', ACTIVITY_LABELS.publicLink)
   }
   else {
     const { tokenHash, tokenSealed } = newSecretToken()
     await db.insert(accessRules).values({ resourceId: resource.id, kind: 'link', tokenHash, tokenSealed, ...settings })
-    await logOwnerAction(event, viewer, resource.id, 'link_created', 'Lien public')
+    await logOwnerAction(event, viewer, resource.id, 'link_created', ACTIVITY_LABELS.publicLink)
   }
   return resourceAccess(resource)
 })
