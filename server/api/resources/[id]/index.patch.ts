@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   if (body.starred !== undefined) patch.starred = body.starred
   if (body.inheritAccess !== undefined) patch.inheritAccess = body.inheritAccess
   if (body.allowScripts !== undefined) {
-    if (resourceKind(resource) !== 'html') throw createError({ statusCode: 400, statusMessage: 'Réservé aux pages HTML' })
+    if (resourceKind(resource) !== 'html') throw createError({ statusCode: 400, statusMessage: tr('errors.htmlOnly') })
     patch.allowScripts = body.allowScripts
   }
 
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body.inheritAccess !== undefined && body.inheritAccess !== resource.inheritAccess) {
-    await logOwnerAction(event, viewer, resource.id, 'share_updated', body.inheritAccess ? 'Accès hérités rétablis' : 'Accès hérités retirés')
+    await logOwnerAction(event, viewer, resource.id, 'share_updated', body.inheritAccess ? ACTIVITY_LABELS.inheritRestored : ACTIVITY_LABELS.inheritRemoved)
   }
   const summaries = await summarizeMany([updated])
   return toItem(updated, { viewer, summary: summaries.get(updated.id) })

@@ -11,6 +11,8 @@ const { public: config } = useRuntimeConfig()
 const dialogs = useDialogs()
 const route = useRoute()
 const actions = useFileActions()
+const { t } = useI18n()
+const ROOT = { id: null, name: t('common.myDrive') }
 
 interface NavItem {
   to: string
@@ -21,31 +23,31 @@ interface NavItem {
 }
 
 const ownerNav: NavItem[] = [
-  { to: '/home', label: 'Accueil', icon: House },
-  { to: '/drive', label: 'Mon Drive', icon: HardDrive, match: /^\/drive/, drop: true },
-  { to: '/recent', label: 'Récents', icon: Clock },
-  { to: '/starred', label: 'Favoris', icon: Star },
-  { to: '/shared', label: 'Partagés', icon: Share2 },
-  { to: '/activity', label: 'Activité', icon: Activity },
-  { to: '/people', label: 'Personnes', icon: Users },
-  { to: '/trash', label: 'Corbeille', icon: Trash2 },
+  { to: '/home', label: t('nav.home'), icon: House },
+  { to: '/drive', label: t('common.myDrive'), icon: HardDrive, match: /^\/drive/, drop: true },
+  { to: '/recent', label: t('nav.recent'), icon: Clock },
+  { to: '/starred', label: t('nav.starred'), icon: Star },
+  { to: '/shared', label: t('nav.shared'), icon: Share2 },
+  { to: '/activity', label: t('nav.activity'), icon: Activity },
+  { to: '/people', label: t('nav.people'), icon: Users },
+  { to: '/trash', label: t('nav.trash'), icon: Trash2 },
 ]
 const readerNav: NavItem[] = [
-  { to: '/shared-with-me', label: 'Partagé avec moi', icon: Inbox, match: /^\/shared-with-me/ },
-  { to: '/recent', label: 'Récents', icon: Clock },
-  { to: '/starred', label: 'Favoris', icon: Star },
+  { to: '/shared-with-me', label: t('nav.sharedWithMe'), icon: Inbox, match: /^\/shared-with-me/ },
+  { to: '/recent', label: t('nav.recent'), icon: Clock },
+  { to: '/starred', label: t('nav.starred'), icon: Star },
 ]
 const nav = computed(() => props.owner ? ownerNav : readerNav)
 const isActive = (item: { to: string, match?: RegExp }) => item.match ? item.match.test(route.path) : route.path === item.to
 
 const currentFolder = computed(() => route.path.startsWith('/drive/folder/') ? String(route.params.id) : null)
 const newEntries = computed<MenuEntry[]>(() => [
-  { id: 'folder', label: 'Nouveau dossier', icon: FolderPlus, onSelect: () => dialogs.newFolder(currentFolder.value) },
+  { id: 'folder', label: t('nav.newFolder'), icon: FolderPlus, onSelect: () => dialogs.newFolder(currentFolder.value) },
   { kind: 'separator' },
-  { id: 'files', label: 'Importer des fichiers', icon: Upload, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
-  { id: 'folder-upload', label: 'Importer un dossier', icon: FolderUp, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-folder')) },
+  { id: 'files', label: t('nav.uploadFiles'), icon: Upload, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
+  { id: 'folder-upload', label: t('nav.uploadFolder'), icon: FolderUp, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-folder')) },
   { kind: 'separator' },
-  { id: 'page-upload', label: 'Importer une page ou un site web', icon: Globe, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-page')) },
+  { id: 'page-upload', label: t('nav.uploadPage'), icon: Globe, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-page')) },
 ])
 
 const { data: storage } = useQuery({
@@ -61,9 +63,9 @@ const activeTag = computed(() => route.path === '/search' ? parseSearchQuery(Str
 
 async function deleteTag(tag: TagInfo) {
   const confirmed = await dialogs.confirm({
-    title: `Supprimer l’étiquette « ${tag.name} » ?`,
-    message: tag.count ? `Elle sera retirée de ${plural(tag.count, 'élément', 'éléments')}. Les fichiers eux-mêmes ne changent pas.` : 'Aucun élément ne la porte.',
-    confirmLabel: 'Supprimer',
+    title: t('nav.deleteTag.title', { name: tag.name }),
+    message: tag.count ? t('nav.deleteTag.inUse', { count: tag.count }) : t('nav.deleteTag.unused'),
+    confirmLabel: t('common.delete'),
     danger: true,
   })
   if (!confirmed) return
@@ -73,8 +75,8 @@ async function deleteTag(tag: TagInfo) {
 }
 
 const tagEntries = (tag: TagInfo): MenuEntry[] => [
-  { id: 'edit', label: 'Modifier', icon: Pencil, onSelect: () => dialogs.tagEdit(tag) },
-  { id: 'delete', label: 'Supprimer', icon: Trash2, danger: true, onSelect: () => deleteTag(tag) },
+  { id: 'edit', label: t('common.edit'), icon: Pencil, onSelect: () => dialogs.tagEdit(tag) },
+  { id: 'delete', label: t('common.delete'), icon: Trash2, danger: true, onSelect: () => deleteTag(tag) },
 ]
 
 const dropTarget = ref<string | null>(null)
@@ -85,7 +87,7 @@ async function onDrop(event: DragEvent) {
   dropTarget.value = null
   if (event.dataTransfer?.types.includes('Files')) {
     event.preventDefault()
-    uploads.uploadTree(await filesFromDataTransfer(event.dataTransfer), { id: null, name: 'Mon Drive' })
+    uploads.uploadTree(await filesFromDataTransfer(event.dataTransfer), ROOT)
     return
   }
   const raw = event.dataTransfer?.getData('application/x-drive-ids')
@@ -94,12 +96,12 @@ async function onDrop(event: DragEvent) {
   const { $queryClient } = useNuxtApp()
   const cached = $queryClient.getQueriesData<{ items: import('#shared/types/api').ResourceItem[] }>({ queryKey: ['folder'] })
   const items = cached.flatMap(([, data]) => data?.items ?? []).filter((item, index, all) => ids.has(item.id) && all.findIndex(i => i.id === item.id) === index)
-  actions.moveTo(items, { id: null, name: 'Mon Drive' })
+  actions.moveTo(items, ROOT)
 }
 </script>
 
 <template>
-  <aside class="flex shrink-0 flex-col bg-nav text-nav-ink transition-[width] duration-200" :class="collapsed ? 'w-[68px]' : 'w-[248px]'" aria-label="Navigation principale">
+  <aside class="flex shrink-0 flex-col bg-nav text-nav-ink transition-[width] duration-200" :class="collapsed ? 'w-[68px]' : 'w-[248px]'" :aria-label="t('nav.main')">
     <div class="flex h-15 shrink-0 items-center gap-2.5" :class="collapsed ? 'justify-center' : 'px-5'">
       <AppLogo class="size-7 shrink-0" />
       <span v-if="!collapsed" class="text-md font-semibold tracking-tight">{{ config.appName }}</span>
@@ -107,8 +109,8 @@ async function onDrop(event: DragEvent) {
 
     <div v-if="owner" class="pt-1 pb-4" :class="collapsed ? 'px-3' : 'px-4'">
       <UiDropdownMenu :entries="newEntries">
-        <UiButton v-if="collapsed" variant="primary" size="lg" :icon="Plus" aria-label="Nouveau" class="w-full px-0! shadow-none" />
-        <UiButton v-else variant="primary" size="lg" :icon="Plus" block class="justify-start! shadow-none">Nouveau</UiButton>
+        <UiButton v-if="collapsed" variant="primary" size="lg" :icon="Plus" :aria-label="t('nav.new')" class="w-full px-0! shadow-none" />
+        <UiButton v-else variant="primary" size="lg" :icon="Plus" block class="justify-start! shadow-none">{{ t('nav.new') }}</UiButton>
       </UiDropdownMenu>
     </div>
     <div v-else class="h-3" />
@@ -139,7 +141,7 @@ async function onDrop(event: DragEvent) {
       </ul>
 
       <section v-if="owner && !collapsed && tags.length" class="mt-5" aria-labelledby="sidebar-tags">
-        <h2 id="sidebar-tags" class="mb-1 px-3 text-xs font-semibold tracking-wide text-nav-ink-weak uppercase">Étiquettes</h2>
+        <h2 id="sidebar-tags" class="mb-1 px-3 text-xs font-semibold tracking-wide text-nav-ink-weak uppercase">{{ t('nav.tags') }}</h2>
         <ul class="flex flex-col gap-0.5">
           <li v-for="tag in tags" :key="tag.id" class="group relative">
             <NuxtLink
@@ -157,7 +159,7 @@ async function onDrop(event: DragEvent) {
             <UiDropdownMenu :entries="tagEntries(tag)" align="start" side="right">
               <button
                 type="button"
-                :aria-label="`Actions pour l’étiquette ${tag.name}`"
+                :aria-label="t('nav.tagActions', { name: tag.name })"
                 class="absolute top-1.5 right-1.5 inline-flex size-6 items-center justify-center rounded text-nav-ink-weak opacity-0 group-hover:opacity-100 hover:bg-nav-hover hover:text-nav-ink focus-visible:opacity-100 data-[state=open]:opacity-100 pointer-coarse:opacity-100"
               >
                 <Ellipsis class="size-4" aria-hidden="true" />
@@ -170,13 +172,13 @@ async function onDrop(event: DragEvent) {
 
     <div v-if="owner && storage && !collapsed" class="border-t border-nav-line px-5 py-4">
       <div class="mb-2 flex items-baseline justify-between text-sm">
-        <span class="text-nav-ink-weak">Stockage</span>
+        <span class="text-nav-ink-weak">{{ t('nav.storage') }}</span>
         <span class="tabular text-nav-ink">{{ formatSize(storage.used) }}</span>
       </div>
-      <div class="h-1.5 overflow-hidden rounded-full bg-nav-hover" role="progressbar" :aria-valuenow="Math.round(usage * 100)" aria-valuemin="0" aria-valuemax="100" aria-label="Espace utilisé">
+      <div class="h-1.5 overflow-hidden rounded-full bg-nav-hover" role="progressbar" :aria-valuenow="Math.round(usage * 100)" aria-valuemin="0" aria-valuemax="100" :aria-label="t('nav.storageUsed')">
         <div class="h-full rounded-full transition-[width] duration-500" :class="usage > 0.9 ? 'bg-danger' : 'bg-accent'" :style="{ width: `${Math.max(usage * 100, 1.5)}%` }" />
       </div>
-      <p class="mt-1.5 text-xs text-nav-ink-weak">sur {{ formatSize(storage.quota) }}</p>
+      <p class="mt-1.5 text-xs text-nav-ink-weak">{{ t('nav.storageOf', { size: formatSize(storage.quota) }) }}</p>
     </div>
   </aside>
 </template>

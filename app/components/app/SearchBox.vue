@@ -11,6 +11,7 @@ const query = ref(route.path === '/search' ? String(route.query.q ?? '') : '')
 const debounced = refDebounced(query, 120)
 const open = ref(false)
 const input = useTemplateRef<InstanceType<typeof ComboboxInput>>('input')
+const { t } = useI18n()
 
 const { data, isFetching } = useQuery({
   queryKey: computed(() => ['search', 'suggest', debounced.value.trim()]),
@@ -66,14 +67,14 @@ onBeforeUnmount(() => document.removeEventListener('drive:focus-search', onFocus
       <ComboboxInput
         ref="input"
         v-model="query"
-        :placeholder="props.owner ? 'Rechercher dans mes fichiers' : 'Rechercher dans les documents partagés'"
-        aria-label="Rechercher"
+        :placeholder="t(props.owner ? 'nav.search.owner' : 'nav.search.reader')"
+        :aria-label="t('common.search')"
         class="h-full min-w-0 flex-1 bg-transparent text-base text-ink placeholder:text-ink-weak focus:outline-none"
         @keydown.enter.exact="!results.length && query.trim() && select('__all')"
         @focus="query.trim() && (open = true)"
         @update:model-value="open = !!$event.trim()"
       />
-      <button v-if="query" type="button" class="rounded p-1 text-ink-weak hover:bg-hover" aria-label="Effacer la recherche" @click="query = ''; focus()">
+      <button v-if="query" type="button" class="rounded p-1 text-ink-weak hover:bg-hover" :aria-label="t('nav.search.clear')" @click="query = ''; focus()">
         <X class="size-4" aria-hidden="true" />
       </button>
       <UiKbd v-else keys="/" class="max-sm:hidden" />
@@ -86,7 +87,7 @@ onBeforeUnmount(() => document.removeEventListener('drive:focus-search', onFocus
         class="z-(--z-menu) w-(--reka-combobox-trigger-width) min-w-80 overflow-hidden rounded-lg border border-line-weak bg-raised shadow-lifted animate-pop-in"
       >
         <ComboboxViewport class="max-h-[60vh] p-1">
-          <ComboboxEmpty v-if="!isFetching" class="px-3 py-2.5 text-sm text-ink-weak">Aucun fichier ne correspond.</ComboboxEmpty>
+          <ComboboxEmpty v-if="!isFetching" class="px-3 py-2.5 text-sm text-ink-weak">{{ t('nav.search.noMatch') }}</ComboboxEmpty>
           <ComboboxItem
             v-for="item in results"
             :key="item.id"
@@ -101,7 +102,7 @@ onBeforeUnmount(() => document.removeEventListener('drive:focus-search', onFocus
           </ComboboxItem>
           <ComboboxItem value="__all" class="mt-0.5 flex h-10 cursor-pointer items-center gap-3 rounded-md border-t border-line-weak px-2.5 text-base text-accent-ink outline-none data-highlighted:bg-hover">
             <Search class="size-4" aria-hidden="true" />
-            <span class="flex-1 truncate">Tous les résultats pour « {{ query.trim() }} »</span>
+            <span class="flex-1 truncate">{{ t('nav.search.allResults', { query: query.trim() }) }}</span>
             <ArrowRight class="size-4" aria-hidden="true" />
           </ComboboxItem>
         </ComboboxViewport>

@@ -2,13 +2,14 @@
 import { ExternalLink, Maximize, ShieldCheck } from '@lucide/vue'
 
 const props = defineProps<{ src: string, scripts: boolean, title: string, converted?: boolean }>()
+const { t } = useI18n()
 const notice = computed(() => {
-  if (props.converted) return 'Aperçu converti, isolé du reste de l’application'
-  return props.scripts ? 'Page interactive, isolée du reste de l’application' : 'Aperçu sécurisé : les scripts sont désactivés'
+  if (props.converted) return t('preview.converted')
+  return t(props.scripts ? 'preview.interactive' : 'preview.safe')
 })
 const frame = useTemplateRef<HTMLIFrameElement>('frame')
 
-/** The isolated frame itself takes the whole screen; Échap gives the app back. */
+/** The isolated frame itself takes the whole screen; Escape gives the app back. */
 const fullscreen = () => frame.value?.requestFullscreen?.()
 defineExpose({ fullscreen })
 </script>
@@ -21,11 +22,11 @@ defineExpose({ fullscreen })
       <slot name="actions" />
       <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-ink hover:bg-hover" @click="fullscreen">
         <Maximize class="size-4" aria-hidden="true" />
-        <span class="max-sm:sr-only">Plein écran</span>
+        <span class="max-sm:sr-only">{{ t('preview.fullScreen') }}</span>
       </button>
       <a :href="src" target="_blank" rel="noopener noreferrer" class="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-ink hover:bg-hover">
         <ExternalLink class="size-4" aria-hidden="true" />
-        <span class="max-sm:sr-only">Nouvel onglet</span>
+        <span class="max-sm:sr-only">{{ t('preview.newTab') }}</span>
       </a>
     </div>
     <iframe

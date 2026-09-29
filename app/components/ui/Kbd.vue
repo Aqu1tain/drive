@@ -1,10 +1,22 @@
 <script setup lang="ts">
+import type { MessageKey } from '#shared/i18n'
+
 const props = withDefaults(defineProps<{ keys: string, tone?: 'default' | 'inverse' }>(), { tone: 'default' })
+const { t } = useI18n()
 
 const isMac = import.meta.client && /Mac|iPhone|iPad/.test(navigator.platform)
-const MAC: Record<string, string> = { Mod: '⌘', Alt: '⌥', Maj: '⇧', Shift: '⇧' }
+const MAC: Record<string, string> = { Mod: '⌘', Alt: '⌥', Shift: '⇧' }
 const OTHER: Record<string, string> = { Mod: 'Ctrl' }
-const parts = computed(() => props.keys.split('+').map(key => (isMac ? MAC : OTHER)[key] ?? key))
+const NAMED: Record<string, MessageKey> = { Shift: 'nav.keys.shift', Enter: 'nav.keys.enter', Space: 'nav.keys.space', Esc: 'nav.keys.escape', Delete: 'nav.keys.delete' }
+
+function label(key: string) {
+  const symbol = (isMac ? MAC : OTHER)[key]
+  if (symbol) return symbol
+  const name = NAMED[key]
+  return name ? t(name) : key
+}
+
+const parts = computed(() => props.keys.split('+').map(label))
 </script>
 
 <template>

@@ -5,6 +5,7 @@ import { X } from '@lucide/vue'
 const open = defineModel<boolean>('open', { default: false })
 withDefaults(defineProps<{ title: string, description?: string, size?: 'sm' | 'md' | 'lg' }>(), { size: 'md' })
 const emit = defineEmits<{ openAutoFocus: [Event] }>()
+const { t } = useI18n()
 
 const WIDTHS = { sm: 'sm:max-w-sm', md: 'sm:max-w-[480px]', lg: 'sm:max-w-[600px]' }
 </script>
@@ -32,7 +33,7 @@ const WIDTHS = { sm: 'sm:max-w-sm', md: 'sm:max-w-[480px]', lg: 'sm:max-w-[600px
           <slot name="footer" />
         </footer>
         <DialogClose as-child>
-          <UiIconButton :icon="X" label="Fermer" size="sm" class="absolute top-4 right-3.5" />
+          <UiIconButton :icon="X" :label="t('common.close')" size="sm" class="absolute top-4 right-3.5" />
         </DialogClose>
       </DialogContent>
     </DialogPortal>

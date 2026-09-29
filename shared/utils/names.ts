@@ -3,12 +3,17 @@ export const MAX_NAME_LENGTH = 255
 const COMPOUND_EXTENSIONS = ['tar.gz', 'tar.bz2', 'tar.xz', 'tar.zst']
 const FORBIDDEN_CHARS = /[\u0000-\u001F\u007F/\\]/g
 
-export class InvalidNameError extends Error {}
+/** Carries the message key, so each side can word it in its own language. */
+export class InvalidNameError extends Error {
+  constructor(readonly key: 'errors.nameInvalid' | 'errors.nameTooLong') {
+    super(key)
+  }
+}
 
 export function sanitizeName(raw: string) {
   const name = raw.normalize('NFC').replace(FORBIDDEN_CHARS, '-').trim()
-  if (!name || name === '.' || name === '..') throw new InvalidNameError('Nom invalide')
-  if (name.length > MAX_NAME_LENGTH) throw new InvalidNameError(`Le nom ne peut pas dépasser ${MAX_NAME_LENGTH} caractères`)
+  if (!name || name === '.' || name === '..') throw new InvalidNameError('errors.nameInvalid')
+  if (name.length > MAX_NAME_LENGTH) throw new InvalidNameError('errors.nameTooLong')
   return name
 }
 

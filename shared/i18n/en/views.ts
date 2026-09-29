@@ -1,0 +1,52 @@
+export default {
+  folder: {
+    contents: 'Contents of {name}',
+    unnamed: 'folder',
+    this: 'this folder',
+    denied: 'Access denied',
+    deniedHint: 'This folder isn’t shared with you, or no longer is.',
+    missing: 'Folder not found',
+    missingHint: 'It may have been deleted or moved.',
+    backToDrive: 'Back to My Drive',
+    backToShared: 'Back to Shared with me',
+    empty: 'This folder is empty',
+    emptyDrive: 'Your Drive is empty',
+    emptyHint: 'Drop your files here, or create a folder to start organizing.',
+    emptyShared: 'Nothing has been shared with you here yet.',
+  },
+  recent: {
+    title: 'Recent',
+    label: 'Recent files',
+    empty: 'No recent files',
+    emptyOwner: 'Files you upload, edit or open will show up here.',
+    emptyReader: 'Documents you view will show up here.',
+  },
+  shared: {
+    title: 'Shared',
+    label: 'Shared items',
+    empty: 'No shared files',
+    emptyHint: 'Files you share will show up here, along with the people who can access them.',
+  },
+  sharedWithMe: {
+    label: 'Documents shared with me',
+    heading: 'Documents you have access to',
+    empty: 'Nothing yet',
+    emptyHint: 'Documents shared with you will show up here.',
+  },
+  starred: {
+    title: 'Favorites',
+    empty: 'No favorites',
+    emptyHint: 'Add a file or folder to favorites (S key) to find it here in one click.',
+  },
+  trash: {
+    title: 'Trash',
+    notice: 'Items stay here until they’re deleted forever. People you shared them with can no longer access them.',
+    empty: 'Trash is empty',
+    emptyHint: 'Deleted items stay here, ready to be restored, until you delete them forever.',
+  },
+  open: {
+    denied: 'You don’t have access to this item, or no longer do.',
+    missing: 'This item no longer exists.',
+    home: 'Back to home',
+  },
+}

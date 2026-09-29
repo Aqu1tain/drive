@@ -2,7 +2,8 @@
 import { Fingerprint, Mail } from '@lucide/vue'
 
 definePageMeta({ layout: 'auth' })
-useHead({ title: 'Connexion' })
+const { t } = useI18n()
+useHead({ title: t('auth.login.title') })
 
 const route = useRoute()
 const { $queryClient } = useNuxtApp()
@@ -49,7 +50,7 @@ async function signInWithPassword() {
 async function signInWithPasskey() {
   await attempt(async () => {
     const result = await authClient.signIn.passkey()
-    if (result?.error) return void (error.value = 'La connexion par clé d’accès a été annulée ou a échoué.')
+    if (result?.error) return void (error.value = t('auth.login.passkeyFailed'))
     await done()
   })
 }
@@ -57,7 +58,7 @@ async function signInWithPasskey() {
 async function requestCode() {
   await attempt(async () => {
     const { error: failure } = await authClient.emailOtp.sendVerificationOtp({ email: email.value.trim(), type: 'sign-in' })
-    if (failure) return void (error.value = authErrorMessage(failure, 'Impossible d’envoyer le code.'))
+    if (failure) return void (error.value = authErrorMessage(failure, t('auth.login.codeFailed')))
     step.value = 'code'
   })
 }
@@ -86,40 +87,42 @@ watch(step, () => {
 
 <template>
   <div>
-    <h1 class="text-xl font-semibold text-ink">{{ step === 'totp' ? 'Vérification en deux étapes' : 'Connexion' }}</h1>
+    <h1 class="text-xl font-semibold text-ink">{{ t(step === 'totp' ? 'auth.login.twoFactor' : 'auth.login.title') }}</h1>
     <p class="mt-1 mb-6 text-base text-ink-weak">
-      <template v-if="step === 'totp'">Saisissez le code affiché par votre application d’authentification.</template>
-      <template v-else-if="step === 'code'">Un code à 6 chiffres a été envoyé à <strong class="font-semibold text-ink">{{ email }}</strong> s’il correspond à un compte.</template>
-      <template v-else>Accédez à vos documents.</template>
+      <template v-if="step === 'totp'">{{ t('auth.login.totpIntro') }}</template>
+      <UiTranslate v-else-if="step === 'code'" message="auth.login.codeSent">
+        <template #email><strong class="font-semibold text-ink">{{ email }}</strong></template>
+      </UiTranslate>
+      <template v-else>{{ t('auth.login.intro') }}</template>
     </p>
 
     <form v-if="step === 'password'" class="flex flex-col gap-4" @submit.prevent="signInWithPassword">
-      <UiInput v-model="email" label="Adresse email" type="email" autocomplete="username webauthn" inputmode="email" required autofocus />
-      <UiInput v-model="password" label="Mot de passe" type="password" autocomplete="current-password" required />
+      <UiInput v-model="email" :label="t('auth.login.email')" type="email" autocomplete="username webauthn" inputmode="email" required autofocus />
+      <UiInput v-model="password" :label="t('auth.login.password')" type="password" autocomplete="current-password" required />
       <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
-      <UiButton type="submit" variant="primary" size="lg" block :loading="busy">Se connecter</UiButton>
+      <UiButton type="submit" variant="primary" size="lg" block :loading="busy">{{ t('auth.login.submit') }}</UiButton>
     </form>
 
     <form v-else-if="step === 'code-request'" class="flex flex-col gap-4" @submit.prevent="requestCode">
-      <UiInput v-model="email" label="Adresse email" type="email" autocomplete="email" inputmode="email" required autofocus />
+      <UiInput v-model="email" :label="t('auth.login.email')" type="email" autocomplete="email" inputmode="email" required autofocus />
       <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
-      <UiButton type="submit" variant="primary" size="lg" block :loading="busy">Recevoir un code</UiButton>
+      <UiButton type="submit" variant="primary" size="lg" block :loading="busy">{{ t('auth.login.requestCode') }}</UiButton>
     </form>
 
     <form v-else class="flex flex-col gap-4" @submit.prevent="step === 'totp' ? verifyTotp() : signInWithCode()">
-      <UiInput v-model="code" label="Code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required autofocus />
+      <UiInput v-model="code" :label="t('auth.login.code')" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required autofocus />
       <label v-if="step === 'totp'" class="flex items-center gap-2.5 text-base text-ink">
         <input v-model="trustDevice" type="checkbox" class="size-4 accent-(--accent)">
-        Faire confiance à cet appareil pendant 30 jours
+        {{ t('auth.login.trustDevice') }}
       </label>
       <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
-      <UiButton type="submit" variant="primary" size="lg" block :loading="busy">Vérifier</UiButton>
+      <UiButton type="submit" variant="primary" size="lg" block :loading="busy">{{ t('auth.login.verify') }}</UiButton>
     </form>
 
     <div v-if="step !== 'totp'" class="mt-6 flex flex-col gap-2 border-t border-line-weak pt-6">
-      <UiButton v-if="step === 'password'" block :icon="Fingerprint" :disabled="busy" @click="signInWithPasskey">Utiliser une clé d’accès</UiButton>
-      <UiButton v-if="step === 'password' && me?.emailEnabled" block variant="ghost" :icon="Mail" @click="step = 'code-request'">Recevoir un code par email</UiButton>
-      <UiButton v-if="step !== 'password'" block variant="ghost" @click="step = 'password'">Utiliser mon mot de passe</UiButton>
+      <UiButton v-if="step === 'password'" block :icon="Fingerprint" :disabled="busy" @click="signInWithPasskey">{{ t('auth.login.passkey') }}</UiButton>
+      <UiButton v-if="step === 'password' && me?.emailEnabled" block variant="ghost" :icon="Mail" @click="step = 'code-request'">{{ t('auth.login.emailCode') }}</UiButton>
+      <UiButton v-if="step !== 'password'" block variant="ghost" @click="step = 'password'">{{ t('auth.login.usePassword') }}</UiButton>
     </div>
   </div>
 </template>

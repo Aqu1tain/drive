@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
-useHead({ title: 'Bienvenue' })
+const { t } = useI18n()
+useHead({ title: t('auth.setup.title') })
 
 const { data: setup } = await useFetch<{ needed: boolean, tokenRequired: boolean }>('/api/setup')
 if (setup.value && !setup.value.needed) await navigateTo('/login', { replace: true })
@@ -23,7 +24,7 @@ async function submit() {
     await navigateTo('/home', { replace: true })
   }
   catch (e) {
-    error.value = errorMessage(e, 'L’installation a échoué')
+    error.value = errorMessage(e, t('auth.setup.failed'))
   }
   finally {
     busy.value = false
@@ -33,15 +34,15 @@ async function submit() {
 
 <template>
   <div>
-    <h1 class="text-xl font-semibold text-ink">Créez votre espace</h1>
-    <p class="mt-1 mb-6 text-base text-ink-weak">Vous serez le seul à pouvoir y déposer, organiser et partager des documents.</p>
+    <h1 class="text-xl font-semibold text-ink">{{ t('auth.setup.heading') }}</h1>
+    <p class="mt-1 mb-6 text-base text-ink-weak">{{ t('auth.setup.intro') }}</p>
     <form class="flex flex-col gap-4" @submit.prevent="submit">
-      <UiInput v-model="name" label="Votre nom" autocomplete="name" required autofocus hint="Affiché aux personnes avec qui vous partagez." />
-      <UiInput v-model="email" label="Adresse email" type="email" autocomplete="email" inputmode="email" required />
-      <UiInput v-model="password" label="Mot de passe" type="password" autocomplete="new-password" required hint="Au moins 10 caractères. Vous pourrez ajouter une clé d’accès ensuite." />
-      <UiInput v-if="setup?.tokenRequired" v-model="token" label="Jeton d’installation" required hint="Défini par NUXT_SETUP_TOKEN sur le serveur." />
+      <UiInput v-model="name" :label="t('auth.setup.name')" autocomplete="name" required autofocus :hint="t('auth.setup.nameHint')" />
+      <UiInput v-model="email" :label="t('auth.setup.email')" type="email" autocomplete="email" inputmode="email" required />
+      <UiInput v-model="password" :label="t('auth.setup.password')" type="password" autocomplete="new-password" required :hint="t('auth.setup.passwordHint')" />
+      <UiInput v-if="setup?.tokenRequired" v-model="token" :label="t('auth.setup.token')" required :hint="t('auth.setup.tokenHint')" />
       <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
-      <UiButton type="submit" variant="primary" size="lg" block :loading="busy">Créer mon espace</UiButton>
+      <UiButton type="submit" variant="primary" size="lg" block :loading="busy">{{ t('auth.setup.submit') }}</UiButton>
     </form>
   </div>
 </template>

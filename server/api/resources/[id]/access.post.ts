@@ -14,14 +14,14 @@ export default defineEventHandler(async (event) => {
   const viewer = await requireOwner(event)
   const body = await readValidatedBody(event, bodySchema.parse)
   const resource = await requireOwned(getRouterParam(event, 'id')!)
-  if (resource.deletedAt) throw createError({ statusCode: 409, statusMessage: 'Cet élément est dans la corbeille' })
-  if (body.email === viewer.user!.email.toLowerCase()) throw createError({ statusCode: 400, statusMessage: 'Vous avez déjà accès à tout votre espace' })
+  if (resource.deletedAt) throw createError({ statusCode: 409, statusMessage: tr('errors.itemInTrash') })
+  if (body.email === viewer.user!.email.toLowerCase()) throw createError({ statusCode: 400, statusMessage: tr('errors.alreadyFullAccess') })
 
   const { accessRules } = tables
   const db = useDB()
   const settings = { allowDownload: body.allowDownload, expiresAt: body.expiresAt ? new Date(body.expiresAt) : null }
   const existingUser = await findUserByEmail(body.email)
-  if (existingUser?.role === 'owner') throw createError({ statusCode: 400, statusMessage: 'Adresse du propriétaire' })
+  if (existingUser?.role === 'owner') throw createError({ statusCode: 400, statusMessage: tr('errors.ownerAddress') })
 
   let ruleId: string
   let url: string

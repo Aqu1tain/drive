@@ -8,13 +8,13 @@ const MAX_FRAME_BYTES = 5 * 1024 * 1024
 export default defineEventHandler(async (event) => {
   const viewer = await requireOwner(event)
   const resource = await findResource(getRouterParam(event, 'id')!)
-  if (!resource?.checksum || kindOf(resource.type, resource.mimeType) !== 'video') throw createError({ statusCode: 404, statusMessage: 'Vidéo introuvable' })
-  if (Number(getHeader(event, 'content-length') ?? 0) > MAX_FRAME_BYTES) throw createError({ statusCode: 413, statusMessage: 'Image trop lourde' })
+  if (!resource?.checksum || kindOf(resource.type, resource.mimeType) !== 'video') throw createError({ statusCode: 404, statusMessage: tr('errors.videoNotFound') })
+  if (Number(getHeader(event, 'content-length') ?? 0) > MAX_FRAME_BYTES) throw createError({ statusCode: 413, statusMessage: tr('errors.imageTooLarge') })
 
   const frame = await readRawBody(event, false)
-  if (!frame?.length || frame.length > MAX_FRAME_BYTES) throw createError({ statusCode: 400, statusMessage: 'Image manquante' })
+  if (!frame?.length || frame.length > MAX_FRAME_BYTES) throw createError({ statusCode: 400, statusMessage: tr('errors.imageMissing') })
   const thumbnail = await imageThumbnail(frame).catch(() => {
-    throw createError({ statusCode: 400, statusMessage: 'Image illisible' })
+    throw createError({ statusCode: 400, statusMessage: tr('errors.imageUnreadable') })
   })
 
   const { resources } = tables

@@ -14,18 +14,19 @@ interface ShareRoot {
 }
 
 const route = useRoute()
+const { t } = useI18n()
 const token = String(route.params.token)
 const apiBase = `/api/s/${token}`
 const { data, error } = await useFetch<ShareRoot>(apiBase)
 
 const root = computed(() => data.value?.root ?? null)
 const isFile = computed(() => root.value?.type === 'file')
-const title = computed(() => root.value?.name ?? (data.value?.kind === 'invitation' ? 'Documents partagés avec vous' : 'Partage'))
+const title = computed(() => root.value?.name ?? t(data.value?.kind === 'invitation' ? 'publicPage.sharedWithYou' : 'publicPage.share'))
 
 useSeoMeta({
   title,
-  ogTitle: computed(() => data.value ? `${title.value}, partagé par ${data.value.sharedBy}` : 'Partage'),
-  description: computed(() => data.value ? `${data.value.sharedBy} vous a partagé ${isFile.value ? 'un document' : 'des documents'}.` : undefined),
+  ogTitle: computed(() => data.value ? t('publicPage.ogTitle', { title: title.value, name: data.value.sharedBy }) : t('publicPage.share')),
+  description: computed(() => data.value ? t(isFile.value ? 'publicPage.sharedFile' : 'publicPage.sharedFiles', { name: data.value.sharedBy }) : undefined),
 })
 
 const preview = ref<PreviewInfo | null>(null)
@@ -43,6 +44,10 @@ onMounted(async () => {
 
 const downloadAllUrl = (items: ResourceItem[]) => `/api/s/${token}/downloads?ids=${items.filter(item => item.canDownload).map(item => item.id).join(',')}`
 const baseName = computed(() => root.value?.name.replace(/\.[^.]+$/, '') ?? '')
+const greeting = computed(() => {
+  const name = data.value?.recipient?.name
+  return name ? t('publicPage.helloName', { name }) : t('publicPage.hello')
+})
 </script>
 
 <template>
@@ -54,11 +59,11 @@ const baseName = computed(() => root.value?.name.replace(/\.[^.]+$/, '') ?? '')
       <template #actions>
         <a v-if="root.canDownload" :href="`${apiBase}/resources/${root.id}/download`" :download="root.name" class="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-ink hover:bg-hover">
           <Download class="size-4" aria-hidden="true" />
-          <span class="max-sm:sr-only">Télécharger</span>
+          <span class="max-sm:sr-only">{{ t('common.download') }}</span>
         </a>
       </template>
     </PreviewHtml>
-    <div v-else-if="previewError" class="flex flex-1 items-center justify-center p-8 text-center text-ink-weak">Aperçu indisponible pour le moment.</div>
+    <div v-else-if="previewError" class="flex flex-1 items-center justify-center p-8 text-center text-ink-weak">{{ t('publicPage.previewUnavailable') }}</div>
     <div v-else class="flex flex-1 items-center justify-center"><UiSpinner class="size-6 text-ink-hint" /></div>
   </div>
 
@@ -66,11 +71,11 @@ const baseName = computed(() => root.value?.name.replace(/\.[^.]+$/, '') ?? '')
     <div class="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-6 pb-24 sm:px-6 sm:pt-10">
       <div class="mb-5 text-center sm:mb-7">
         <h1 class="text-xl font-semibold tracking-tight text-balance text-ink sm:text-2xl">{{ baseName }}</h1>
-        <p class="mt-1 text-sm text-ink-weak">Partagé par {{ data.sharedBy }}</p>
+        <p class="mt-1 text-sm text-ink-weak">{{ t('publicPage.sharedBy', { name: data.sharedBy }) }}</p>
       </div>
       <div class="flex min-h-[60vh] flex-1 overflow-hidden rounded-xl bg-canvas shadow-raised">
         <PreviewContent v-if="preview" :info="preview" />
-        <div v-else-if="previewError" class="flex flex-1 items-center justify-center p-8 text-center text-ink-weak">Aperçu indisponible pour le moment.</div>
+        <div v-else-if="previewError" class="flex flex-1 items-center justify-center p-8 text-center text-ink-weak">{{ t('publicPage.previewUnavailable') }}</div>
         <div v-else class="flex flex-1 items-center justify-center"><UiSpinner class="size-6 text-ink-hint" /></div>
       </div>
     </div>
@@ -81,8 +86,8 @@ const baseName = computed(() => root.value?.name.replace(/\.[^.]+$/, '') ?? '')
           <p class="truncate text-base font-medium text-ink">{{ root.name }}</p>
           <p class="text-sm text-ink-weak">{{ formatSize(root.size) }}</p>
         </div>
-        <UiButton v-if="root.canDownload" variant="primary" :icon="Download" :href="`${apiBase}/resources/${root.id}/download`" :download="root.name">Télécharger</UiButton>
-        <span v-else class="text-sm text-ink-weak">Consultation seule</span>
+        <UiButton v-if="root.canDownload" variant="primary" :icon="Download" :href="`${apiBase}/resources/${root.id}/download`" :download="root.name">{{ t('common.download') }}</UiButton>
+        <span v-else class="text-sm text-ink-weak">{{ t('publicPage.viewOnly') }}</span>
       </div>
     </footer>
   </template>
@@ -91,16 +96,16 @@ const baseName = computed(() => root.value?.name.replace(/\.[^.]+$/, '') ?? '')
     <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div class="min-w-0">
         <h1 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
-          {{ data.kind === 'invitation' ? `Bonjour${data.recipient?.name ? ` ${data.recipient.name}` : ''}` : root?.name }}
+          {{ data.kind === 'invitation' ? greeting : root?.name }}
         </h1>
         <p class="mt-1 text-base text-ink-weak">
-          {{ data.kind === 'invitation' ? `${data.sharedBy} a partagé ces documents avec vous.` : `Partagé par ${data.sharedBy}` }}
+          {{ t(data.kind === 'invitation' ? 'publicPage.sharedThese' : 'publicPage.sharedBy', { name: data.sharedBy }) }}
         </p>
       </div>
-      <UiButton v-if="data.items.some(item => item.canDownload)" :icon="Download" :href="downloadAllUrl(data.items)">Tout télécharger</UiButton>
+      <UiButton v-if="data.items.some(item => item.canDownload)" :icon="Download" :href="downloadAllUrl(data.items)">{{ t('publicPage.downloadAll') }}</UiButton>
     </div>
     <PublicListing v-if="data.items.length" :items="data.items" :token="token" />
-    <p v-else class="rounded-xl bg-canvas p-8 text-center text-base text-ink-weak shadow-norm">Ce dossier est vide pour le moment.</p>
-    <p v-if="data.kind === 'invitation'" class="mt-6 text-center text-xs text-ink-hint">Ce lien vous est personnel : vos consultations sont associées à votre invitation.</p>
+    <p v-else class="rounded-xl bg-canvas p-8 text-center text-base text-ink-weak shadow-norm">{{ t('publicPage.emptyForNow') }}</p>
+    <p v-if="data.kind === 'invitation'" class="mt-6 text-center text-xs text-ink-hint">{{ t('publicPage.personal') }}</p>
   </div>
 </template>

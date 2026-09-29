@@ -18,19 +18,19 @@ export interface UploadPlan {
 /** Every check that can refuse an upload runs before a single byte is stored. */
 export async function planUpload(input: { parentId?: string | null, name: string, conflict: ConflictStrategy, size: number }): Promise<UploadPlan> {
   const { uploadMaxBytes, storageQuotaBytes } = useRuntimeConfig()
-  if (!Number.isFinite(input.size) || input.size < 0) throw createError({ statusCode: 411, statusMessage: 'Taille du fichier inconnue' })
-  if (input.size > uploadMaxBytes) throw createError({ statusCode: 413, statusMessage: 'Fichier trop volumineux' })
-  if ((await usedBytes()) + input.size > storageQuotaBytes) throw createError({ statusCode: 507, statusMessage: 'Espace de stockage insuffisant' })
+  if (!Number.isFinite(input.size) || input.size < 0) throw createError({ statusCode: 411, statusMessage: tr('errors.unknownSize') })
+  if (input.size > uploadMaxBytes) throw createError({ statusCode: 413, statusMessage: tr('errors.fileTooLarge') })
+  if ((await usedBytes()) + input.size > storageQuotaBytes) throw createError({ statusCode: 507, statusMessage: tr('errors.storageFull') })
 
   const parent = await requireFolder(input.parentId)
   const parentId = parent?.id ?? null
   let fields = nameFields(input.name)
   const existing = await findSibling(parentId, fields.nameLower)
   if (existing && input.conflict === 'fail') {
-    throw createError({ statusCode: 409, statusMessage: `« ${existing.name} » existe déjà`, data: { reason: 'name_taken', existingId: existing.id } })
+    throw createError({ statusCode: 409, statusMessage: tr('errors.nameTakenShort', { name: existing.name }), data: { reason: 'name_taken', existingId: existing.id } })
   }
   if (existing && input.conflict === 'replace' && existing.type === 'folder') {
-    throw createError({ statusCode: 409, statusMessage: 'Un dossier ne peut pas être remplacé par un fichier' })
+    throw createError({ statusCode: 409, statusMessage: tr('errors.folderNotReplaceable') })
   }
   if (existing && input.conflict === 'keep') fields = nameFields(keepBothName(fields.name, await siblingNames(parentId)))
   return { parent, fields, existing, conflict: input.conflict, size: input.size }

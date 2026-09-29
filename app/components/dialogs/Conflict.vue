@@ -3,6 +3,7 @@ import { RadioGroupIndicator, RadioGroupItem, RadioGroupRoot } from 'reka-ui'
 
 const props = defineProps<{ request: ConflictRequest }>()
 const emit = defineEmits<{ close: [] }>()
+const { t } = useI18n()
 
 const open = ref(true)
 const strategy = ref<'replace' | 'keep' | 'skip'>(props.request.kind === 'folder' ? 'replace' : 'keep')
@@ -12,14 +13,14 @@ let settled = false
 const keepName = computed(() => keepBothName(props.request.name, [props.request.name]))
 const options = computed(() => props.request.kind === 'folder'
   ? [
-      { value: 'replace', label: 'Fusionner', hint: 'Ajouter le contenu au dossier existant' },
-      { value: 'keep', label: 'Conserver les deux', hint: `Créer « ${keepName.value} »` },
-      { value: 'skip', label: 'Ignorer', hint: 'Ne pas importer ce dossier' },
+      { value: 'replace', label: t('dialogs.conflict.merge'), hint: t('dialogs.conflict.mergeHint') },
+      { value: 'keep', label: t('dialogs.conflict.keepBoth'), hint: t('dialogs.conflict.keepFolderHint', { name: keepName.value }) },
+      { value: 'skip', label: t('dialogs.conflict.skip'), hint: t('dialogs.conflict.skipFolderHint') },
     ]
   : [
-      { value: 'replace', label: 'Remplacer', hint: 'Le fichier existant est mis à jour, ses partages sont conservés' },
-      { value: 'keep', label: 'Conserver les deux', hint: `Importer sous le nom « ${keepName.value} »` },
-      { value: 'skip', label: 'Ignorer', hint: 'Ne pas importer ce fichier' },
+      { value: 'replace', label: t('dialogs.conflict.replace'), hint: t('dialogs.conflict.replaceHint') },
+      { value: 'keep', label: t('dialogs.conflict.keepBoth'), hint: t('dialogs.conflict.keepFileHint', { name: keepName.value }) },
+      { value: 'skip', label: t('dialogs.conflict.skip'), hint: t('dialogs.conflict.skipFileHint') },
     ])
 
 function settle(choice: ConflictChoice) {
@@ -35,11 +36,11 @@ watch(open, value => !value && settle({ strategy: 'skip', applyToAll: false }))
 <template>
   <UiDialog
     v-model:open="open"
-    :title="request.kind === 'folder' ? `Le dossier « ${request.name} » existe déjà` : `« ${request.name} » existe déjà`"
-    description="Que voulez-vous faire ?"
+    :title="t(request.kind === 'folder' ? 'dialogs.conflict.folderExists' : 'dialogs.conflict.fileExists', { name: request.name })"
+    :description="t('dialogs.conflict.question')"
     size="sm"
   >
-    <RadioGroupRoot v-model="strategy" class="flex flex-col gap-1" aria-label="Résolution du conflit">
+    <RadioGroupRoot v-model="strategy" class="flex flex-col gap-1" :aria-label="t('dialogs.conflict.label')">
       <label
         v-for="option in options"
         :key="option.value"
@@ -56,11 +57,11 @@ watch(open, value => !value && settle({ strategy: 'skip', applyToAll: false }))
     </RadioGroupRoot>
     <label v-if="request.remaining > 0" class="mt-4 flex items-center gap-2.5 text-base text-ink">
       <input v-model="applyToAll" type="checkbox" class="size-4 accent-(--accent)">
-      Appliquer aux {{ plural(request.remaining, 'autre conflit', 'autres conflits') }}
+      {{ t('dialogs.conflict.applyToAll', { count: request.remaining }) }}
     </label>
     <template #footer>
-      <UiButton variant="ghost" @click="settle({ strategy: 'skip', applyToAll: true })">Tout ignorer</UiButton>
-      <UiButton variant="primary" @click="settle({ strategy, applyToAll })">Continuer</UiButton>
+      <UiButton variant="ghost" @click="settle({ strategy: 'skip', applyToAll: true })">{{ t('dialogs.conflict.skipAll') }}</UiButton>
+      <UiButton variant="primary" @click="settle({ strategy, applyToAll })">{{ t('common.continue') }}</UiButton>
     </template>
   </UiDialog>
 </template>

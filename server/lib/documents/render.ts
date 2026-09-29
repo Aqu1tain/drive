@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, translate, type Locale } from '../../../shared/i18n'
 import { escapeHtml } from './text'
 import type { Sheet } from './xlsx'
 
@@ -30,37 +31,37 @@ nav a:hover { background: var(--head) }
 @media (max-width: 640px) { .paper { margin: 0; padding: 24px 16px; border-radius: 0 } .slide { aspect-ratio: auto; margin: 12px; padding: 24px } .slide h2 { font-size: 20px } .slide p { font-size: 15px } }
 `
 
-function page(title: string, body: string) {
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base target="_blank"><title>${escapeHtml(title)}</title><style>${STYLE}</style></head><body>${body}</body></html>`
+function page(title: string, body: string, locale: Locale) {
+  return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><base target="_blank"><title>${escapeHtml(title)}</title><style>${STYLE}</style></head><body>${body}</body></html>`
 }
 
 const multiline = (value: string) => escapeHtml(value).replace(/\n/g, '<br>')
 
-export const documentHtml = (title: string, html: string) => page(title, `<article class="paper">${html}</article>`)
+export const documentHtml = (title: string, html: string, locale: Locale = DEFAULT_LOCALE) => page(title, `<article class="paper">${html}</article>`, locale)
 
 function columnName(index: number): string {
   return (index >= 26 ? columnName(Math.floor(index / 26) - 1) : '') + String.fromCharCode(65 + index % 26)
 }
 
-function sheetTable(sheet: Sheet) {
+function sheetTable(sheet: Sheet, locale: Locale) {
   const width = Math.max(0, ...sheet.rows.map(row => row.length))
-  if (width === 0) return '<p class="empty">Feuille vide</p>'
+  if (width === 0) return `<p class="empty">${translate(locale, 'documents.emptySheet')}</p>`
   const head = `<tr><th></th>${Array.from({ length: width }, (_, i) => `<th>${columnName(i)}</th>`).join('')}</tr>`
   const body = sheet.rows.map((row, r) => `<tr><th>${r + 1}</th>${Array.from({ length: width }, (_, c) => `<td>${multiline(row[c] ?? '')}</td>`).join('')}</tr>`).join('')
-  const more = sheet.truncated ? '<p class="empty">Seules les 1 000 premières lignes sont affichées.</p>' : ''
+  const more = sheet.truncated ? `<p class="empty">${translate(locale, 'documents.truncatedRows', { count: sheet.rows.length })}</p>` : ''
   return `<div class="scroll"><table>${head}${body}</table></div>${more}`
 }
 
-export function sheetsHtml(title: string, sheets: Sheet[]) {
+export function sheetsHtml(title: string, sheets: Sheet[], locale: Locale = DEFAULT_LOCALE) {
   const nav = sheets.length > 1 ? `<nav>${sheets.map((sheet, i) => `<a href="#sheet-${i + 1}" target="_self">${escapeHtml(sheet.name)}</a>`).join('')}</nav>` : ''
-  const sections = sheets.map((sheet, i) => `<section class="sheet" id="sheet-${i + 1}"><h2>${escapeHtml(sheet.name)}</h2>${sheetTable(sheet)}</section>`).join('')
-  return page(title, nav + (sections || '<p class="note">Classeur vide</p>'))
+  const sections = sheets.map((sheet, i) => `<section class="sheet" id="sheet-${i + 1}"><h2>${escapeHtml(sheet.name)}</h2>${sheetTable(sheet, locale)}</section>`).join('')
+  return page(title, nav + (sections || `<p class="note">${translate(locale, 'documents.emptyWorkbook')}</p>`), locale)
 }
 
-export function slidesHtml(title: string, slides: string[][]) {
-  const note = '<p class="note">Aperçu du texte des diapositives. Téléchargez le fichier pour la mise en page complète.</p>'
+export function slidesHtml(title: string, slides: string[][], locale: Locale = DEFAULT_LOCALE) {
+  const note = `<p class="note">${translate(locale, 'documents.slidesNote')}</p>`
   const sections = slides.map(([heading, ...rest], i) => `<section class="slide">${heading
     ? `<h2>${multiline(heading)}</h2>${rest.map(p => `<p>${multiline(p)}</p>`).join('')}`
-    : '<p class="empty">Diapositive sans texte</p>'}<span class="number">${i + 1} / ${slides.length}</span></section>`).join('')
-  return page(title, note + sections)
+    : `<p class="empty">${translate(locale, 'documents.emptySlide')}</p>`}<span class="number">${i + 1} / ${slides.length}</span></section>`).join('')
+  return page(title, note + sections, locale)
 }

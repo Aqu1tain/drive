@@ -97,31 +97,31 @@ export async function findOrCreateInvitation(email: string, name: string | null,
 export async function ownerName() {
   const { user } = tables
   const [owner] = await useDB().select({ name: user.name }).from(user).where(eq(user.role, 'owner')).limit(1)
-  return owner?.name ?? 'Le propriétaire'
+  return owner?.name ?? tr('labels.theOwner')
 }
 
 export async function notifyShare(to: string, resource: Resource, url: string, kind: 'user' | 'account' | 'link') {
   const sender = await ownerName()
-  const what = resource.type === 'folder' ? `le dossier « ${resource.name} »` : `« ${resource.name} »`
-  const lines = [`${sender} a partagé ${what} avec vous.`]
-  if (kind === 'account') lines.push('Créez votre accès en quelques secondes pour le consulter.')
-  if (kind === 'link') lines.push('Ce lien vous est personnel : évitez de le transférer.')
-  const { html, text } = emailLayout(`${sender} a partagé un élément avec vous`, lines, { label: 'Ouvrir', url })
-  return sendEmail(to, `${sender} a partagé ${resource.name} avec vous`, text, html).catch((error) => {
+  const params = { sender, name: resource.name }
+  const lines = [tr(resource.type === 'folder' ? 'emails.share.folder' : 'emails.share.file', params)]
+  if (kind === 'account') lines.push(tr('emails.share.createAccount'))
+  if (kind === 'link') lines.push(tr('emails.share.personalLink'))
+  const { html, text } = emailLayout(tr('emails.share.title', params), lines, { label: tr('emails.share.open'), url })
+  return sendEmail(to, tr('emails.share.subject', params), text, html).catch((error) => {
     console.error(JSON.stringify({ level: 'error', job: 'email', error: String(error) }))
     return false
   })
 }
 
 export async function requireRule(id: string) {
-  if (!isUuid(id)) throw createError({ statusCode: 404, statusMessage: 'Accès introuvable' })
+  if (!isUuid(id)) throw createError({ statusCode: 404, statusMessage: tr('errors.accessNotFound') })
   const [rule] = await useDB().select().from(tables.accessRules).where(eq(tables.accessRules.id, id)).limit(1)
-  if (!rule) throw createError({ statusCode: 404, statusMessage: 'Accès introuvable' })
+  if (!rule) throw createError({ statusCode: 404, statusMessage: tr('errors.accessNotFound') })
   return rule
 }
 
 export async function ruleLabel(rule: AccessRule) {
-  if (rule.kind === 'link') return 'Lien public'
+  if (rule.kind === 'link') return ACTIVITY_LABELS.publicLink
   const [row] = await loadRuleRows(eq(tables.accessRules.id, rule.id))
-  return row?.person?.label ?? 'Accès'
+  return row?.person?.label ?? tr('labels.access')
 }

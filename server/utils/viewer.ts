@@ -42,13 +42,13 @@ export async function getSessionViewer(event: H3Event): Promise<Viewer | null> {
 
 export async function requireViewer(event: H3Event) {
   const viewer = await getSessionViewer(event)
-  if (!viewer) throw createError({ statusCode: 401, statusMessage: 'Connexion requise' })
+  if (!viewer) throw createError({ statusCode: 401, statusMessage: tr('errors.signInRequired') })
   return viewer
 }
 
 export async function requireOwner(event: H3Event) {
   const viewer = await requireViewer(event)
-  if (viewer.kind !== 'owner') throw createError({ statusCode: 403, statusMessage: 'Action réservée au propriétaire' })
+  if (viewer.kind !== 'owner') throw createError({ statusCode: 403, statusMessage: tr('errors.ownerOnly') })
   return viewer
 }
 

@@ -9,7 +9,7 @@ const bodySchema = z.object({
 export default defineEventHandler(async (event) => {
   await requireOwner(event)
   const body = await readValidatedBody(event, bodySchema.parse)
-  if (await findUserByEmail(body.email)) throw createError({ statusCode: 409, statusMessage: 'Un compte existe déjà avec cette adresse' })
+  if (await findUserByEmail(body.email)) throw createError({ statusCode: 409, statusMessage: tr('errors.accountExists') })
   const created = await createUser({ ...body, role: 'reader', emailVerified: true })
   setResponseStatus(event, 201)
   return { id: created.id }

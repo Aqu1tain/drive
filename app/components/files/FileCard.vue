@@ -16,6 +16,7 @@ defineProps<{
   menu: MenuEntry[]
 }>()
 const emit = defineEmits<{ menuOpen: [] }>()
+const { t } = useI18n()
 const failed = ref(false)
 </script>
 
@@ -55,14 +56,14 @@ const failed = ref(false)
     <div class="flex h-10 items-center gap-2 pr-0.5 pl-1.5">
       <FilesFileIcon :kind="item.kind" size="sm" class="shrink-0" />
       <span class="min-w-0 flex-1 truncate text-base text-ink" :title="item.name">{{ item.name }}</span>
-      <Star v-if="item.starred" class="size-3.5 shrink-0 fill-current text-[#f0a500]" aria-label="Favori" />
+      <Star v-if="item.starred" class="size-3.5 shrink-0 fill-current text-[#f0a500]" :aria-label="t('files.favorite')" />
       <TagsDots v-if="item.tagIds?.length" :ids="item.tagIds" />
       <FilesAccessCell v-if="showAccess && item.access?.level !== 'private'" :access="item.access" compact />
       <UiDropdownMenu :entries="menu" align="end" @update:open="(open: boolean) => open && emit('menuOpen')" @click.stop>
         <button
           type="button"
           tabindex="-1"
-          :aria-label="`Actions pour ${item.name}`"
+          :aria-label="t('files.actionsFor', { name: item.name })"
           class="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-ink-weak hover:bg-hover hover:text-ink data-[state=open]:bg-hover"
           @click.stop
           @dblclick.stop

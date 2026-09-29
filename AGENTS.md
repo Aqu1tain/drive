@@ -24,6 +24,7 @@ A single owner uploads, organizes and shares; everyone else is a reader and neve
 | `server/domain/access.ts` | Pure permission resolver (read, download, manage). Tested in `tests/unit/access.test.ts` |
 | `server/utils/` | Services auto-imported by Nitro: resources, listing, sharing, activity, content, search, uploads, file processing |
 | `server/lib/documents/` | Reading PDF and Office documents: text, thumbnail, preview page (pure functions) |
+| `shared/i18n/` | English and French catalogs, one file per area, and `translate` (typed keys, plurals) |
 | `server/api/` | Endpoints. Every write goes through `requireOwner`, every read through `requireReadable` |
 | `server/routes/c`, `server/routes/p` | Isolated origin for HTML (previews and published pages) |
 | `server/lib/` | Storage (local, S3), cryptography, MIME, Better Auth configuration |
@@ -58,4 +59,4 @@ pnpm test:integration   # dev server running
 pnpm test:e2e           # browser journeys and axe audit
 ```
 
-Conventions: strict TypeScript, no needless comments, early returns, short functions. Conventional, atomic commits (`feat(share): …`, `fix(upload): …`). Interface text in French, without em dashes. The documentation is in English, with a French version in each `*.fr.md` file: update both when you change one.
+Conventions: strict TypeScript, no needless comments, early returns, short functions. Conventional, atomic commits (`feat(share): …`, `fix(upload): …`). Every interface text goes through the catalogs in `shared/i18n` (`t()` in components, `say()` in plain modules, `tr()` on the server): add the English key and its French twin, the type check fails if one is missing. No em dashes, in any language. The documentation is in English, with a French version in each `*.fr.md` file: update both when you change one.

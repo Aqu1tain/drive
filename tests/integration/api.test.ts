@@ -364,6 +364,15 @@ describe('file processing', () => {
   })
 })
 
+describe('languages', () => {
+  it('answers in the language picked by the visitor, English otherwise', async () => {
+    const missing = '/api/resources/00000000-0000-4000-8000-000000000000'
+    expect((await owner.get(missing)).body.statusMessage).toBe('Item not found')
+    expect((await owner.get(missing, { headers: { cookie: 'drive_locale=fr' } })).body.statusMessage).toBe('Élément introuvable')
+    expect((await owner.get(missing, { headers: { cookie: 'drive_locale=xx' } })).body.statusMessage).toBe('Item not found')
+  })
+})
+
 describe('upload safety', () => {
   it('neutralises path traversal in names', async () => {
     const file = await fileIn(root, '../../../etc/passwd')
@@ -577,7 +586,7 @@ describe('readers', () => {
     expect(mine.body.items.map((i: { id: string }) => i.id)).toContain(shared)
     const listing = await reader.get(`/api/folders/${shared}`)
     expect(listing.body.items.map((i: { id: string }) => i.id)).toEqual([inside.id])
-    expect(listing.body.breadcrumbs[0].name).toBe('Partagé avec moi')
+    expect(listing.body.breadcrumbs[0].name).toBe('Shared with me')
     expect(listing.body.items[0].access).toBeUndefined()
 
     expect((await reader.get(`/api/resources/${inside.id}/content`)).body).toBe('devis')

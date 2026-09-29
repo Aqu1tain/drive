@@ -3,6 +3,7 @@ import { Download } from '@lucide/vue'
 import type { PreviewInfo } from '#shared/types/api'
 
 const props = defineProps<{ info: PreviewInfo, dark?: boolean }>()
+const { t } = useI18n()
 
 function download() {
   const anchor = document.createElement('a')
@@ -18,12 +19,12 @@ function download() {
       <FilesFileIcon :kind="info.kind" size="xl" />
     </div>
     <div>
-      <p class="font-semibold" :class="dark ? 'text-white' : 'text-ink'">Ce fichier ne peut pas être prévisualisé</p>
+      <p class="font-semibold" :class="dark ? 'text-white' : 'text-ink'">{{ t('preview.unsupported') }}</p>
       <p class="mt-1 text-sm" :class="dark ? 'text-white/60' : 'text-ink-weak'">{{ info.item.name }} · {{ formatSize(info.item.size) }}</p>
     </div>
     <UiButton v-if="info.downloadUrl" variant="primary" :icon="Download" @click="download">
-      Télécharger
+      {{ t('common.download') }}
     </UiButton>
-    <p v-else class="text-sm" :class="dark ? 'text-white/60' : 'text-ink-weak'">Le téléchargement n’est pas autorisé pour ce partage.</p>
+    <p v-else class="text-sm" :class="dark ? 'text-white/60' : 'text-ink-weak'">{{ t('preview.downloadDisabled') }}</p>
   </div>
 </template>

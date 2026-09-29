@@ -3,6 +3,7 @@ import { Download, Eye, Globe, Link2Off, Pencil, UserCheck, UserMinus, UserPlus 
 import type { ActivityEvent } from '#shared/types/api'
 
 const props = withDefaults(defineProps<{ events: ActivityEvent[], showResource?: boolean, dense?: boolean }>(), { showResource: true })
+const { t } = useI18n()
 
 const groups = computed(() => [...Map.groupBy(props.events, e => new Date(e.createdAt).toDateString()).values()])
 
@@ -13,25 +14,27 @@ const ICONS = {
 
 /** Honest wording: a public link visitor is never presented as a known person. */
 function actor(event: ActivityEvent) {
-  if (event.actorKind === 'owner') return 'Vous'
-  if (event.actorKind === 'link') return 'Un visiteur (lien public)'
-  if (event.actorKind === 'invitation') return `${event.actorLabel} (lien personnel)`
+  if (event.actorKind === 'owner') return t('activity.you')
+  if (event.actorKind === 'link') return t('activity.visitor')
+  if (event.actorKind === 'invitation') return t('activity.personalLink', { name: event.actorLabel })
   return event.actorLabel
 }
 
+const isInheritance = (label: string) => label === t('labels.inheritRestored') || label === t('labels.inheritRemoved')
+
 function verb(event: ActivityEvent) {
-  const target = event.targetLabel
+  const target = event.targetLabel ?? ''
   switch (event.type) {
-    case 'view': return 'a consulté'
-    case 'download': return 'a téléchargé'
-    case 'share_added': return `avez partagé avec ${target}`
-    case 'share_removed': return `avez retiré l’accès de ${target}`
-    case 'share_updated': return target?.startsWith('Accès hérités') ? `: ${target.toLowerCase()} pour` : `avez modifié l’accès de ${target}`
-    case 'link_created': return 'avez créé un lien public pour'
-    case 'link_updated': return 'avez modifié le lien public de'
-    case 'link_removed': return 'avez désactivé le lien public de'
-    case 'invite_accepted': return 'a accepté l’invitation à'
-    default: return 'a tenté d’accéder à'
+    case 'view': return t('activity.verbs.view')
+    case 'download': return t('activity.verbs.download')
+    case 'share_added': return t('activity.verbs.shareAdded', { target })
+    case 'share_removed': return t('activity.verbs.shareRemoved', { target })
+    case 'share_updated': return isInheritance(target) ? t('activity.verbs.inheritance', { target: target.toLowerCase() }) : t('activity.verbs.shareUpdated', { target })
+    case 'link_created': return t('activity.verbs.linkCreated')
+    case 'link_updated': return t('activity.verbs.linkUpdated')
+    case 'link_removed': return t('activity.verbs.linkRemoved')
+    case 'invite_accepted': return t('activity.verbs.inviteAccepted')
+    default: return t('activity.verbs.accessDenied')
   }
 }
 </script>

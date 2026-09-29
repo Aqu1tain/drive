@@ -2,10 +2,10 @@
 import { Link2Off } from '@lucide/vue'
 
 const props = defineProps<{ status?: number }>()
-const title = computed(() => props.status === 410 ? 'Ce lien n’est plus actif' : 'Lien introuvable')
-const description = computed(() => props.status === 410
-  ? 'Il a expiré ou a été désactivé par la personne qui l’a partagé. Demandez-lui un nouveau lien.'
-  : 'Vérifiez l’adresse, ou demandez un nouveau lien à la personne qui vous l’a envoyé.')
+const { t } = useI18n()
+const gone = computed(() => props.status === 410)
+const title = computed(() => t(gone.value ? 'publicPage.gone' : 'publicPage.notFound'))
+const description = computed(() => t(gone.value ? 'publicPage.goneText' : 'publicPage.notFoundText'))
 useHead({ title })
 </script>
 

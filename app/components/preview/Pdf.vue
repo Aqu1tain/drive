@@ -3,6 +3,7 @@ import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
 
 const props = defineProps<{ src: string, dark?: boolean }>()
 const emit = defineEmits<{ error: [] }>()
+const { t } = useI18n()
 
 const container = useTemplateRef<HTMLElement>('container')
 const pages = ref<Array<{ number: number, ratio: number }>>([])
@@ -98,9 +99,9 @@ onBeforeUnmount(cleanup)
           class="w-full overflow-hidden rounded-sm bg-white shadow-raised"
           :style="{ aspectRatio: `1 / ${page.ratio}`, maxWidth: `${Math.min(width, 1100)}px` }"
         >
-          <canvas class="block size-full" :aria-label="`Page ${page.number}`" />
+          <canvas class="block size-full" :aria-label="t('preview.page', { number: String(page.number) })" />
         </div>
-        <p class="pb-4 text-sm" :class="dark ? 'text-white/60' : 'text-ink-weak'">{{ plural(pages.length, 'page') }}</p>
+        <p class="pb-4 text-sm" :class="dark ? 'text-white/60' : 'text-ink-weak'">{{ t('preview.pages', { count: pages.length }) }}</p>
       </template>
       <div v-else class="aspect-[1/1.414] w-full max-w-[720px] rounded-sm bg-white/90 p-10 shadow-raised">
         <div class="flex flex-col gap-3">

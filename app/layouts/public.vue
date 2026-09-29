@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { public: config } = useRuntimeConfig()
+const { t } = useI18n()
 useHead({ meta: [{ name: 'robots', content: 'noindex, nofollow' }] })
 </script>
 
@@ -10,7 +11,7 @@ useHead({ meta: [{ name: 'robots', content: 'noindex, nofollow' }] })
         <AppLogo class="size-7" />
         {{ config.appName }}
       </span>
-      <NuxtLink to="/login" class="ml-auto rounded-md px-3 py-1.5 text-base font-medium text-ink-weak transition-colors hover:bg-hover hover:text-ink">Se connecter</NuxtLink>
+      <NuxtLink to="/login" class="ml-auto rounded-md px-3 py-1.5 text-base font-medium text-ink-weak transition-colors hover:bg-hover hover:text-ink">{{ t('publicPage.signIn') }}</NuxtLink>
     </header>
     <main class="flex min-h-0 flex-1 flex-col">
       <slot />

@@ -94,6 +94,16 @@ Files over 80 MB are not processed. pdf.js runs in the server process, page by p
 - IP: /24 (IPv4) or /48 (IPv6) prefix hashed with HMAC, or nothing at all (`NUXT_ACTIVITY_IP_MODE=none`). Configurable retention (`NUXT_ACTIVITY_RETENTION_DAYS`), with a daily purge.
 - Technical logs kept separate (JSON on stdout: requestId, userId, resourceId, status, latency), with tokens masked.
 
+## Languages
+
+The interface, server messages, emails and shared pages exist in English and French. English is the default; an instance can pick French with `DEFAULT_LOCALE` (written by `install.sh --lang fr`), and each browser can pick its own language in the settings, kept in a `drive_locale` cookie.
+
+- Catalogs live in `shared/i18n`, one file per area and per language. Keys are typed from the English catalog and the French one must have the same shape, so a missing translation is a build error. Plurals use `Intl.PluralRules`, numbers and dates `Intl` with the current language.
+- No i18n library: a hundred lines cover lookups, plurals and parameters, and the same code runs in the app, on the server and in tests.
+- The server answers in the language of the request (cookie, otherwise the instance default) through Nitro's async context, so helpers deep in the call stack can word their errors without passing the event around. Emails follow the sender's language. Document previews are made in the background, in the instance language.
+- The activity log stores fixed labels as tokens (`@public-link`...) and names them when read, in the reader's language; rows written before hold French words, which are recognized too.
+- The end-to-end suite runs in French (a cookie in `playwright.config.ts`), with one test for the English default and the switch.
+
 ## Migrations
 
 Applied before startup in production (`scripts/migrate.mjs`): Nitro 2 does not wait for async plugins. In development, a plugin applies them at launch.

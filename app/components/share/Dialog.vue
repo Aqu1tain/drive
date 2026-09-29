@@ -5,9 +5,11 @@ import { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxP
 import { toast } from 'vue-sonner'
 import { Ban, CalendarClock, Check, Copy, Download, EllipsisVertical, ExternalLink, Globe, Link, Lock, Mail, UserMinus } from '@lucide/vue'
 import type { AccessEntry, ResourceAccess } from '#shared/types/api'
+import type { MessageKey } from '#shared/i18n'
 
 const props = defineProps<{ item: { id: string, name: string, type: 'file' | 'folder' } }>()
 const emit = defineEmits<{ close: [] }>()
+const { t } = useI18n()
 
 const open = ref(true)
 watch(open, value => !value && emit('close'))
@@ -55,7 +57,7 @@ const knownReader = computed(() => suggested.value.some(p => p.kind === 'user' &
 async function add(value = email.value) {
   const address = value.trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
-    addError.value = 'Saisissez une adresse email valide'
+    addError.value = t('share.invalidEmail')
     return
   }
   adding.value = true
@@ -70,27 +72,27 @@ async function add(value = email.value) {
     setAccess(await api<ResourceAccess>(`/api/resources/${props.item.id}/access`))
     if (result.inviteUrl) {
       lastInvite.value = { email: address, url: result.inviteUrl, emailed: result.emailed }
-      if (!result.emailed) await copy(result.inviteUrl, 'Lien d’invitation copié : transmettez-le à la personne')
+      if (!result.emailed) await copy(result.inviteUrl, t('share.inviteLinkCopiedSend'))
     }
     else {
-      toast(result.emailed ? `${address} a été prévenu par email` : `Accès accordé à ${address}`)
+      toast(t(result.emailed ? 'share.notified' : 'share.granted', { email: address }))
     }
   }
   catch (error) {
-    addError.value = errorMessage(error, 'Impossible d’ajouter cette personne')
+    addError.value = errorMessage(error, t('share.addFailed'))
   }
   finally {
     adding.value = false
   }
 }
 
-async function copy(text: string, message = 'Lien copié') {
+async function copy(text: string, message = t('share.linkCopied')) {
   try {
     await navigator.clipboard.writeText(text)
     toast(message)
   }
   catch {
-    toast('Copie automatique impossible. Sélectionnez le lien pour le copier.')
+    toast(t('share.copyFailed'))
   }
 }
 
@@ -108,7 +110,7 @@ async function updateRule(entry: { ruleId: string }, patch: { allowDownload?: bo
 async function removeRule(entry: AccessEntry) {
   try {
     setAccess(await api<ResourceAccess>(`/api/access/${entry.ruleId}`, { method: 'DELETE' }))
-    toast(`Accès de ${entry.label} retiré`)
+    toast(t('share.accessRemoved', { name: entry.label }))
   }
   catch (error) {
     toast.error(errorMessage(error))
@@ -117,23 +119,23 @@ async function removeRule(entry: AccessEntry) {
 
 function entryMenu(entry: AccessEntry): MenuEntry[] {
   return tidyMenu([
-    entry.inviteUrl && { id: 'copy', label: 'Copier le lien d’invitation', icon: Copy, onSelect: () => copy(entry.inviteUrl!, 'Lien d’invitation copié') },
+    entry.inviteUrl && { id: 'copy', label: t('share.copyInviteLink'), icon: Copy, onSelect: () => copy(entry.inviteUrl!, t('share.inviteLinkCopied')) },
     entry.inviteUrl && { kind: 'separator' },
-    { id: 'download', label: entry.allowDownload ? 'Interdire le téléchargement' : 'Autoriser le téléchargement', icon: entry.allowDownload ? Ban : Download, onSelect: () => updateRule(entry, { allowDownload: !entry.allowDownload }) },
-    { id: 'exp-7', label: 'Expire dans 7 jours', icon: CalendarClock, onSelect: () => updateRule(entry, { expiresAt: inDays(7) }) },
-    { id: 'exp-30', label: 'Expire dans 30 jours', icon: CalendarClock, onSelect: () => updateRule(entry, { expiresAt: inDays(30) }) },
-    entry.expiresAt && { id: 'exp-none', label: 'Sans expiration', icon: CalendarClock, onSelect: () => updateRule(entry, { expiresAt: null }) },
+    { id: 'download', label: t(entry.allowDownload ? 'share.blockDownload' : 'share.allowDownload'), icon: entry.allowDownload ? Ban : Download, onSelect: () => updateRule(entry, { allowDownload: !entry.allowDownload }) },
+    { id: 'exp-7', label: t('share.expiresIn', { count: 7 }), icon: CalendarClock, onSelect: () => updateRule(entry, { expiresAt: inDays(7) }) },
+    { id: 'exp-30', label: t('share.expiresIn', { count: 30 }), icon: CalendarClock, onSelect: () => updateRule(entry, { expiresAt: inDays(30) }) },
+    entry.expiresAt && { id: 'exp-none', label: t('share.noExpiration'), icon: CalendarClock, onSelect: () => updateRule(entry, { expiresAt: null }) },
     { kind: 'separator' },
-    { id: 'remove', label: 'Retirer l’accès', icon: UserMinus, danger: true, onSelect: () => removeRule(entry) },
+    { id: 'remove', label: t('share.removeAccess'), icon: UserMinus, danger: true, onSelect: () => removeRule(entry) },
   ])
 }
 
-const STATUS: Record<AccessEntry['status'], { label: string, tone: 'neutral' | 'warning' | 'danger' | 'accent' } | null> = {
+const STATUS: Record<AccessEntry['status'], { label: MessageKey, tone: 'neutral' | 'warning' | 'danger' | 'accent' } | null> = {
   active: null,
-  pending: { label: 'Invitation en attente', tone: 'warning' },
-  disabled: { label: 'Compte désactivé', tone: 'danger' },
-  expired: { label: 'Expiré', tone: 'danger' },
-  revoked: { label: 'Révoqué', tone: 'danger' },
+  pending: { label: 'share.status.pending', tone: 'warning' },
+  disabled: { label: 'share.status.disabled', tone: 'danger' },
+  expired: { label: 'share.status.expired', tone: 'danger' },
+  revoked: { label: 'share.status.revoked', tone: 'danger' },
 }
 
 const linkEnabled = computed({
@@ -160,11 +162,11 @@ async function saveLink(patch: { enabled?: boolean, allowDownload?: boolean, exp
       },
     })
     setAccess(result)
-    if (patch.enabled === true && result.link) await copy(result.link.url, 'Lien public créé et copié')
-    if (patch.enabled === false) toast('Lien public désactivé : il ne fonctionne plus')
+    if (patch.enabled === true && result.link) await copy(result.link.url, t('share.linkCreated'))
+    if (patch.enabled === false) toast(t('share.linkTurnedOff'))
   }
   catch (error) {
-    toast.error(errorMessage(error, 'Impossible de modifier le lien'))
+    toast.error(errorMessage(error, t('share.linkFailed')))
   }
   finally {
     savingLink.value = false
@@ -199,7 +201,7 @@ function openParentSharing(crumb: { id: string | null, name: string }) {
 </script>
 
 <template>
-  <UiDialog v-model:open="open" :title="`Partager « ${item.name} »`" size="lg">
+  <UiDialog v-model:open="open" :title="t('share.title', { name: item.name })" size="lg">
     <form class="flex flex-col gap-2" @submit.prevent="add()">
       <div class="flex gap-2">
         <ComboboxRoot v-model:open="suggestOpen" :ignore-filter="true" :reset-search-term-on-blur="false" :reset-search-term-on-select="false" class="relative flex-1" @update:model-value="value => add(String(value))">
@@ -210,8 +212,8 @@ function openParentSharing(crumb: { id: string | null, name: string }) {
               type="email"
               inputmode="email"
               autocomplete="off"
-              placeholder="Ajouter une personne par email"
-              aria-label="Adresse email de la personne"
+              :placeholder="t('share.emailPlaceholder')"
+              :aria-label="t('share.emailLabel')"
               class="h-full min-w-0 flex-1 bg-transparent text-base text-ink placeholder:text-ink-hint focus:outline-none"
               @update:model-value="suggestOpen = !!$event.trim() && suggested.length > 0"
               @keydown.enter.prevent="add()"
@@ -231,87 +233,95 @@ function openParentSharing(crumb: { id: string | null, name: string }) {
             </ComboboxContent>
           </ComboboxPortal>
         </ComboboxRoot>
-        <UiButton type="submit" variant="primary" :loading="adding" :disabled="!email.trim()">Partager</UiButton>
+        <UiButton type="submit" variant="primary" :loading="adding" :disabled="!email.trim()">{{ t('common.share') }}</UiButton>
       </div>
       <p v-if="addError" class="text-sm text-danger" role="alert">{{ addError }}</p>
 
       <div v-if="isValidEmail && !knownReader" class="flex flex-col gap-2 rounded-lg bg-subtle p-3 text-sm animate-fade-in">
-        <RadioGroupRoot v-model="mode" class="flex flex-col gap-2" aria-label="Type d’accès pour une nouvelle personne">
+        <RadioGroupRoot v-model="mode" class="flex flex-col gap-2" :aria-label="t('share.modeLabel')">
           <label class="flex items-start gap-2.5">
             <RadioGroupItem value="account" class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-field bg-canvas data-[state=checked]:border-accent">
               <RadioGroupIndicator class="size-2 rounded-full bg-accent" />
             </RadioGroupItem>
-            <span><span class="block font-medium text-ink">Invitation avec compte</span><span class="block text-ink-weak">La personne crée son accès : vous savez précisément qui consulte.</span></span>
+            <span><span class="block font-medium text-ink">{{ t('share.withAccount') }}</span><span class="block text-ink-weak">{{ t('share.withAccountHint') }}</span></span>
           </label>
           <label class="flex items-start gap-2.5">
             <RadioGroupItem value="link" class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-field bg-canvas data-[state=checked]:border-accent">
               <RadioGroupIndicator class="size-2 rounded-full bg-accent" />
             </RadioGroupItem>
-            <span><span class="block font-medium text-ink">Lien personnel</span><span class="block text-ink-weak">Sans compte. L’activité est attribuée à ce lien, qui peut toutefois être transféré.</span></span>
+            <span><span class="block font-medium text-ink">{{ t('share.personalLink') }}</span><span class="block text-ink-weak">{{ t('share.personalLinkHint') }}</span></span>
           </label>
         </RadioGroupRoot>
         <label class="flex items-center gap-2.5" :class="!emailEnabled && 'opacity-60'">
           <input v-model="notify" type="checkbox" :disabled="!emailEnabled" class="size-4 accent-(--accent)">
-          <span class="text-ink">Prévenir par email</span>
-          <span v-if="!emailEnabled" class="text-ink-weak">(envoi non configuré, le lien sera copié)</span>
+          <span class="text-ink">{{ t('share.notify') }}</span>
+          <span v-if="!emailEnabled" class="text-ink-weak">{{ t('share.emailOff') }}</span>
         </label>
       </div>
 
       <div v-if="lastInvite" class="flex flex-col gap-2.5 rounded-lg bg-accent-softer p-3 text-sm animate-fade-in" role="status">
         <p class="flex items-center gap-2 text-ink">
           <Check class="size-4 shrink-0 text-accent-ink" aria-hidden="true" />
-          <span>Invitation créée pour <strong class="font-semibold">{{ lastInvite.email }}</strong>{{ lastInvite.emailed ? ' et envoyée par email.' : '. Transmettez-lui ce lien :' }}</span>
+          <span>
+            <UiTranslate :message="lastInvite.emailed ? 'share.inviteSent' : 'share.inviteCreated'">
+              <template #email><strong class="font-semibold">{{ lastInvite.email }}</strong></template>
+            </UiTranslate>
+          </span>
         </p>
         <div class="flex gap-2">
-          <input :value="lastInvite.url" readonly aria-label="Lien d’invitation" class="h-8 min-w-0 flex-1 rounded-md border border-line bg-canvas px-2 text-sm text-ink-weak" @focus="($event.target as HTMLInputElement).select()">
-          <UiButton size="sm" variant="secondary" :icon="Copy" @click="copy(lastInvite.url, 'Lien d’invitation copié')">Copier</UiButton>
+          <input :value="lastInvite.url" readonly :aria-label="t('share.inviteLink')" class="h-8 min-w-0 flex-1 rounded-md border border-line bg-canvas px-2 text-sm text-ink-weak" @focus="($event.target as HTMLInputElement).select()">
+          <UiButton size="sm" variant="secondary" :icon="Copy" @click="copy(lastInvite.url, t('share.inviteLinkCopied'))">{{ t('common.copy') }}</UiButton>
         </div>
       </div>
     </form>
 
     <section class="mt-6" aria-labelledby="people-heading">
-      <h3 id="people-heading" class="mb-2 text-sm font-semibold text-ink-weak">Personnes ayant accès</h3>
+      <h3 id="people-heading" class="mb-2 text-sm font-semibold text-ink-weak">{{ t('share.peopleWithAccess') }}</h3>
       <div v-if="isPending" class="flex flex-col gap-3 py-1"><UiSkeleton v-for="n in 2" :key="n" height="2.25rem" /></div>
       <ul v-else class="flex flex-col">
         <li class="flex items-center gap-3 py-2">
-          <UiAvatar :name="me?.user?.name || 'Moi'" />
+          <UiAvatar :name="me?.user?.name || t('share.me')" />
           <div class="min-w-0 flex-1">
-            <p class="truncate text-base text-ink">{{ me?.user?.name }} <span class="text-ink-weak">(vous)</span></p>
+            <p class="truncate text-base text-ink">{{ me?.user?.name }} <span class="text-ink-weak">{{ t('share.you') }}</span></p>
             <p class="truncate text-sm text-ink-weak">{{ me?.user?.email }}</p>
           </div>
-          <span class="text-sm text-ink-weak">Propriétaire</span>
+          <span class="text-sm text-ink-weak">{{ t('share.owner') }}</span>
         </li>
         <li v-for="entry in own" :key="entry.ruleId" class="flex items-center gap-3 py-2">
           <UiAvatar :name="entry.label" :kind="entry.kind === 'invitation' ? 'invitation' : 'user'" />
           <div class="min-w-0 flex-1">
             <p class="flex min-w-0 items-center gap-2">
               <span class="truncate text-base text-ink">{{ entry.label }}</span>
-              <UiBadge v-if="STATUS[entry.status]" :tone="STATUS[entry.status]!.tone">{{ STATUS[entry.status]!.label }}</UiBadge>
-              <UiBadge v-else-if="entry.invitationMode === 'link'" tone="accent">Lien personnel</UiBadge>
+              <UiBadge v-if="STATUS[entry.status]" :tone="STATUS[entry.status]!.tone">{{ t(STATUS[entry.status]!.label) }}</UiBadge>
+              <UiBadge v-else-if="entry.invitationMode === 'link'" tone="accent">{{ t('share.personalLink') }}</UiBadge>
             </p>
             <p class="truncate text-sm text-ink-weak">
               <template v-if="entry.label !== entry.email">{{ entry.email }}</template>
-              <template v-if="entry.expiresAt"> · expire le {{ formatLongDate(entry.expiresAt) }}</template>
-              <template v-if="!entry.allowDownload"> · lecture seule, sans téléchargement</template>
+              <template v-if="entry.expiresAt"> · {{ t('share.expires', { date: formatLongDate(entry.expiresAt) }) }}</template>
+              <template v-if="!entry.allowDownload"> · {{ t('share.viewOnly') }}</template>
             </p>
           </div>
-          <span class="text-sm text-ink-weak max-sm:hidden">Lecteur</span>
+          <span class="text-sm text-ink-weak max-sm:hidden">{{ t('share.reader') }}</span>
           <UiDropdownMenu :entries="entryMenu(entry)" align="end">
-            <UiIconButton :icon="EllipsisVertical" :label="`Options pour ${entry.label}`" size="sm" />
+            <UiIconButton :icon="EllipsisVertical" :label="t('share.optionsFor', { name: entry.label })" size="sm" />
           </UiDropdownMenu>
         </li>
       </ul>
 
       <div v-for="[folderId, entries] in inherited" :key="String(folderId)" class="mt-3 rounded-lg border border-line-weak p-3">
         <div class="mb-1 flex items-center justify-between gap-2">
-          <p class="text-sm text-ink-weak">Accès hérités de <strong class="font-semibold text-ink">« {{ entries[0]!.inheritedFrom!.name }} »</strong></p>
-          <UiButton size="sm" variant="ghost" @click="openParentSharing(entries[0]!.inheritedFrom!)">Modifier</UiButton>
+          <p class="text-sm text-ink-weak">
+            <UiTranslate message="share.inheritedFrom">
+              <template #folder><strong class="font-semibold text-ink">{{ t('share.quoted', { name: entries[0]!.inheritedFrom!.name }) }}</strong></template>
+            </UiTranslate>
+          </p>
+          <UiButton size="sm" variant="ghost" @click="openParentSharing(entries[0]!.inheritedFrom!)">{{ t('common.edit') }}</UiButton>
         </div>
         <ul>
           <li v-for="entry in entries" :key="entry.ruleId" class="flex items-center gap-3 py-1.5">
             <UiAvatar :name="entry.label" size="sm" :kind="entry.kind === 'invitation' ? 'invitation' : 'user'" />
             <span class="min-w-0 flex-1 truncate text-base text-ink">{{ entry.label }}</span>
-            <UiBadge v-if="STATUS[entry.status]" :tone="STATUS[entry.status]!.tone">{{ STATUS[entry.status]!.label }}</UiBadge>
+            <UiBadge v-if="STATUS[entry.status]" :tone="STATUS[entry.status]!.tone">{{ t(STATUS[entry.status]!.label) }}</UiBadge>
           </li>
         </ul>
       </div>
@@ -320,69 +330,69 @@ function openParentSharing(crumb: { id: string | null, name: string }) {
         v-if="access?.parent"
         v-model="inheritAccess"
         class="mt-4"
-        :label="`Hériter des accès de « ${access.parent.name} »`"
-        :description="inheritAccess ? 'Les personnes ayant accès au dossier parent voient aussi cet élément.' : 'Seules les personnes listées ci-dessus y ont accès.'"
+        :label="t('share.inherit', { name: access.parent.name })"
+        :description="t(inheritAccess ? 'share.inheritOn' : 'share.inheritOff')"
       />
     </section>
 
     <section class="mt-6 border-t border-line-weak pt-5" aria-labelledby="link-heading">
-      <h3 id="link-heading" class="mb-3 text-sm font-semibold text-ink-weak">Accès par lien</h3>
+      <h3 id="link-heading" class="mb-3 text-sm font-semibold text-ink-weak">{{ t('share.linkAccess') }}</h3>
       <div class="flex items-start gap-3">
         <div class="flex size-9 shrink-0 items-center justify-center rounded-full" :class="access?.link ? 'bg-accent-softer text-accent-ink' : 'bg-subtle text-ink-weak'">
           <Globe v-if="access?.link" class="size-[18px]" aria-hidden="true" />
           <Lock v-else class="size-[18px]" aria-hidden="true" />
         </div>
-        <RadioGroupRoot v-model="linkEnabled" class="flex flex-1 flex-col gap-2" aria-label="Accès par lien" :disabled="savingLink || isPending">
+        <RadioGroupRoot v-model="linkEnabled" class="flex flex-1 flex-col gap-2" :aria-label="t('share.linkAccess')" :disabled="savingLink || isPending">
           <label class="flex items-center gap-2.5">
             <RadioGroupItem value="off" class="flex size-4 shrink-0 items-center justify-center rounded-full border border-field data-[state=checked]:border-accent">
               <RadioGroupIndicator class="size-2 rounded-full bg-accent" />
             </RadioGroupItem>
-            <span class="text-base text-ink">Désactivé</span>
+            <span class="text-base text-ink">{{ t('share.linkOff') }}</span>
           </label>
           <label class="flex items-center gap-2.5">
             <RadioGroupItem value="on" class="flex size-4 shrink-0 items-center justify-center rounded-full border border-field data-[state=checked]:border-accent">
               <RadioGroupIndicator class="size-2 rounded-full bg-accent" />
             </RadioGroupItem>
-            <span class="text-base text-ink">Toute personne disposant du lien</span>
+            <span class="text-base text-ink">{{ t('share.linkOn') }}</span>
           </label>
         </RadioGroupRoot>
       </div>
 
       <p v-if="!access?.link && access?.inheritedLink" class="mt-3 flex items-center gap-2 rounded-lg bg-info-soft p-3 text-sm text-info">
         <Link class="size-4 shrink-0" aria-hidden="true" />
-        Le lien public du dossier « {{ access.inheritedLink.inheritedFrom.name }} » donne déjà accès à cet élément.
+        {{ t('share.inheritedLink', { name: access.inheritedLink.inheritedFrom.name }) }}
       </p>
 
       <div v-if="access?.link" class="mt-4 flex flex-col gap-4 pl-12 animate-fade-in">
-        <UiSwitch :model-value="access.link.allowDownload" label="Autoriser le téléchargement" description="Sinon, le contenu reste consultable en ligne uniquement." @update:model-value="value => saveLink({ allowDownload: value })" />
+        <UiSwitch :model-value="access.link.allowDownload" :label="t('share.allowDownload')" :description="t('share.allowDownloadHint')" @update:model-value="value => saveLink({ allowDownload: value })" />
         <div class="flex items-center justify-between gap-4">
-          <label for="link-expiration" class="text-base text-ink">Expiration</label>
+          <label for="link-expiration" class="text-base text-ink">{{ t('share.expiration') }}</label>
           <select
             id="link-expiration"
             :value="expirationChoice"
             class="h-9 rounded-md border border-field bg-canvas px-2.5 text-base text-ink focus:border-accent focus:outline-none focus:ring-3 focus:ring-focus-ring"
             @change="onExpirationChange"
           >
-            <option value="never">Jamais</option>
-            <option value="1">Dans 24 heures</option>
-            <option value="7">Dans 7 jours</option>
-            <option value="30">Dans 30 jours</option>
-            <option v-if="access.link.expiresAt" value="custom" disabled>Le {{ formatLongDate(access.link.expiresAt) }}</option>
+            <option value="never">{{ t('share.never') }}</option>
+            <option value="1">{{ t('share.in24Hours') }}</option>
+            <option value="7">{{ t('share.inDays', { count: 7 }) }}</option>
+            <option value="30">{{ t('share.inDays', { count: 30 }) }}</option>
+            <option v-if="access.link.expiresAt" value="custom" disabled>{{ t('share.on', { date: formatLongDate(access.link.expiresAt) }) }}</option>
           </select>
         </div>
         <div class="flex gap-2">
-          <input :value="access.link.url" readonly aria-label="Adresse du lien public" class="h-9 min-w-0 flex-1 rounded-md border border-line bg-subtle px-2.5 text-sm text-ink-weak" @focus="($event.target as HTMLInputElement).select()">
-          <UiButton variant="secondary" :icon="Copy" @click="copy(access.link.url)">Copier le lien</UiButton>
+          <input :value="access.link.url" readonly :aria-label="t('share.linkAddress')" class="h-9 min-w-0 flex-1 rounded-md border border-line bg-subtle px-2.5 text-sm text-ink-weak" @focus="($event.target as HTMLInputElement).select()">
+          <UiButton variant="secondary" :icon="Copy" @click="copy(access.link.url)">{{ t('share.copyLink') }}</UiButton>
         </div>
         <a v-if="access.link.publishedUrl" :href="access.link.publishedUrl" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm text-accent-ink hover:underline">
           <ExternalLink class="size-3.5" aria-hidden="true" />
-          Adresse de publication de la page
+          {{ t('share.publishedAddress') }}
         </a>
       </div>
     </section>
 
     <template #footer>
-      <UiButton variant="primary" @click="open = false">Terminé</UiButton>
+      <UiButton variant="primary" @click="open = false">{{ t('share.done') }}</UiButton>
     </template>
   </UiDialog>
 </template>

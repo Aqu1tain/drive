@@ -6,6 +6,7 @@ import type { Crumb, FolderListing } from '#shared/types/api'
 const props = defineProps<{ folderId: string | null, mode: 'owner' | 'reader' }>()
 const dialogs = useDialogs()
 const actions = useFileActions()
+const { t } = useI18n()
 
 const base = computed(() => props.mode === 'owner' ? '/drive' : '/shared-with-me')
 const folderTo = (id: string) => `${base.value}/folder/${id}`
@@ -17,7 +18,7 @@ const { data, isPending, error } = useQuery({
   retry: false,
 })
 
-const name = computed(() => data.value?.folder?.name ?? (props.folderId ? '' : 'Mon Drive'))
+const name = computed(() => data.value?.folder?.name ?? (props.folderId ? '' : t('common.myDrive')))
 useHead({ title: name })
 
 watch(() => props.folderId, (id) => {
@@ -25,17 +26,22 @@ watch(() => props.folderId, (id) => {
 }, { immediate: true })
 
 const status = computed(() => errorStatus(error.value))
+const failure = computed(() => {
+  if (status.value === 409) return { title: t('files.trashedFolder.title'), description: t('files.trashedFolder.recover') }
+  if (status.value === 403) return { title: t('views.folder.denied'), description: t('views.folder.deniedHint') }
+  return { title: t('views.folder.missing'), description: t('views.folder.missingHint') }
+})
 </script>
 
 <template>
   <div v-if="error" class="flex flex-1 items-center justify-center">
     <UiEmptyState
       :icon="FolderOpen"
-      :title="status === 409 ? 'Ce dossier est dans la corbeille' : status === 403 ? 'Accès refusé' : 'Dossier introuvable'"
-      :description="status === 409 ? 'Restaurez-le pour retrouver son contenu.' : status === 403 ? 'Ce dossier ne vous est pas ou plus partagé.' : 'Il a peut-être été supprimé ou déplacé.'"
+      :title="failure.title"
+      :description="failure.description"
     >
-      <UiButton v-if="status === 409 && folderId" variant="primary" :icon="RotateCcw" @click="actions.restore([{ id: folderId } as never])">Restaurer</UiButton>
-      <UiButton :variant="status === 409 ? 'secondary' : 'primary'" @click="navigateTo(base)">{{ mode === 'owner' ? 'Retour à Mon Drive' : 'Retour aux partages' }}</UiButton>
+      <UiButton v-if="status === 409 && folderId" variant="primary" :icon="RotateCcw" @click="actions.restore([{ id: folderId } as never])">{{ t('actions.restore') }}</UiButton>
+      <UiButton :variant="status === 409 ? 'secondary' : 'primary'" @click="navigateTo(base)">{{ t(mode === 'owner' ? 'views.folder.backToDrive' : 'views.folder.backToShared') }}</UiButton>
     </UiEmptyState>
   </div>
   <FilesDriveView
@@ -43,10 +49,10 @@ const status = computed(() => errorStatus(error.value))
     :items="data?.items ?? []"
     :loading="isPending"
     :mode="mode"
-    :label="`Contenu de ${name || 'dossier'}`"
-    :folder="{ id: folderId, name: name || 'ce dossier' }"
+    :label="t('views.folder.contents', { name: name || t('views.folder.unnamed') })"
+    :folder="{ id: folderId, name: name || t('views.folder.this') }"
     :folder-item="data?.folder ?? null"
-    :crumbs="data?.breadcrumbs ?? [{ id: null, name: mode === 'owner' ? 'Mon Drive' : 'Partagé avec moi' }]"
+    :crumbs="data?.breadcrumbs ?? [{ id: null, name: t(mode === 'owner' ? 'common.myDrive' : 'labels.sharedWithMe') }]"
     :crumb-to="crumbTo"
     :folder-to="folderTo"
   >
@@ -54,13 +60,13 @@ const status = computed(() => errorStatus(error.value))
       <UiEmptyState
         v-if="mode === 'owner'"
         :icon="folderId ? FolderOpen : HardDrive"
-        :title="folderId ? 'Ce dossier est vide' : 'Votre Drive est vide'"
-        description="Déposez vos fichiers ici, ou créez un dossier pour commencer à ranger."
+        :title="t(folderId ? 'views.folder.empty' : 'views.folder.emptyDrive')"
+        :description="t('views.folder.emptyHint')"
       >
-        <UiButton variant="primary" :icon="Upload" @click="pickFiles">Importer</UiButton>
-        <UiButton :icon="FolderPlus" @click="dialogs.newFolder(folderId)">Nouveau dossier</UiButton>
+        <UiButton variant="primary" :icon="Upload" @click="pickFiles">{{ t('files.upload') }}</UiButton>
+        <UiButton :icon="FolderPlus" @click="dialogs.newFolder(folderId)">{{ t('files.newFolder') }}</UiButton>
       </UiEmptyState>
-      <UiEmptyState v-else :icon="FolderOpen" title="Ce dossier est vide" description="Aucun document ne vous est partagé ici pour l’instant." />
+      <UiEmptyState v-else :icon="FolderOpen" :title="t('views.folder.empty')" :description="t('views.folder.emptyShared')" />
     </template>
   </FilesDriveView>
 </template>
