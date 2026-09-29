@@ -181,6 +181,58 @@ describe('zip downloads', () => {
   })
 })
 
+describe('multipart uploads', () => {
+  const PART = 8 * 1024 * 1024
+
+  async function session(name: string, size: number, conflict = 'fail', parentId = root) {
+    return owner.post('/api/uploads/sessions', { parentId, name, size, conflict })
+  }
+
+  function part(id: string, number: number, body: Uint8Array) {
+    return owner.request('PUT', `/api/uploads/sessions/${id}/parts/${number}`, { body: body as BodyInit })
+  }
+
+  it('assembles a large file sent in ordered parts', async () => {
+    const data = new Uint8Array(PART + 1000)
+    data.set(new TextEncoder().encode('%PDF-1.7\n'), 0)
+    data[PART + 999] = 42
+    const created = await session(`${unique('big')}.pdf`, data.byteLength)
+    expect(created.status).toBe(201)
+    expect(created.body.partSize).toBe(PART)
+    const id = created.body.id
+
+    expect((await part(id, 2, data.subarray(PART))).status).toBe(409)
+    expect((await part(id, 1, data.subarray(0, 1000))).status).toBe(400)
+    expect((await part(id, 1, data.subarray(0, PART))).body).toMatchObject({ received: PART, nextPart: 2 })
+    expect((await owner.get(`/api/uploads/sessions/${id}`)).body).toMatchObject({ nextPart: 2, received: PART })
+    expect((await part(id, 2, data.subarray(PART))).status).toBe(200)
+
+    const done = await owner.post(`/api/uploads/sessions/${id}/complete`)
+    expect(done.status).toBe(201)
+    expect(done.body).toMatchObject({ size: data.byteLength, mimeType: 'application/pdf' })
+    expect((await owner.get(`/api/uploads/sessions/${id}`)).status).toBe(404)
+
+    const tail = await owner.get(`/api/resources/${done.body.id}/content`, { headers: { range: `bytes=${PART + 999}-${PART + 999}` } })
+    expect(tail.status).toBe(206)
+    expect(tail.headers.get('content-range')).toBe(`bytes ${PART + 999}-${PART + 999}/${data.byteLength}`)
+  })
+
+  it('refuses to complete an unfinished upload, and forgets aborted ones', async () => {
+    const created = await session(`${unique('partial')}.bin`, PART + 1)
+    const id = created.body.id
+    expect((await owner.post(`/api/uploads/sessions/${id}/complete`)).status).toBe(400)
+    expect((await owner.delete(`/api/uploads/sessions/${id}`)).status).toBe(200)
+    expect((await part(id, 1, new Uint8Array(PART))).status).toBe(404)
+  })
+
+  it('checks conflicts and quota before any byte is sent', async () => {
+    const name = `${unique('dup')}.txt`
+    await fileIn(root, name)
+    expect((await session(name, 10)).status).toBe(409)
+    expect((await session(unique('huge'), Number.MAX_SAFE_INTEGER)).status).toBe(413)
+  })
+})
+
 describe('upload safety', () => {
   it('neutralises path traversal in names', async () => {
     const file = await fileIn(root, '../../../etc/passwd')
