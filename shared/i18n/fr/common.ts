@@ -1,0 +1,32 @@
+import type { Catalog } from '..'
+import type en from '../en/common'
+
+export default {
+  myDrive: 'Mon Drive',
+  cancel: 'Annuler',
+  save: 'Enregistrer',
+  close: 'Fermer',
+  delete: 'Supprimer',
+  rename: 'Renommer',
+  create: 'Créer',
+  apply: 'Appliquer',
+  retry: 'Réessayer',
+  back: 'Retour',
+  continue: 'Continuer',
+  confirm: 'Confirmer',
+  edit: 'Modifier',
+  remove: 'Retirer',
+  open: 'Ouvrir',
+  download: 'Télécharger',
+  share: 'Partager',
+  copy: 'Copier',
+  copied: 'Copié',
+  search: 'Rechercher',
+  name: 'Nom',
+  none: 'Aucune',
+  details: 'Détails',
+  loading: 'Chargement',
+  items: { one: '{count} élément', other: '{count} éléments' },
+  files: { one: '{count} fichier', other: '{count} fichiers' },
+  folders: { one: '{count} dossier', other: '{count} dossiers' },
+} satisfies Catalog<typeof en>
