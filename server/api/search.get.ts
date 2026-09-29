@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { parseSearchQuery } from '#shared/utils/search'
+import { isEmptySearch, parseSearchQuery } from '#shared/utils/search'
 
 const querySchema = z.object({
   q: z.string().max(500).default(''),
@@ -10,7 +10,6 @@ export default defineEventHandler(async (event) => {
   const viewer = await requireViewer(event)
   const { q, limit } = await getValidatedQuery(event, querySchema.parse)
   const query = parseSearchQuery(q)
-  const empty = query.terms.length === 0 && !query.type && !query.access && !query.sharedWith && !query.after && !query.before && !query.tag
-  if (empty) return { items: [], query }
+  if (isEmptySearch(query)) return { items: [], query }
   return { items: await withFolderPreviews(viewer, await searchResources(viewer, query, limit)), query }
 })

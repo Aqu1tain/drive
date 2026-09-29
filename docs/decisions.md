@@ -104,6 +104,21 @@ The interface, server messages, emails and shared pages exist in English and Fre
 - The activity log stores fixed labels as tokens (`@public-link`...) and names them when read, in the reader's language; rows written before hold French words, which are recognized too.
 - The end-to-end suite runs in French (a cookie in `playwright.config.ts`), with one test for the English default and the switch.
 
+## AI assistants (MCP)
+
+Decision: an MCP server at `/mcp` (Streamable HTTP, stateless, JSON responses), with Better Auth as the OAuth 2.1 authorization server through `@better-auth/mcp`: discovery (RFC 8414, RFC 9728), dynamic client registration, authorization code with PKCE, tokens bound to the `/mcp` resource (RFC 8707). Guide: [docs/mcp.md](mcp.md).
+
+- Each request rebuilds the same `Viewer` as the app for the person who authorized the app, and requires an active account. Tools call the existing services (`listFolder`, `searchResources`, `requireReadable`...): MCP has no access rule of its own. Organizing tools are registered for the owner only: a reader neither sees nor can call them.
+- Opaque access tokens (1 h), stored hashed like our other tokens, rather than JWTs: a JWT would stay valid until it expires and would make the server fetch its own keys over HTTP. Every call checks the token, its audience, the app, the account and the consent in the database, so a revocation applies on the next request, whatever path removed the consent. Refresh tokens (30 days) are hashed and rotated.
+- Clients belong to no one (creating clients from a session is refused); consents and tokens belong to a person. Disabling or deleting a reader, or changing their password, also removes their apps.
+- Sign-in through the usual `/login` page, then a consent page. Never automatic approval (no `skip_consent`); a consent holds for that app until it is revoked. The app declares its own name, so the page also shows the address it returns to.
+- Reading: preview access is enough for text (text files, text extracted from PDF and Office documents), since the preview already shows it. An image is handed over as is, which is a copy: download access is required too. At most 200,000 characters per call (continue with `offset`), 25 MB documents and 5 MB images.
+- Activity log: a read goes through `logAccess`, like opening a preview, with the actor "Alice via Claude Code"; deduplication tells the person and their assistant apart. Reads by the owner's assistant are not logged, like the owner's own.
+- No tool shares, changes access or deletes for good: only the trash. Moving an item into a shared folder shares it, as in the app: the tool and the consent page say so.
+- CSRF: `/mcp` is not under `/api/` and uses no cookie, only the token. Only `/api/auth/oauth2/token` and `/api/auth/oauth2/register` skip the `Origin` check: they rely on no cookie (PKCE verifier, client credentials, anonymous registration). `/mcp` and discovery answer on the app origin only.
+- HTTPS is required, except on `localhost` in development: over HTTP on an IP address, `/mcp` and discovery answer 404.
+- MCP clients do not declare `application_type`; treated as web apps, their local return addresses (`http://127.0.0.1:...`) would be refused. A registration without a type is therefore a native app's.
+
 ## Migrations
 
 Applied before startup in production (`scripts/migrate.mjs`): Nitro 2 does not wait for async plugins. In development, a plugin applies them at launch.

@@ -12,6 +12,8 @@ export interface Viewer {
   linkRule?: AccessRule
   shareToken?: string
   visitorId?: string
+  /** The AI app acting for this person, named in the activity journal. */
+  via?: string
 }
 
 declare module 'h3' {
@@ -32,12 +34,15 @@ export async function getSessionUser(event: H3Event): Promise<SessionUser | null
   return user
 }
 
-export async function getSessionViewer(event: H3Event): Promise<Viewer | null> {
-  const user = await getSessionUser(event)
-  if (!user) return null
+export function viewerFor(user: SessionUser): Viewer {
   return user.role === 'owner'
     ? { kind: 'owner', user, apiBase: '/api', ctx: { isOwner: true, userId: user.id } }
     : { kind: 'reader', user, apiBase: '/api', ctx: { isOwner: false, userId: user.id } }
+}
+
+export async function getSessionViewer(event: H3Event): Promise<Viewer | null> {
+  const user = await getSessionUser(event)
+  return user ? viewerFor(user) : null
 }
 
 export async function requireViewer(event: H3Event) {

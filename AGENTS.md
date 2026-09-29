@@ -25,6 +25,7 @@ A single owner uploads, organizes and shares; everyone else is a reader and neve
 | `server/utils/` | Services auto-imported by Nitro: resources, listing, sharing, activity, content, search, uploads, file processing |
 | `server/lib/documents/` | Reading PDF and Office documents: text, thumbnail, preview page (pure functions) |
 | `shared/i18n/` | English and French catalogs, one file per area, and `translate` (typed keys, plurals) |
+| `server/routes/mcp.ts`, `server/utils/mcp.ts`, `server/utils/oauth.ts` | MCP server for AI assistants: tools, OAuth token checks, revocation. See [docs/mcp.md](docs/mcp.md) |
 | `server/api/` | Endpoints. Every write goes through `requireOwner`, every read through `requireReadable` |
 | `server/routes/c`, `server/routes/p` | Isolated origin for HTML (previews and published pages) |
 | `server/lib/` | Storage (local, S3), cryptography, MIME, Better Auth configuration |
