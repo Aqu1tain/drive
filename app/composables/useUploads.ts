@@ -18,6 +18,7 @@ export interface UploadTask {
   loaded: number
   status: 'queued' | 'uploading' | 'done' | 'error' | 'canceled'
   error?: string
+  nameTaken?: boolean
   conflict: 'fail' | 'keep' | 'replace'
   resourceId?: string
   renamed?: boolean
@@ -102,8 +103,14 @@ const isTransient = (failure: UploadFailure) => !failure.canceled && (!failure.s
 const backOff = (attempt: number) => wait(1000 * 2 ** (attempt - 1))
 
 function uploadError(error: unknown) {
-  if ((error as UploadFailure).statusCode) return errorMessage(error, 'L’import a échoué')
-  return navigator.onLine ? 'Connexion interrompue' : 'Vous êtes hors ligne'
+  if ((error as UploadFailure).statusCode) return errorMessage(error, say('uploads.error'))
+  return say(navigator.onLine ? 'uploads.interrupted' : 'uploads.offline')
+}
+
+function fail(task: UploadTask, error: unknown) {
+  task.status = 'error'
+  task.error = uploadError(error)
+  task.nameTaken = errorReason(error) === 'name_taken'
 }
 /** Read through a function: a cancel can land between two awaits, which type narrowing cannot see. */
 const isCanceled = (task: UploadTask) => task.status === 'canceled'
@@ -159,10 +166,7 @@ async function sendParts(task: UploadTask) {
     markDone(task, item)
   }
   catch (error) {
-    if (!isCanceled(task)) {
-      task.status = 'error'
-      task.error = uploadError(error)
-    }
+    if (!isCanceled(task)) fail(task, error)
   }
   finally {
     requests.delete(task.id)
@@ -219,10 +223,7 @@ async function sendWhole(task: UploadTask) {
     }
   }
   catch (error) {
-    if (!isCanceled(task) && !(error as UploadFailure).canceled) {
-      task.status = 'error'
-      task.error = uploadError(error)
-    }
+    if (!isCanceled(task) && !(error as UploadFailure).canceled) fail(task, error)
   }
   finally {
     requests.delete(task.id)
@@ -251,13 +252,13 @@ function settle(task: UploadTask) {
   const done = tasks.filter(t => t.status === 'done')
   const failed = tasks.filter(t => t.status === 'error')
   const renamed = done.filter(t => t.renamed).length
-  state.announcement = `${plural(done.length, 'fichier importé', 'fichiers importés')}${failed.length ? `, ${failed.length} en erreur` : ''}`
+  const summary = say('uploads.done', { count: done.length })
+  state.announcement = failed.length ? say('uploads.doneWithErrors', { summary, count: failed.length }) : summary
   if (done.length === 0) return
 
-  const details = renamed ? ` (${plural(renamed, 'renommé', 'renommés')} pour éviter un doublon)` : ''
-  toast.success(`${plural(done.length, 'fichier importé', 'fichiers importés')}${details}`, {
+  toast.success(renamed ? say('uploads.doneRenamed', { summary, count: renamed }) : summary, {
     action: {
-      label: 'Afficher',
+      label: say('uploads.show'),
       onClick: () => router?.push(batch.target.id ? `/drive/folder/${batch.target.id}` : '/drive'),
     },
   })
@@ -278,7 +279,7 @@ function enqueue(files: Array<{ file: File, parentId: string | null, parentName:
     status: 'queued' as const,
     conflict: f.conflict,
   })))
-  state.announcement = `Import de ${plural(files.length, 'fichier')} vers ${target.name}`
+  state.announcement = say('uploads.uploadingTo', { count: files.length, folder: target.name })
   pump()
 }
 
@@ -317,7 +318,7 @@ async function uploadFiles(files: File[], target: UploadTarget) {
     enqueue(accepted, target)
   }
   catch (error) {
-    toast.error(errorMessage(error, 'Impossible de préparer l’import'))
+    toast.error(errorMessage(error, say('uploads.prepareFailed')))
   }
 }
 
@@ -361,7 +362,7 @@ async function uploadTree(entries: TreeFile[], target: UploadTarget) {
     enqueue(files, target)
   }
   catch (error) {
-    toast.error(errorMessage(error, 'Impossible de préparer l’import du dossier'))
+    toast.error(errorMessage(error, say('uploads.prepareFolderFailed')))
   }
 }
 
@@ -415,7 +416,7 @@ export function useUploads() {
     uploadTree,
     retry(task: UploadTask) {
       task.status = 'queued'
-      if (task.error?.includes('existe déjà')) task.conflict = 'keep'
+      if (task.nameTaken) task.conflict = 'keep'
       batches.set(task.batchId, batches.get(task.batchId) ?? { id: task.batchId, target: { id: task.parentId, name: task.parentName }, total: 1 })
       pump()
     },
