@@ -94,6 +94,16 @@ Les fichiers de plus de 80 Mo ne sont pas traités. pdf.js tourne dans le proces
 - IP : préfixe /24 (IPv4) ou /48 (IPv6) haché avec HMAC, ou rien (`NUXT_ACTIVITY_IP_MODE=none`). Rétention configurable (`NUXT_ACTIVITY_RETENTION_DAYS`), purge quotidienne.
 - Logs techniques séparés (stdout JSON : requestId, userId, resourceId, status, latence) avec jetons masqués.
 
+## Langues
+
+L'interface, les messages du serveur, les emails et les pages partagées existent en anglais et en français. L'anglais est la langue par défaut ; une instance peut choisir le français avec `DEFAULT_LOCALE` (écrit par `install.sh --lang fr`), et chaque navigateur peut choisir sa langue dans les paramètres, gardée dans un cookie `drive_locale`.
+
+- Les catalogues vivent dans `shared/i18n`, un fichier par domaine et par langue. Les clés sont typées d'après le catalogue anglais et le français doit avoir la même forme : une traduction manquante est une erreur de compilation. Les pluriels passent par `Intl.PluralRules`, les nombres et les dates par `Intl` dans la langue courante.
+- Pas de bibliothèque d'i18n : une centaine de lignes suffisent pour les recherches, les pluriels et les paramètres, et le même code tourne dans l'app, sur le serveur et dans les tests.
+- Le serveur répond dans la langue de la requête (cookie, sinon celle de l'instance) grâce au contexte asynchrone de Nitro : les fonctions profondes rédigent leurs erreurs sans qu'on leur passe l'événement. Les emails suivent la langue de l'expéditeur. Les aperçus de documents sont faits en arrière-plan, dans la langue de l'instance.
+- Le journal d'activité stocke les libellés fixes sous forme de jetons (`@public-link`…) et les nomme à la lecture, dans la langue du lecteur ; les lignes écrites avant contiennent des mots français, reconnus aussi.
+- Les tests de bout en bout tournent en français (un cookie dans `playwright.config.ts`), avec un test pour l'anglais par défaut et le changement de langue.
+
 ## Migrations
 
 Pré-démarrage en production (`scripts/migrate.mjs`) : Nitro 2 n'attend pas les plugins asynchrones. En dev, un plugin les applique au lancement.
