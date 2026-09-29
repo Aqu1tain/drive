@@ -8,6 +8,8 @@ export interface MenuAction {
   shortcut?: string
   danger?: boolean
   disabled?: boolean
+  /** An on/off setting: shows a check mark and reads as a checkbox. */
+  checked?: boolean
   onSelect: () => void
 }
 

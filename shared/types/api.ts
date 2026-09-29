@@ -41,6 +41,8 @@ export interface ResourceItem {
   previews?: string[]
   starred?: boolean
   tagIds?: string[]
+  /** Folders listed for the owner: whether files replaced inside keep their earlier versions. */
+  versioning?: boolean
   allowScripts?: boolean
   access?: AccessSummary
   lastExternalViewAt?: string | null

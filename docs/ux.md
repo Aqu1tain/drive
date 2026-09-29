@@ -73,7 +73,9 @@ A consistency guardrail. Every new interface must follow it, or update it.
 
 ## Version history
 
-- A folder's details hold a "Keep earlier versions" switch; its caption says where the choice comes from ("On for everything in Clients") or what replacing does when it is off.
+- "Keep earlier versions" is a checked entry wherever a folder has actions: its right-click menu, the menu of the open folder's name in the breadcrumbs, and the right-click on the empty area inside it. The folder's details hold the same setting as a switch, whose caption says where the choice comes from ("On for everything in Clients") or what replacing does when it is off.
+- An open folder that keeps versions shows a "Versions kept" pill next to its name, which opens its details.
+- Turning it off asks first, in red, and says what it means: files replaced from then on are overwritten, while versions already kept stay. Turning it on needs no confirmation.
 - A file's "Versions" tab (details panel, also "Version history" in the menu): the current version first, earlier ones grouped by day with time and size, a pin on named ones. A click previews a version in a dialog with Download and Restore; the menu adds Name, Remove the name and Delete. The footnote gives the space taken and the cleanup rule in plain words.
 - When version history is off, the tab says so and offers to turn it on for the file's folder in one click.
 - "Upload new version" (menu and tab) keeps the file's name, whatever the picked file is called.

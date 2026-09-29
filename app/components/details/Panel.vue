@@ -41,12 +41,7 @@ const tabs = computed(() => [
 ] as const)
 watch(() => current.value?.type, type => type === 'folder' && panel.state.tab === 'versions' && (panel.state.tab = 'details'))
 
-async function setVersioning(value: boolean) {
-  await api(`/api/resources/${id.value}`, { method: 'PATCH', body: { versioning: value } })
-  queryClient.invalidateQueries({ queryKey: ['resource'] })
-  queryClient.invalidateQueries({ queryKey: ['versions'] })
-}
-const versioning = computed({ get: () => details.value?.versioning?.enabled ?? false, set: setVersioning })
+const versioning = computed({ get: () => details.value?.versioning?.enabled ?? false, set: value => actions.setVersioning(current.value!, value) })
 const versioningHint = computed(() => {
   const state = details.value?.versioning
   if (!state?.enabled) return t('versions.folderOff')
