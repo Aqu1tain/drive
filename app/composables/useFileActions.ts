@@ -84,7 +84,7 @@ export function useFileActions() {
   async function star(items: ResourceItem[], starred: boolean) {
     const rollback = snapshot()
     for (const item of items) patchInCaches(item.id, { starred })
-    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'PATCH', body: { starred } }))), 'Impossible de mettre à jour les favoris', rollback)
+    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}/star`, { method: 'PUT', body: { starred } }))), 'Impossible de mettre à jour les favoris', rollback)
     queryClient.invalidateQueries({ queryKey: ['list', 'starred'] })
     toast(starred ? `${label(items)} ajouté aux favoris` : `${label(items)} retiré des favoris`)
   }
@@ -243,23 +243,26 @@ export function useFileActions() {
         ]
       : []
 
+    const allStarred = items.every(item => item.starred)
+    const starEntry = { id: 'star', label: allStarred ? 'Retirer des favoris' : 'Ajouter aux favoris', icon: allStarred ? StarOff : Star, shortcut: 'S', onSelect: () => star(items, !allStarred) }
+
     if (context.mode !== 'owner') {
       return tidyMenu([
         ...openEntries,
         { kind: 'separator' },
+        context.mode === 'reader' && starEntry,
         downloadable && { id: 'download', label: 'Télécharger', icon: Download, onSelect: () => download(items, context.apiBase) },
         context.mode === 'reader' && single && { id: 'details', label: 'Détails', icon: Info, onSelect: () => showDetails(single) },
       ])
     }
 
-    const allStarred = items.every(item => item.starred)
     return tidyMenu([
       ...openEntries,
       { kind: 'separator' },
       single && { id: 'share', label: 'Partager', icon: Share2, shortcut: 'Mod+Alt+A', onSelect: () => dialogs.share(single) },
       single && { id: 'copy-link', label: 'Copier le lien', icon: Link, onSelect: () => copyLink(single) },
       { kind: 'separator' },
-      { id: 'star', label: allStarred ? 'Retirer des favoris' : 'Ajouter aux favoris', icon: allStarred ? StarOff : Star, shortcut: 'S', onSelect: () => star(items, !allStarred) },
+      starEntry,
       { kind: 'separator' },
       single && { id: 'rename', label: 'Renommer', icon: Pencil, shortcut: 'F2', onSelect: () => dialogs.rename(single) },
       { id: 'move', label: 'Déplacer', icon: FolderInput, onSelect: () => dialogs.move(items) },

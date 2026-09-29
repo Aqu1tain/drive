@@ -31,6 +31,7 @@ const ownerNav: NavItem[] = [
 const readerNav: NavItem[] = [
   { to: '/shared-with-me', label: 'Partagé avec moi', icon: Inbox, match: /^\/shared-with-me/ },
   { to: '/recent', label: 'Récents', icon: Clock },
+  { to: '/starred', label: 'Favoris', icon: Star },
 ]
 const nav = computed(() => props.owner ? ownerNav : readerNav)
 const isActive = (item: { to: string, match?: RegExp }) => item.match ? item.match.test(route.path) : route.path === item.to
