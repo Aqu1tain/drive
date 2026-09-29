@@ -149,7 +149,6 @@ docker compose up -d
 | Les pages HTML ne s'affichent pas | `USERCONTENT_URL` doit être joignable et différent de `APP_URL` |
 | Pas d'email reçu | `SMTP_URL` vide ou invalide. Les liens d'invitation restent copiables depuis le dialogue de partage |
 | Les clés d'accès ne fonctionnent pas | Elles exigent HTTPS : utilisez le mode domaine |
-| Un gros fichier échoue après 5 minutes | Limite actuelle d'une requête d'import (voir docs/decisions.md) |
 
 Journal de l'application : `~/drive/install.sh logs`.
 

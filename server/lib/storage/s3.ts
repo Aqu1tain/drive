@@ -1,7 +1,10 @@
-import { CreateBucketCommand, DeleteObjectCommand, GetObjectCommand, HeadBucketCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import {
+  AbortMultipartUploadCommand, CompleteMultipartUploadCommand, CreateBucketCommand, CreateMultipartUploadCommand, DeleteObjectCommand,
+  GetObjectCommand, HeadBucketCommand, HeadObjectCommand, S3Client, UploadPartCommand,
+} from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import type { Readable } from 'node:stream'
-import { assertSafeKey, type ByteRange, type StorageProvider } from './types'
+import { assertSafeKey, type ByteRange, type StorageProvider, type UploadedPart } from './types'
 
 export interface S3Options {
   endpoint?: string
@@ -64,5 +67,33 @@ export class S3StorageProvider implements StorageProvider {
   async delete(key: string) {
     assertSafeKey(key)
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }))
+  }
+
+  async createMultipart(key: string, contentType?: string) {
+    assertSafeKey(key)
+    await this.ensureBucket()
+    const result = await this.client.send(new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType ?? 'application/octet-stream' }))
+    return result.UploadId!
+  }
+
+  async uploadPart(key: string, uploadId: string, partNumber: number, body: Uint8Array): Promise<UploadedPart> {
+    assertSafeKey(key)
+    const result = await this.client.send(new UploadPartCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId, PartNumber: partNumber, Body: body, ContentLength: body.byteLength }))
+    return { partNumber, etag: result.ETag! }
+  }
+
+  async completeMultipart(key: string, uploadId: string, parts: UploadedPart[]) {
+    assertSafeKey(key)
+    await this.client.send(new CompleteMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: { Parts: parts.toSorted((a, b) => a.partNumber - b.partNumber).map(p => ({ PartNumber: p.partNumber, ETag: p.etag })) },
+    }))
+  }
+
+  async abortMultipart(key: string, uploadId: string) {
+    assertSafeKey(key)
+    await this.client.send(new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId })).catch(() => {})
   }
 }

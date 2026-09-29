@@ -77,6 +77,7 @@ export default defineNuxtConfig({
     experimental: { tasks: true },
     scheduledTasks: {
       '0 3 * * *': ['activity:prune'],
+      '0 * * * *': ['uploads:sweep'],
     },
   },
 

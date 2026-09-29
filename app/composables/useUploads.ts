@@ -20,6 +20,9 @@ export interface UploadTask {
   conflict: 'fail' | 'keep' | 'replace'
   resourceId?: string
   renamed?: boolean
+  sessionId?: string
+  partSize?: number
+  nextPart?: number
 }
 
 export interface TreeFile {
@@ -34,6 +37,9 @@ interface Batch {
 }
 
 const CONCURRENCY = 3
+/** Above this size a file travels in parts: short requests, retried one by one, resumable. */
+const MULTIPART_THRESHOLD = 32 * 1024 * 1024
+const PART_ATTEMPTS = 4
 const state = reactive({ tasks: [] as UploadTask[], announcement: '' })
 const requests = new Map<string, XMLHttpRequest>()
 const batches = new Map<string, Batch>()
@@ -43,7 +49,109 @@ let router: ReturnType<typeof useRouter> | undefined
 /** randomUUID only exists in secure contexts; a plain-HTTP install by IP must still upload. */
 const newId = () => crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 
+function markDone(task: UploadTask, item: ResourceItem) {
+  task.status = 'done'
+  task.loaded = task.file.size
+  task.resourceId = item.id
+  task.renamed = item.name !== task.name
+  queryClient?.invalidateQueries({ queryKey: ['folder', task.parentId ?? 'root'] })
+}
+
+function xhrError(xhr: XMLHttpRequest) {
+  let body: unknown
+  try {
+    body = JSON.parse(xhr.responseText)
+  }
+  catch {}
+  return { statusCode: xhr.status || undefined, data: body }
+}
+
+function putPart(task: UploadTask, partNumber: number, blob: Blob, offset: number) {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    requests.set(task.id, xhr)
+    xhr.open('PUT', `/api/uploads/sessions/${task.sessionId}/parts/${partNumber}`)
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+    xhr.upload.onprogress = event => (task.loaded = offset + event.loaded)
+    xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(xhrError(xhr))
+    xhr.onerror = () => reject({ statusCode: undefined })
+    xhr.onabort = () => reject({ canceled: true })
+    xhr.send(blob)
+  })
+}
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+/** Read through a function: a cancel can land between two awaits, which type narrowing cannot see. */
+const isCanceled = (task: UploadTask) => task.status === 'canceled'
+
+async function resumePoint(task: UploadTask) {
+  if (!task.sessionId) return
+  try {
+    const state = await api<{ nextPart: number }>(`/api/uploads/sessions/${task.sessionId}`)
+    task.nextPart = state.nextPart
+  }
+  catch {
+    task.sessionId = undefined
+  }
+}
+
+async function sendParts(task: UploadTask) {
+  task.status = 'uploading'
+  task.error = undefined
+  try {
+    await resumePoint(task)
+    if (!task.sessionId) {
+      const session = await api<{ id: string, partSize: number }>('/api/uploads/sessions', {
+        method: 'POST',
+        body: { parentId: task.parentId, name: task.name, size: task.file.size, conflict: task.conflict },
+      })
+      Object.assign(task, { sessionId: session.id, partSize: session.partSize, nextPart: 1 })
+    }
+    const partSize = task.partSize!
+    const total = Math.ceil(task.file.size / partSize)
+    while (task.nextPart! <= total) {
+      const offset = (task.nextPart! - 1) * partSize
+      for (let attempt = 1; ; attempt++) {
+        if (isCanceled(task)) return
+        try {
+          await putPart(task, task.nextPart!, task.file.slice(offset, offset + partSize), offset)
+          task.nextPart! += 1
+          break
+        }
+        catch (error) {
+          const failure = error as { canceled?: boolean, statusCode?: number, data?: { data?: { reason?: string } } }
+          if (failure.canceled) return
+          if (failure.data?.data?.reason === 'part_order') {
+            await resumePoint(task)
+            break
+          }
+          const transient = !failure.statusCode || failure.statusCode >= 500
+          if (!transient || attempt >= PART_ATTEMPTS) throw failure
+          await wait(1000 * 2 ** (attempt - 1))
+        }
+      }
+    }
+    const item = await api<ResourceItem>(`/api/uploads/sessions/${task.sessionId}/complete`, { method: 'POST' })
+    task.sessionId = undefined
+    markDone(task, item)
+  }
+  catch (error) {
+    if (!isCanceled(task)) {
+      task.status = 'error'
+      task.error = errorMessage(error, 'L’import a échoué')
+    }
+  }
+  finally {
+    requests.delete(task.id)
+    settle(task)
+  }
+}
+
 function send(task: UploadTask) {
+  if (task.file.size > MULTIPART_THRESHOLD) {
+    sendParts(task)
+    return
+  }
   task.status = 'uploading'
   task.loaded = 0
   task.error = undefined
@@ -55,22 +163,10 @@ function send(task: UploadTask) {
   xhr.upload.onprogress = event => (task.loaded = event.loaded)
   xhr.onload = () => {
     requests.delete(task.id)
-    if (xhr.status >= 200 && xhr.status < 300) {
-      const item = JSON.parse(xhr.responseText) as ResourceItem
-      task.status = 'done'
-      task.loaded = task.file.size
-      task.resourceId = item.id
-      task.renamed = item.name !== task.name
-      queryClient?.invalidateQueries({ queryKey: ['folder', task.parentId ?? 'root'] })
-    }
+    if (xhr.status >= 200 && xhr.status < 300) markDone(task, JSON.parse(xhr.responseText) as ResourceItem)
     else {
       task.status = 'error'
-      let body: unknown
-      try {
-        body = JSON.parse(xhr.responseText)
-      }
-      catch {}
-      task.error = errorMessage({ statusCode: xhr.status, data: body }, 'L’import a échoué')
+      task.error = errorMessage(xhrError(xhr), 'L’import a échoué')
     }
     settle(task)
   }
@@ -245,6 +341,13 @@ export async function filesFromDataTransfer(transfer: DataTransfer): Promise<Tre
 export const filesFromInput = (files: FileList): TreeFile[] =>
   [...files].map(file => ({ file, path: file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(0, -1) : [] }))
 
+function cancelTask(task: UploadTask) {
+  task.status = 'canceled'
+  requests.get(task.id)?.abort()
+  if (task.sessionId) api(`/api/uploads/sessions/${task.sessionId}`, { method: 'DELETE' }).catch(() => {})
+  task.sessionId = undefined
+}
+
 export function useUploads() {
   queryClient ??= useQueryClient()
   router ??= useRouter()
@@ -265,14 +368,10 @@ export function useUploads() {
       pump()
     },
     cancel(task: UploadTask) {
-      task.status = 'canceled'
-      requests.get(task.id)?.abort()
+      cancelTask(task)
     },
     cancelAll() {
-      for (const task of active.value) {
-        task.status = 'canceled'
-        requests.get(task.id)?.abort()
-      }
+      for (const task of active.value) cancelTask(task)
     },
     clear() {
       state.tasks = state.tasks.filter(t => t.status === 'queued' || t.status === 'uploading')
