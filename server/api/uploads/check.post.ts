@@ -15,5 +15,6 @@ export default defineEventHandler(async (event) => {
     const existing = byName.get(nameFields(name).nameLower)
     return existing ? [{ name, existingId: existing.id, existingType: existing.type }] : []
   })
-  return { conflicts }
+  const versioning = parent ? (await versioningOf(parent)).enabled : false
+  return { conflicts, versioning }
 })

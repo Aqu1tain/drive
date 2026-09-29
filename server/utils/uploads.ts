@@ -61,8 +61,14 @@ export async function commitUpload(viewer: Viewer, plan: UploadPlan, blob: { sto
   let resource: Resource
   try {
     if (replacing) {
-      [resource] = await db.update(resources).set({ extension: plan.fields.extension, ...content }).where(eq(resources.id, replacing.id)).returning() as [Resource]
-      for (const key of [replacing.storageKey, replacing.thumbnailKey, replacing.previewKey]) if (key) await storage.delete(key).catch(() => {})
+      const keep = replacing.checksum !== blob.checksum && (await versioningOf(replacing)).enabled
+      resource = await db.transaction(async (tx) => {
+        const [updated] = await tx.update(resources).set({ extension: plan.fields.extension, ...content }).where(eq(resources.id, replacing.id)).returning()
+        if (keep) await tx.insert(tables.fileVersions).values(versionOf(replacing))
+        return updated as Resource
+      })
+      for (const key of [keep ? null : replacing.storageKey, replacing.thumbnailKey, replacing.previewKey]) if (key) await storage.delete(key).catch(() => {})
+      if (keep) await pruneVersions(resource.id)
     }
     else {
       [resource] = await db.insert(resources).values({

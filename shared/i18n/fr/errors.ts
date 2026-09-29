@@ -11,6 +11,8 @@ export default {
   linkNotFound: 'Lien introuvable',
   tagNotFound: 'Étiquette introuvable',
   appNotFound: 'Application introuvable',
+  versionNotFound: 'Version introuvable',
+  foldersOnly: 'Seuls les dossiers ont ce réglage',
   videoNotFound: 'Vidéo introuvable',
   noThumbnail: 'Pas de miniature',
   noContent: 'Aucun contenu',

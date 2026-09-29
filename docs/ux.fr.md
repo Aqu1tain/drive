@@ -71,6 +71,15 @@ Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire
 - En grille, un dossier montre une mosaïque de ses dernières images et vidéos (une à quatre, celles rangées directement dedans d'abord, puis celles des sous-dossiers), avec un badge de dossier pour ne pas le confondre avec une photo. Sans image, il garde son icône.
 - Les miniatures de PDF montrent le haut de la première page, pas son centre souvent vide. Les vidéos ont une miniature prise à une seconde, la première image étant souvent noire.
 
+## Historique des versions
+
+- Les détails d'un dossier ont un interrupteur « Garder les versions précédentes » ; sa légende dit d'où vient le choix (« Activé pour tout le contenu de Clients ») ou ce que fait un remplacement quand il est désactivé.
+- L'onglet « Versions » d'un fichier (panneau de détails, aussi « Historique des versions » dans le menu) : la version actuelle d'abord, les précédentes groupées par jour avec l'heure et la taille, une épingle sur les versions nommées. Un clic ouvre l'aperçu d'une version dans une fenêtre avec Télécharger et Restaurer ; le menu ajoute Nommer, Retirer le nom et Supprimer. La note de bas dit la place occupée et la règle de nettoyage en mots simples.
+- Quand l'historique est désactivé, l'onglet le dit et propose de l'activer pour le dossier du fichier en un clic.
+- « Importer une nouvelle version » (menu et onglet) garde le nom du fichier, quel que soit celui du fichier choisi.
+- Le dialogue de conflit à l'import connaît l'historique : dans un dossier versionné, « Remplacer » est présélectionné et précise que le fichier actuel reste dans son historique ; ailleurs, « Garder les deux » reste le choix par défaut.
+- Restaurer demande une confirmation et précise que rien n'est perdu ; supprimer une version aussi, car c'est définitif.
+
 ## Partage
 
 - Un seul panneau : personnes (sans sélecteur de rôle : tout le monde est lecteur), accès hérités affichés avec leur origine, lien public (désactivé / toute personne disposant du lien), téléchargement autorisé, expiration, Copier le lien.

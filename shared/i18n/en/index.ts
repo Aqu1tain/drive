@@ -24,6 +24,7 @@ import auth from './auth'
 import invite from './invite'
 import publicPage from './publicPage'
 import oauth from './oauth'
+import versions from './versions'
 
 export default {
   common,
@@ -52,4 +53,5 @@ export default {
   invite,
   publicPage,
   oauth,
+  versions,
 }

@@ -8,6 +8,8 @@ export default {
   linkNotFound: 'Link not found',
   tagNotFound: 'Tag not found',
   appNotFound: 'App not found',
+  versionNotFound: 'Version not found',
+  foldersOnly: 'Only folders have this setting',
   videoNotFound: 'Video not found',
   noThumbnail: 'No thumbnail',
   noContent: 'No content',

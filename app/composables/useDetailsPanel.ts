@@ -1,6 +1,6 @@
 import type { ResourceItem } from '#shared/types/api'
 
-export type DetailsTab = 'details' | 'access' | 'activity'
+export type DetailsTab = 'details' | 'access' | 'activity' | 'versions'
 
 const state = reactive({ tab: 'details' as DetailsTab, pinned: null as ResourceItem | null })
 

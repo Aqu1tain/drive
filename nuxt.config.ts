@@ -76,7 +76,7 @@ export default defineNuxtConfig({
   nitro: {
     experimental: { tasks: true, asyncContext: true },
     scheduledTasks: {
-      '0 3 * * *': ['activity:prune'],
+      '0 3 * * *': ['activity:prune', 'versions:prune'],
       '0 * * * *': ['uploads:sweep'],
     },
   },

@@ -121,10 +121,36 @@ export interface ActivityEvent {
   createdAt: string
 }
 
+export interface VersioningState {
+  enabled: boolean
+  /** The folder whose choice applies, null when no folder decided (off). */
+  source: Crumb | null
+}
+
+export interface FileVersionItem {
+  id: string
+  size: number
+  mimeType: string | null
+  label: string | null
+  savedAt: string
+  replacedAt: string
+  contentUrl: string
+  downloadUrl: string
+}
+
+export interface VersionHistory {
+  versioning: VersioningState
+  current: { size: number, mimeType: string | null, savedAt: string }
+  versions: FileVersionItem[]
+  totalSize: number
+}
+
 export interface ResourceDetails {
   item: ResourceItem
   path: Crumb[]
   stats: ActivityStats | null
+  /** For the owner: whether earlier versions are kept, for a folder's files or for this file. */
+  versioning?: VersioningState
 }
 
 export interface PreviewInfo {

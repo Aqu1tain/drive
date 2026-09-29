@@ -11,6 +11,7 @@ export default {
     mergeHint: 'Ajouter le contenu au dossier existant',
     replace: 'Remplacer',
     replaceHint: 'Le fichier existant est mis à jour, ses partages sont conservés',
+    replaceKeepsVersion: 'Le fichier existant est mis à jour et garde ses partages ; l’actuel reste dans son historique des versions',
     keepBoth: 'Conserver les deux',
     keepFolderHint: 'Créer « {name} »',
     keepFileHint: 'Importer sous le nom « {name} »',

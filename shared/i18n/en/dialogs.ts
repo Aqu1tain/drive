@@ -8,6 +8,7 @@ export default {
     mergeHint: 'Add the contents to the existing folder',
     replace: 'Replace',
     replaceHint: 'The existing file is updated and keeps its sharing',
+    replaceKeepsVersion: 'The existing file is updated and keeps its sharing; the current one stays in its version history',
     keepBoth: 'Keep both',
     keepFolderHint: 'Create “{name}”',
     keepFileHint: 'Upload as “{name}”',
