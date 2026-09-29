@@ -99,6 +99,7 @@ Everything is set in `~/drive/.env`, then `docker compose up -d` applies it.
 | `APP_DOMAIN`, `CONTENT_DOMAIN` | Domains served over HTTPS by Caddy | empty in IP mode |
 | `COMPOSE_PROFILES` | `https` enables Caddy | `https` in domain mode |
 | `APP_NAME` | Name shown in the interface and the emails | `Drive` |
+| `DEFAULT_LOCALE` | Language of the interface for everyone who has not picked one, and of emails and shared pages (`en` or `fr`) | `en` |
 | `SMTP_URL`, `SMTP_FROM` | Sending invitations and sign-in codes | disabled |
 | `UPLOAD_MAX_BYTES` | Maximum size of a file | 5 GB |
 | `STORAGE_QUOTA_BYTES` | Total space allowed | 100 GB |
