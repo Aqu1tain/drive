@@ -71,6 +71,15 @@ A consistency guardrail. Every new interface must follow it, or update it.
 - In the grid, a folder shows a mosaic of its latest images and videos (one to four, those stored directly inside first, then those in subfolders), with a folder badge so it is not mistaken for a photo. Without any image, it keeps its icon.
 - PDF thumbnails show the top of the first page, not its often empty middle. Videos get a thumbnail taken at one second, since the first frame is often black.
 
+## Version history
+
+- A folder's details hold a "Keep earlier versions" switch; its caption says where the choice comes from ("On for everything in Clients") or what replacing does when it is off.
+- A file's "Versions" tab (details panel, also "Version history" in the menu): the current version first, earlier ones grouped by day with time and size, a pin on named ones. A click previews a version in a dialog with Download and Restore; the menu adds Name, Remove the name and Delete. The footnote gives the space taken and the cleanup rule in plain words.
+- When version history is off, the tab says so and offers to turn it on for the file's folder in one click.
+- "Upload new version" (menu and tab) keeps the file's name, whatever the picked file is called.
+- The upload conflict dialog knows about history: in a versioned folder, "Replace" is preselected and says the current file stays in its history; elsewhere "Keep both" stays the default.
+- Restoring asks for confirmation and says nothing is lost; deleting a version asks too, as it cannot be undone.
+
 ## Sharing
 
 - A single panel: people (no role picker: everyone is a reader), inherited access shown with where it comes from, public link (off / anyone with the link), download allowed, expiry, Copy link.

@@ -58,6 +58,8 @@ function markDone(task: UploadTask, item: ResourceItem) {
   task.resourceId = item.id
   task.renamed = item.name !== task.name
   queryClient?.invalidateQueries({ queryKey: ['folder', task.parentId ?? 'root'] })
+  queryClient?.invalidateQueries({ queryKey: ['versions', item.id] })
+  queryClient?.invalidateQueries({ queryKey: ['resource', item.id] })
   if (item.kind === 'video' && !item.thumbnailUrl) addVideoThumbnail(task, item.id)
 }
 
@@ -264,7 +266,7 @@ function settle(task: UploadTask) {
   })
 }
 
-function enqueue(files: Array<{ file: File, parentId: string | null, parentName: string, conflict: UploadTask['conflict'] }>, target: UploadTarget) {
+function enqueue(files: Array<{ file: File, name?: string, parentId: string | null, parentName: string, conflict: UploadTask['conflict'] }>, target: UploadTarget) {
   if (files.length === 0) return
   const batch: Batch = { id: newId(), target, total: files.length }
   batches.set(batch.id, batch)
@@ -272,7 +274,7 @@ function enqueue(files: Array<{ file: File, parentId: string | null, parentName:
     id: newId(),
     batchId: batch.id,
     file: f.file,
-    name: f.file.name,
+    name: f.name ?? f.file.name,
     parentId: f.parentId,
     parentName: f.parentName,
     loaded: 0,
@@ -283,7 +285,7 @@ function enqueue(files: Array<{ file: File, parentId: string | null, parentName:
   pump()
 }
 
-async function resolveConflicts(names: string[], kind: 'file' | 'folder') {
+async function resolveConflicts(names: string[], kind: 'file' | 'folder', versioned = false) {
   const dialogs = useDialogs()
   const decisions = new Map<string, 'replace' | 'keep' | 'skip'>()
   let applyAll: 'replace' | 'keep' | 'skip' | null = null
@@ -292,21 +294,26 @@ async function resolveConflicts(names: string[], kind: 'file' | 'folder') {
       decisions.set(name, applyAll)
       continue
     }
-    const choice = await dialogs.conflict({ name, kind, remaining: names.length - index - 1 })
+    const choice = await dialogs.conflict({ name, kind, versioned, remaining: names.length - index - 1 })
     decisions.set(name, choice.strategy)
     if (choice.applyToAll) applyAll = choice.strategy
   }
   return decisions
 }
 
+/** A new version of a file: same name, same place, whatever the picked file is called. */
+function uploadVersion(file: File, item: ResourceItem, folder: UploadTarget) {
+  enqueue([{ file, name: item.name, parentId: item.parentId, parentName: folder.name, conflict: 'replace' }], folder)
+}
+
 async function uploadFiles(files: File[], target: UploadTarget) {
   if (files.length === 0) return
   try {
-    const { conflicts } = await api<{ conflicts: Array<{ name: string, existingType: 'file' | 'folder' }> }>('/api/uploads/check', {
+    const { conflicts, versioning } = await api<{ conflicts: Array<{ name: string, existingType: 'file' | 'folder' }>, versioning: boolean }>('/api/uploads/check', {
       method: 'POST',
       body: { parentId: target.id, names: files.map(f => f.name) },
     })
-    const decisions = await resolveConflicts(conflicts.map(c => c.name), 'file')
+    const decisions = await resolveConflicts(conflicts.map(c => c.name), 'file', versioning)
     const byLower = new Map([...decisions].map(([name, strategy]) => [name.toLowerCase(), strategy]))
     const accepted = files.flatMap((file) => {
       const decision = byLower.get(file.name.toLowerCase())
@@ -414,6 +421,7 @@ export function useUploads() {
     progress: computed(() => totalBytes.value ? loadedBytes.value / totalBytes.value : 1),
     uploadFiles,
     uploadTree,
+    uploadVersion,
     retry(task: UploadTask) {
       task.status = 'queued'
       if (task.nameTaken) task.conflict = 'keep'

@@ -23,6 +23,7 @@ Drive n'est pas un Drive collaboratif. Il y a **un seul propriétaire** : vous. 
 - **Sachez qui a consulté** quoi et quand : un journal d'activité lisible, honnête sur ce qu'il sait (un lien public reste anonyme).
 - **Publiez des pages HTML ou des sites entiers** (déposés en ZIP) en toute sécurité : ils s'affichent sur une origine isolée, en plein écran si vous le souhaitez.
 - **Retrouvez** un fichier par son nom, ses étiquettes ou ce qu'il contient : texte des PDF, documents Word, classeurs Excel, présentations PowerPoint. Ces documents s'ouvrent aussi en aperçu, sans rien installer.
+- **Revenez en arrière** : activez l'historique des versions sur un dossier, et chaque fichier remplacé y garde ses versions précédentes, à prévisualiser, nommer ou restaurer sans rien perdre.
 - **Ouvrez la porte à votre assistant IA** : Claude, Cursor ou tout client MCP peut parcourir, chercher, lire et, pour vous, ranger votre Drive une fois que vous vous êtes connecté et l'avez autorisé. Il agit avec vos droits, jamais plus, et vous pouvez le déconnecter à tout moment ([guide](docs/mcp.fr.md)).
 - **En français ou en anglais**, pour vous comme pour les personnes avec qui vous partagez.
 

@@ -1,6 +1,7 @@
 /** Owner operations on the tree, shared by the API and the MCP tools. Callers check that the viewer is the owner. */
 import type { H3Event } from 'h3'
-import { and, eq, inArray, isNull } from 'drizzle-orm'
+import { buffer } from 'node:stream/consumers'
+import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
 import { keepBothName } from '#shared/utils/names'
 
 export async function createFolder(viewer: Viewer, parentId: string | null | undefined, name: string) {
@@ -30,6 +31,7 @@ export interface ResourceChanges {
   starred?: boolean
   inheritAccess?: boolean
   allowScripts?: boolean
+  versioning?: boolean
 }
 
 export async function updateResource(event: H3Event, viewer: Viewer, id: string, changes: ResourceChanges) {
@@ -45,6 +47,10 @@ export async function updateResource(event: H3Event, viewer: Viewer, id: string,
   }
   if (changes.starred !== undefined) patch.starred = changes.starred
   if (changes.inheritAccess !== undefined) patch.inheritAccess = changes.inheritAccess
+  if (changes.versioning !== undefined) {
+    if (resource.type !== 'folder') throw createError({ statusCode: 400, statusMessage: tr('errors.foldersOnly') })
+    patch.versioning = await setVersioning(resource, changes.versioning)
+  }
   if (changes.allowScripts !== undefined) {
     if (resourceKind(resource) !== 'html') throw createError({ statusCode: 400, statusMessage: tr('errors.htmlOnly') })
     patch.allowScripts = changes.allowScripts
@@ -103,4 +109,51 @@ export async function trashResources(ids: string[]) {
     .where(and(inArray(resources.id, ids), isNull(resources.deletedAt)))
     .returning({ id: resources.id, name: resources.name })
   return { trashed }
+}
+
+/** Restores in place; when the original folder is itself in the trash, the item comes back at the top of My Drive. */
+export async function restoreResources(ids: string[]) {
+  const { resources } = tables
+  const db = useDB()
+  const items = (await db.select().from(resources).where(inArray(resources.id, ids))).filter(item => item.deletedAt)
+
+  const restored = []
+  for (const item of items) {
+    const chain = await loadChain(item)
+    const movedToRoot = chain.slice(1).some(node => node.deletedAt)
+    const parentId = movedToRoot ? null : item.parentId
+    const name = keepBothName(item.name, await siblingNames(parentId))
+    const renamed = name !== item.name
+    await db.transaction(async (tx) => {
+      const patch = { deletedAt: null, ...(renamed ? nameFields(name) : {}) }
+      if (movedToRoot) await reparent(tx, item, null, patch)
+      else await tx.update(resources).set(patch).where(eq(resources.id, item.id))
+    })
+    restored.push({ id: item.id, name, parentId, renamed, movedToRoot })
+  }
+  return { restored }
+}
+
+export async function listTrash(viewer: Viewer, limit = 2000) {
+  const { resources } = tables
+  const items = await useDB().select().from(resources).where(isNotNull(resources.deletedAt)).orderBy(desc(resources.deletedAt)).limit(limit)
+  const locations = await locationsOf(items)
+  return items.map(item => toItem(item, { viewer, location: locations.get(item.id) }))
+}
+
+/** Copies files, not folders, into a folder or next to themselves; a copy gets a free name and no shares of its own. */
+export async function copyFiles(viewer: Viewer, ids: string[], targetId?: string | null) {
+  const storage = useStorageProvider()
+  const copies = []
+  for (const id of ids) {
+    const file = await requireOwned(id)
+    if (file.type !== 'file' || !file.storageKey || !file.checksum) throw createError({ statusCode: 400, statusMessage: tr('errors.filesOnly') })
+    const plan = await planUpload({ parentId: targetId === undefined ? file.parentId : targetId, name: file.name, conflict: 'keep', size: file.size })
+    const storageKey = newBlobKey()
+    await storage.put(storageKey, await storage.get(file.storageKey), file.mimeType ?? undefined)
+    const head = file.size ? await buffer(await storage.get(storageKey, { start: 0, end: Math.min(file.size, SNIFF_BYTES) - 1 })) : Buffer.alloc(0)
+    const { item } = await commitUpload(viewer, plan, { storageKey, size: file.size, checksum: file.checksum, head })
+    copies.push(item)
+  }
+  return copies
 }

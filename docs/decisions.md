@@ -94,6 +94,16 @@ Files over 80 MB are not processed. pdf.js runs in the server process, page by p
 - IP: /24 (IPv4) or /48 (IPv6) prefix hashed with HMAC, or nothing at all (`NUXT_ACTIVITY_IP_MODE=none`). Configurable retention (`NUXT_ACTIVITY_RETENTION_DAYS`), with a daily purge.
 - Technical logs kept separate (JSON on stdout: requestId, userId, resourceId, status, latency), with tokens masked.
 
+## Version history
+
+Turned on per folder, and inherited by its subfolders: `resources.versioning` is true, false or null (follow the parent), and a folder that matches what it would inherit stores null, so the switch never leaves stale choices behind. Nothing is on by default. Turning it off keeps existing versions.
+
+- A version is created when a file is replaced (upload with "Replace", or "Upload new version") in a folder with version history on, unless the new content is identical. The old blob is kept in `file_versions` instead of being deleted; thumbnails and previews are only made for the current version. The file keeps its id, name and shares.
+- Restoring never loses anything: the current content joins the history before the chosen version takes its place, whatever the folder setting.
+- Cleanup follows the SharePoint and Nextcloud idea that the value of an old version is in the state it captures: every version of the last day, then the latest of each day for a month, then one a week, 100 per file at most. A named version is never removed automatically (Nextcloud's rule). A daily task and every new version apply the rule.
+- Versions count in the storage used, and deleting a file for good deletes them. They belong to the owner: readers, links and assistants only see the current content.
+- Research behind the interface: Google Drive (manage versions, keep forever), Dropbox (preview then roll back), Proton Drive (restoring keeps newer versions), Nextcloud (named versions), SharePoint (automatic thinning), Figma (named milestones).
+
 ## Languages
 
 The interface, server messages, emails and shared pages exist in English and French. English is the default; an instance can pick French with `DEFAULT_LOCALE` (written by `install.sh --lang fr`), and each browser can pick its own language in the settings, kept in a `drive_locale` cookie.

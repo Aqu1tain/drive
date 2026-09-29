@@ -23,6 +23,7 @@ Drive is not a collaborative drive. There is **a single owner**: you. Everyone e
 - **Know who viewed** what and when: a readable activity log, honest about what it knows (a public link stays anonymous).
 - **Publish HTML pages or whole websites** (uploaded as a ZIP) safely: they are displayed on an isolated origin, full screen if you like.
 - **Find** a file by its name, its tags or its content: text from PDFs, Word documents, Excel spreadsheets and PowerPoint presentations. These documents also open in a preview, with nothing to install.
+- **Go back in time**: turn on version history for a folder, and every file replaced in it keeps its earlier versions, to preview, name or restore without losing anything.
 - **Let your AI assistant in**: Claude, Cursor or any MCP client can browse, search, read and, for you, organize your Drive after you sign in and allow it. It acts with your rights, never more, and you can disconnect it at any time ([guide](docs/mcp.md)).
 - **In English or French**, for you and for the people you share with.
 

@@ -485,6 +485,91 @@ describe('folder previews', () => {
   })
 })
 
+describe('version history', () => {
+  const history = async (id: string) => (await owner.get(`/api/resources/${id}/versions`)).body
+  const text = async (url: string) => (await owner.get(url)).body as string
+
+  it('follows the closest folder that decided, and stores nothing when a folder matches its parent', async () => {
+    const parent = await folderIn(root, 'Contrats')
+    const child = await folderIn(parent, 'Signés')
+    expect((await owner.get(`/api/resources/${child}`)).body.versioning).toEqual({ enabled: false, source: null })
+
+    await owner.patch(`/api/resources/${parent}`, { versioning: true })
+    expect((await owner.get(`/api/resources/${child}`)).body.versioning).toMatchObject({ enabled: true, source: { id: parent } })
+
+    await owner.patch(`/api/resources/${child}`, { versioning: false })
+    expect((await owner.get(`/api/resources/${child}`)).body.versioning).toMatchObject({ enabled: false, source: { id: child } })
+    await owner.patch(`/api/resources/${child}`, { versioning: true })
+    expect((await owner.get(`/api/resources/${child}`)).body.versioning).toMatchObject({ enabled: true, source: { id: parent } })
+
+    const file = await fileIn(parent)
+    expect((await owner.patch(`/api/resources/${file.id}`, { versioning: true })).status).toBe(400)
+  })
+
+  it('keeps what a replaced file held, restores without losing anything, and names versions', async () => {
+    const folder = await folderIn(root, 'Versions')
+    await owner.patch(`/api/resources/${folder}`, { versioning: true })
+    const name = `${unique('devis')}.txt`
+    const file = await fileIn(folder, name, 'premier jet')
+    await owner.upload(folder, name, 'second jet', 'replace')
+    await owner.upload(folder, name, 'second jet', 'replace')
+    await owner.upload(folder, name, 'version finale', 'replace')
+
+    let versions = (await history(file.id)).versions as Array<{ id: string, contentUrl: string, downloadUrl: string, label: string | null }>
+    expect(versions).toHaveLength(2)
+    expect(await text(versions[0]!.contentUrl)).toBe('second jet')
+    expect(await text(versions[1]!.contentUrl)).toBe('premier jet')
+    expect((await owner.get(versions[1]!.downloadUrl)).headers.get('content-disposition')).toContain('attachment')
+
+    const restored = await owner.post(`/api/resources/${file.id}/versions/${versions[1]!.id}/restore`)
+    expect(restored.status).toBe(200)
+    expect(await text(`/api/resources/${file.id}/content`)).toBe('premier jet')
+    versions = (await history(file.id)).versions
+    expect(await Promise.all(versions.map(version => text(version.contentUrl)))).toEqual(expect.arrayContaining(['version finale', 'second jet']))
+    expect(versions).toHaveLength(2)
+
+    const named = await owner.patch(`/api/resources/${file.id}/versions/${versions[0]!.id}`, { label: '  Envoyée au client ' })
+    expect(named.body.label).toBe('Envoyée au client')
+    expect((await history(file.id)).versions[0].label).toBe('Envoyée au client')
+
+    expect((await owner.delete(`/api/resources/${file.id}/versions/${versions[1]!.id}`)).status).toBe(200)
+    expect((await history(file.id)).versions).toHaveLength(1)
+    expect((await owner.get(versions[1]!.contentUrl)).status).toBe(404)
+  })
+
+  it('replaces for good where versions are off, and counts kept versions in the storage', async () => {
+    const plain = await folderIn(root, 'Sans versions')
+    const name = `${unique('note')}.txt`
+    const file = await fileIn(plain, name, 'a')
+    await owner.upload(plain, name, 'b', 'replace')
+    expect((await history(file.id)).versions).toEqual([])
+
+    const before = (await owner.get('/api/storage')).body.used
+    await owner.patch(`/api/resources/${plain}`, { versioning: true })
+    await owner.upload(plain, name, 'ccccc', 'replace')
+    expect((await history(file.id)).totalSize).toBe(1)
+    expect((await owner.get('/api/storage')).body.used).toBe(before + 5)
+  })
+
+  it('stays with the owner, and goes with the file', async () => {
+    const { client: reader, email } = await readerClient(owner)
+    const folder = await folderIn(root, 'Partagé versionné')
+    await owner.patch(`/api/resources/${folder}`, { versioning: true })
+    const name = `${unique('plan')}.txt`
+    const file = await fileIn(folder, name, 'v1')
+    await owner.upload(folder, name, 'v2', 'replace')
+    await owner.post(`/api/resources/${folder}/access`, { email, notify: false })
+    const [version] = (await history(file.id)).versions
+    expect((await reader.get(`/api/resources/${file.id}/versions`)).status).toBe(403)
+    expect((await reader.get(version.contentUrl)).status).toBe(403)
+    expect((await reader.get(`/api/resources/${file.id}`)).body.versioning).toBeUndefined()
+
+    await owner.post('/api/resources/trash', { ids: [file.id] })
+    await owner.delete(`/api/resources/${file.id}`)
+    expect((await owner.get(version.contentUrl)).status).toBe(404)
+  })
+})
+
 describe('tags', () => {
   const created: string[] = []
   afterAll(async () => {

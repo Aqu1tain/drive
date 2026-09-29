@@ -8,6 +8,8 @@ export interface ConflictChoice {
 export interface ConflictRequest {
   name: string
   kind: 'file' | 'folder'
+  /** Replacing keeps the current file in its version history. */
+  versioned?: boolean
   remaining: number
   resolve: (choice: ConflictChoice) => void
 }
