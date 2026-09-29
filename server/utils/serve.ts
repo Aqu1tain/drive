@@ -62,7 +62,7 @@ export async function openResource(event: H3Event, viewer: Viewer, id: string): 
     scripts: kind === 'html' && resource.allowScripts,
     contentUrl: `${viewer.apiBase}/resources/${resource.id}/content`,
     downloadUrl: access.download ? `${viewer.apiBase}/resources/${resource.id}/download` : null,
-    frameUrl: kind === 'html' ? usercontentUrl(`/c/${frameTokenFor(viewer, resource.id)}/`) : null,
+    frameUrl: kind === 'html' || resource.previewKey ? usercontentUrl(`/c/${frameTokenFor(viewer, resource.id)}/`) : null,
   }
 }
 
