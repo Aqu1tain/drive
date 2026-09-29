@@ -47,7 +47,9 @@ export async function setPassword(userId: string, password: string) {
   await ctx.internalAdapter.linkAccount({ userId, providerId: 'credential', accountId: userId, password: hash })
 }
 
+/** Signs a person out everywhere, AI apps included. */
 export async function revokeSessions(userId: string) {
   const ctx = await useAuth().$context
   await ctx.internalAdapter.deleteUserSessions(userId)
+  await revokeApps(userId)
 }
