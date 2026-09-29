@@ -1,6 +1,5 @@
 import type { H3Event } from 'h3'
 import { eq } from 'drizzle-orm'
-import { kindOf } from '#shared/utils/search'
 import type { PreviewInfo } from '#shared/types/api'
 import { signPayload, verifyPayload } from '../lib/crypto'
 import type { AccessContext } from '../domain/access'
@@ -55,7 +54,7 @@ export async function contextFromFrameToken(token: string): Promise<{ resourceId
 export async function openResource(event: H3Event, viewer: Viewer, id: string): Promise<PreviewInfo> {
   const { resource, access } = await requireReadable(viewer, id)
   await logAccess(event, viewer, resource, 'view')
-  const kind = kindOf(resource.type, resource.mimeType)
+  const kind = resourceKind(resource)
   return {
     item: toItem(resource, { viewer, access }),
     kind,

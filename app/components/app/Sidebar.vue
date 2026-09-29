@@ -45,7 +45,7 @@ const newEntries = computed<MenuEntry[]>(() => [
   { id: 'files', label: 'Importer des fichiers', icon: Upload, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
   { id: 'folder-upload', label: 'Importer un dossier', icon: FolderUp, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-folder')) },
   { kind: 'separator' },
-  { id: 'page-upload', label: 'Importer une page web', icon: Globe, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-page')) },
+  { id: 'page-upload', label: 'Importer une page ou un site web', icon: Globe, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-page')) },
 ])
 
 const { data: storage } = useQuery({

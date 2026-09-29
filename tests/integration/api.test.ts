@@ -1,7 +1,7 @@
 import { unzipSync } from 'fflate'
 import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { docx, pdf } from '../fixtures'
+import { docx, pack, pdf } from '../fixtures'
 import { Client, USERCONTENT_URL, ownerClient, readerClient, unique } from './client'
 
 let owner: Client
@@ -307,6 +307,50 @@ describe('file processing', () => {
     expect((await put(owner, text.id, frame)).status).toBe(404)
     const { client: reader } = await readerClient(owner)
     expect((await put(reader, video.id, frame)).status).toBe(403)
+  })
+
+  it('publishes a zipped static site, file by file, on the isolated origin only', async () => {
+    const zip = await pack({
+      'monsite/index.html': '<link rel="stylesheet" href="style.css"><h1>Accueil</h1>',
+      'monsite/style.css': 'h1 { color: rebeccapurple }',
+      'monsite/blog/index.html': '<h1>Blog</h1>',
+      'monsite/mes images/photo 1.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>',
+      '__MACOSX/monsite/._index.html': 'junk',
+    })
+    const site = (await owner.upload(root, `${unique('site')}.zip`, zip)).body
+    const info = await eventually(async () => (await owner.post(`/api/resources/${site.id}/open`)).body, body => !!body.frameUrl)
+    expect(info.item.kind).toBe('html')
+    const base = new URL(info.frameUrl).pathname
+    const visitor = new Client()
+    const get = (path: string) => visitor.get(`${base}${path}`, { base: USERCONTENT_URL })
+
+    const home = await get('')
+    expect(home.body).toContain('<h1>Accueil</h1>')
+    expect(home.headers.get('content-security-policy')).toMatch(/^sandbox allow-popups/)
+    const css = await get('style.css')
+    expect(css.headers.get('content-type')).toBe('text/css')
+    expect(css.headers.get('access-control-allow-origin')).toBe('*')
+    const folder = await get('blog')
+    expect(folder.status).toBe(302)
+    expect(folder.headers.get('location')).toBe(`${base}blog/`)
+    expect((await get('blog/')).body).toContain('<h1>Blog</h1>')
+    expect((await get('mes%20images/photo%201.svg')).headers.get('content-type')).toBe('image/svg+xml')
+    expect((await get('__MACOSX/monsite/._index.html')).status).toBe(404)
+    expect((await get('..%2Fmonsite%2Fstyle.css')).status).toBe(404)
+    expect((await owner.get(`${base}style.css`)).status).toBe(404)
+
+    const { link } = (await owner.put(`/api/resources/${site.id}/link`, { enabled: true })).body
+    expect(link.publishedUrl).toMatch(/\/p\/[\w-]+\/$/)
+    const published = new URL(link.publishedUrl).pathname
+    expect((await visitor.get(`${published}blog/`, { base: USERCONTENT_URL })).body).toContain('<h1>Blog</h1>')
+  })
+
+  it('leaves ordinary archives alone', async () => {
+    const archive = (await owner.upload(root, `${unique('photos')}.zip`, await pack({ 'a.txt': 'a', 'b/c.txt': 'c' }))).body
+    await eventually(async () => (await owner.get(`/api/resources/${archive.id}`)).body.item, () => true)
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const info = (await owner.post(`/api/resources/${archive.id}/open`)).body
+    expect(info).toMatchObject({ kind: 'archive', frameUrl: null })
   })
 
   it('forgets the text of a replaced version', async () => {

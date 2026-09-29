@@ -1,6 +1,5 @@
 import { and, eq } from 'drizzle-orm'
 import type { AccessEntry, Crumb, LinkInfo, ResourceAccess } from '#shared/types/api'
-import { kindOf } from '#shared/utils/search'
 import { generateToken, hashToken, openToken, sealToken } from '../lib/crypto'
 import type { AccessRule, Invitation, Resource } from '../database/schema'
 
@@ -25,7 +24,7 @@ function linkInfo(rule: AccessRule, resource: Resource): LinkInfo {
   return {
     ruleId: rule.id,
     url: appUrl(`/s/${token}`),
-    publishedUrl: kindOf(resource.type, resource.mimeType) === 'html' ? usercontentUrl(`/p/${token}/`) : null,
+    publishedUrl: resourceKind(resource) === 'html' ? usercontentUrl(`/p/${token}/`) : null,
     allowDownload: rule.allowDownload,
     expiresAt: rule.expiresAt?.toISOString() ?? null,
     createdAt: rule.createdAt.toISOString(),

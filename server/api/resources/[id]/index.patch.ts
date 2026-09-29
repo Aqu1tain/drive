@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { kindOf } from '#shared/utils/search'
 
 const bodySchema = z.object({
   name: z.string().min(1).max(300).optional(),
@@ -25,7 +24,7 @@ export default defineEventHandler(async (event) => {
   if (body.starred !== undefined) patch.starred = body.starred
   if (body.inheritAccess !== undefined) patch.inheritAccess = body.inheritAccess
   if (body.allowScripts !== undefined) {
-    if (kindOf(resource.type, resource.mimeType) !== 'html') throw createError({ statusCode: 400, statusMessage: 'Réservé aux pages HTML' })
+    if (resourceKind(resource) !== 'html') throw createError({ statusCode: 400, statusMessage: 'Réservé aux pages HTML' })
     patch.allowScripts = body.allowScripts
   }
 

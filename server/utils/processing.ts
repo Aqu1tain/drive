@@ -18,6 +18,7 @@ type StoredFile = Resource & { storageKey: string, checksum: string }
 interface Outcome {
   patch: Partial<Pick<Resource, 'thumbnailKey' | 'thumbnailStatus' | 'width' | 'height' | 'previewKey'>>
   text?: string
+  site?: SiteFile[] | null
   written: string[]
 }
 
@@ -62,12 +63,13 @@ async function processResource(resourceId: string) {
 
   const { resources } = tables
   const [saved] = await useDB().update(resources)
-    .set({ ...outcome.patch, processedChecksum: file.checksum })
+    .set({ ...outcome.patch, siteChecksum: outcome.site ? file.checksum : null, processedChecksum: file.checksum })
     .where(and(eq(resources.id, file.id), eq(resources.checksum, file.checksum)))
     .returning({ id: resources.id })
   if (!saved) return deleteBlobs(outcome.written)
 
   await saveText(file.id, outcome.text)
+  await replaceSiteFiles(file.id, outcome.site ?? [])
   await deleteBlobs((['thumbnailKey', 'previewKey'] as const).flatMap((field) => {
     const previous = file[field]
     const next = outcome.patch[field]
@@ -79,13 +81,15 @@ async function derive(file: StoredFile): Promise<Outcome> {
   const thumbnailKey = thumbnailKeyOf(file.id, file.checksum)
   const wantsThumbnail = canThumbnail(file.mimeType, file.size) && !(file.thumbnailStatus === 'ready' && file.thumbnailKey === thumbnailKey)
   const wantsContent = readsContent(file.mimeType) && file.size <= MAX_INPUT_BYTES
-  if (!wantsThumbnail && !wantsContent) return { patch: {}, written: [] }
+  const wantsSite = file.mimeType === 'application/zip' && file.size <= MAX_INPUT_BYTES
+  if (!wantsThumbnail && !wantsContent && !wantsSite) return { patch: {}, written: [] }
 
   const storage = useStorageProvider()
   const data = await buffer(await storage.get(file.storageKey))
   const document: Derived = wantsContent ? await deriveDocument(file.mimeType!, file.name, data) : {}
   const image = wantsThumbnail && IMAGE.test(file.mimeType!) ? await imageThumbnail(data) : undefined
-  const outcome: Outcome = { patch: {}, text: document.text, written: [] }
+  const site = wantsSite ? await extractSite(file, data) : null
+  const outcome: Outcome = { patch: {}, text: document.text, site, written: site?.map(entry => entry.storageKey) ?? [] }
 
   const thumbnail = image?.data ?? document.thumbnail
   if (wantsThumbnail && thumbnail) {

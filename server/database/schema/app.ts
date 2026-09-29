@@ -23,6 +23,7 @@ export const resources = pgTable('resources', {
   thumbnailKey: text('thumbnail_key'),
   thumbnailStatus: text('thumbnail_status', { enum: ['none', 'pending', 'ready', 'failed'] }).notNull().default('none'),
   previewKey: text('preview_key'),
+  siteChecksum: text('site_checksum'),
   processedChecksum: text('processed_checksum'),
   width: integer('width'),
   height: integer('height'),
@@ -56,6 +57,17 @@ export const resourceTexts = pgTable('resource_texts', {
   words: tsvector('words').notNull(),
 }, t => [
   index('resource_texts_words_idx').using('gin', t.words),
+])
+
+/** Files of a static site uploaded as a zip, extracted once so that each one is served straight from storage. */
+export const siteFiles = pgTable('site_files', {
+  resourceId: uuid('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' }),
+  path: text('path').notNull(),
+  storageKey: text('storage_key').notNull(),
+  mimeType: text('mime_type').notNull(),
+  size: bigint('size', { mode: 'number' }).notNull(),
+}, t => [
+  primaryKey({ columns: [t.resourceId, t.path] }),
 ])
 
 /** The owner's labels; resources point to them through `tag_ids`, so listings need no extra query. */
