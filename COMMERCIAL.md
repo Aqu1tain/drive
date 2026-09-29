@@ -1,14 +1,16 @@
-# Usage commercial
+**English** · [Français](COMMERCIAL.fr.md)
 
-Drive est distribué sous licence [CC BY-NC-SA 4.0](LICENSE) :
+# Commercial use
 
-- **Usage non commercial libre** : particuliers, associations, enseignement, usage personnel. Vous pouvez installer, modifier et redistribuer Drive, à condition de citer l'auteur et de partager vos modifications sous la même licence.
-- **Usage commercial soumis à licence** : toute utilisation dans un cadre commercial (entreprise, activité rémunérée, service vendu à des clients, hébergement payant) nécessite une licence commerciale, contre redevance.
+Drive is distributed under the [CC BY-NC-SA 4.0](LICENSE) license:
 
-## Obtenir une licence commerciale
+- **Free for non-commercial use**: individuals, non-profits, education, personal use. You may install, modify and redistribute Drive, provided you credit the author and share your changes under the same license.
+- **Commercial use requires a license**: any use in a commercial setting (a company, a paid activity, a service sold to clients, paid hosting) requires a commercial license, for a fee.
 
-Écrivez à [contact@corentinrenard.com](mailto:contact@corentinrenard.com) en précisant l'organisation, l'usage prévu et le nombre d'utilisateurs. Les conditions (forfait ou redevance) sont définies au cas par cas.
+## Getting a commercial license
+
+Write to [contact@corentinrenard.com](mailto:contact@corentinrenard.com) with your organization, the intended use and the number of users. Terms (flat fee or royalty) are set case by case.
 
 ## Contributions
 
-En proposant une contribution (pull request), vous acceptez qu'elle soit distribuée sous CC BY-NC-SA 4.0 et puisse être incluse dans les versions sous licence commerciale.
+By submitting a contribution (pull request), you agree that it is distributed under CC BY-NC-SA 4.0 and may be included in commercially licensed versions.

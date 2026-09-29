@@ -1,30 +1,32 @@
-# Données collectées
+**English** · [Français](privacy.fr.md)
 
-Drive enregistre le strict nécessaire pour répondre à une question : qui a consulté ce document, quand, et combien de fois.
+# Data collected
 
-## Pour chaque consultation ou téléchargement
+Drive records only what it needs to answer one question: who viewed this document, when, and how many times.
 
-| Donnée | Pourquoi | Conservée |
+## For each view or download
+
+| Data | Why | Kept for |
 |---|---|---|
-| Ressource, type d'action, date | Répondre à « qui a vu quoi, quand » | Durée de rétention (365 jours par défaut) |
-| Compte lecteur ou invitation | Attribuer la consultation à une personne identifiée | Idem |
-| Identifiant de visiteur aléatoire (cookie `drive_vid`) | Compter les visiteurs distincts d'un lien public, sans les identifier | Cookie d'un an côté navigateur ; en base, idem rétention |
-| Réseau d'origine haché | Distinguer des visiteurs anonymes : l'adresse est tronquée (/24 en IPv4, /48 en IPv6) puis hachée avec un secret du serveur | Idem ; désactivable avec `ACTIVITY_IP_MODE=none` |
-| Navigateur (user-agent, 256 caractères max) | Diagnostic | Idem |
+| Resource, type of action, date | Answer "who saw what, and when" | The retention period (365 days by default) |
+| Reader account or invitation | Attribute the view to an identified person | Same |
+| Random visitor ID (`drive_vid` cookie) | Count the distinct visitors of a public link without identifying them | One-year cookie in the browser; in the database, same retention |
+| Hashed source network | Tell anonymous visitors apart: the address is truncated (/24 for IPv4, /48 for IPv6) then hashed with a server secret | Same; can be turned off with `ACTIVITY_IP_MODE=none` |
+| Browser (user agent, 256 characters max) | Troubleshooting | Same |
 
-Plusieurs ouvertures d'un même document par la même personne en moins de 10 minutes comptent pour une seule consultation. Le chargement des ressources d'une page (images, styles) n'est jamais compté.
+Several openings of the same document by the same person within 10 minutes count as a single view. Loading the assets of a page (images, stylesheets) is never counted.
 
-## Ce que Drive ne fait pas
+## What Drive does not do
 
-- Aucun traceur tiers, aucune analyse d'audience externe, aucune police chargée depuis un service tiers.
-- Les visiteurs d'un lien public ne sont jamais présentés comme identifiés dans l'interface.
-- Les miniatures d'images sont générées sans les métadonnées (EXIF, position GPS).
+- No third-party trackers, no external analytics, no fonts loaded from a third-party service.
+- Visitors of a public link are never presented as identified in the interface.
+- Image thumbnails are generated without their metadata (EXIF, GPS location).
 
-## Journaux techniques
+## Technical logs
 
-La sortie standard du conteneur contient, pour chaque requête : identifiant de requête, méthode, chemin (jetons masqués), statut, durée, identifiant de compte et de ressource. Ils servent au diagnostic et ne sont pas exposés aux lecteurs. Leur conservation dépend de la configuration Docker du serveur.
+For each request, the container's standard output contains the request ID, method, path (tokens masked), status, duration, and account and resource IDs. These logs are used for troubleshooting and are never shown to readers. How long they are kept depends on the server's Docker configuration.
 
-## Réglages
+## Settings
 
-- `ACTIVITY_RETENTION_DAYS` : les événements plus anciens sont supprimés chaque nuit.
-- `ACTIVITY_IP_MODE=none` : aucune donnée réseau n'est enregistrée.
+- `ACTIVITY_RETENTION_DAYS`: older events are deleted every night.
+- `ACTIVITY_IP_MODE=none`: no network data is recorded.
