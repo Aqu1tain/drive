@@ -80,7 +80,7 @@ Le texte des fichiers est aussi cherché : PDF (100 premières pages), Word, Exc
 
 Après chaque upload, une file en mémoire (2 workers) dérive de la version du fichier : sa miniature (images avec sharp, première page des PDF avec pdf.js et @napi-rs/canvas), son texte pour la recherche et, pour les documents Office, une page d'aperçu. `processed_checksum` retient la version traitée : au démarrage, tout fichier dont la version n'a pas été traitée est remis en file, ce qui rattrape aussi les fichiers antérieurs à cette fonctionnalité. Si le fichier est remplacé pendant le traitement, le résultat est jeté.
 
-Les fichiers de plus de 80 Mo ne sont pas traités. pdf.js tourne dans le processus du serveur, page par page ; un PDF piégé ne peut être déposé que par le propriétaire. Vidéo : pas de miniature, faute de décodeur côté serveur (ffmpeg alourdirait l'image de plusieurs centaines de Mo).
+Les fichiers de plus de 80 Mo ne sont pas traités. pdf.js tourne dans le processus du serveur, page par page ; un PDF piégé ne peut être déposé que par le propriétaire. Vidéo : pas de décodeur côté serveur (ffmpeg alourdirait l'image de plusieurs centaines de Mo). C'est le navigateur du propriétaire qui capture une image à une seconde, juste après l'upload à partir du fichier local, ou à la première ouverture pour les vidéos plus anciennes. Le serveur la réencode avec sharp comme n'importe quelle image (SVG refusé, 5 Mo maximum) : un lecteur ne peut jamais en envoyer.
 
 ## Journal d'activité
 
