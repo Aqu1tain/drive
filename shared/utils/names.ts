@@ -30,6 +30,8 @@ export function searchKeyOf(value: string) {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 }
 
+export const searchWordsOf = (value: string) => searchKeyOf(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+
 /** "rapport.pdf" -> "rapport (1).pdf", skipping names already taken (compared case-insensitively). */
 export function keepBothName(name: string, taken: Iterable<string>) {
   const takenLower = new Set([...taken].map(n => n.toLowerCase()))

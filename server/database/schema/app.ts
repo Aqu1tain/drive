@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { bigint, bigserial, boolean, index, integer, pgTable, text, timestamp, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, boolean, customType, index, integer, pgTable, text, timestamp, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core'
 import { user } from './auth'
 
 const timestamps = {
@@ -22,6 +22,8 @@ export const resources = pgTable('resources', {
   checksum: text('checksum'),
   thumbnailKey: text('thumbnail_key'),
   thumbnailStatus: text('thumbnail_status', { enum: ['none', 'pending', 'ready', 'failed'] }).notNull().default('none'),
+  previewKey: text('preview_key'),
+  processedChecksum: text('processed_checksum'),
   width: integer('width'),
   height: integer('height'),
   starred: boolean('starred').notNull().default(false),
@@ -42,6 +44,16 @@ export const resources = pgTable('resources', {
   uniqueIndex('resources_unique_name_idx')
     .on(sql`coalesce(${t.parentId}, '00000000-0000-0000-0000-000000000000'::uuid)`, t.nameLower)
     .where(sql`${t.deletedAt} is null`),
+])
+
+const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' })
+
+/** Words extracted from a file, kept apart so that listings never load them. */
+export const resourceTexts = pgTable('resource_texts', {
+  resourceId: uuid('resource_id').primaryKey().references(() => resources.id, { onDelete: 'cascade' }),
+  words: tsvector('words').notNull(),
+}, t => [
+  index('resource_texts_words_idx').using('gin', t.words),
 ])
 
 export const invitations = pgTable('invitations', {
