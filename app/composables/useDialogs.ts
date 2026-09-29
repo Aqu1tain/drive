@@ -1,4 +1,4 @@
-import type { ResourceItem } from '#shared/types/api'
+import type { ResourceItem, TagInfo } from '#shared/types/api'
 
 export interface ConflictChoice {
   strategy: 'replace' | 'keep' | 'skip'
@@ -30,6 +30,8 @@ interface DialogState {
   share: ShareTarget | null
   rename: ResourceItem | null
   move: ResourceItem[] | null
+  tags: ResourceItem[] | null
+  tagEdit: TagInfo | null
   newFolder: { parentId: string | null } | null
   conflict: ConflictRequest | null
   confirm: ConfirmRequest | null
@@ -41,6 +43,8 @@ const state = reactive<DialogState>({
   share: null,
   rename: null,
   move: null,
+  tags: null,
+  tagEdit: null,
   newFolder: null,
   conflict: null,
   confirm: null,
@@ -51,10 +55,12 @@ const state = reactive<DialogState>({
 export function useDialogs() {
   return {
     state,
-    anyOpen: computed(() => !!(state.share || state.rename || state.move || state.newFolder || state.conflict || state.confirm || state.shortcuts || state.palette)),
+    anyOpen: computed(() => !!(state.share || state.rename || state.move || state.tags || state.tagEdit || state.newFolder || state.conflict || state.confirm || state.shortcuts || state.palette)),
     share: (item: ShareTarget) => (state.share = { id: item.id, name: item.name, type: item.type }),
     rename: (item: ResourceItem) => (state.rename = item),
     move: (items: ResourceItem[]) => (state.move = items),
+    tags: (items: ResourceItem[]) => (state.tags = items),
+    tagEdit: (tag: TagInfo) => (state.tagEdit = tag),
     newFolder: (parentId: string | null) => (state.newFolder = { parentId }),
     shortcuts: () => (state.shortcuts = true),
     palette: (open = true) => (state.palette = open),

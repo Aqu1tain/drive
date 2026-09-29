@@ -1,6 +1,5 @@
 import type { H3Event } from 'h3'
 import { eq } from 'drizzle-orm'
-import { kindOf } from '#shared/utils/search'
 import type { PreviewInfo } from '#shared/types/api'
 import { signPayload, verifyPayload } from '../lib/crypto'
 import type { AccessContext } from '../domain/access'
@@ -55,14 +54,14 @@ export async function contextFromFrameToken(token: string): Promise<{ resourceId
 export async function openResource(event: H3Event, viewer: Viewer, id: string): Promise<PreviewInfo> {
   const { resource, access } = await requireReadable(viewer, id)
   await logAccess(event, viewer, resource, 'view')
-  const kind = kindOf(resource.type, resource.mimeType)
+  const kind = resourceKind(resource)
   return {
     item: toItem(resource, { viewer, access }),
     kind,
     scripts: kind === 'html' && resource.allowScripts,
     contentUrl: `${viewer.apiBase}/resources/${resource.id}/content`,
-    downloadUrl: access.download && resource.type === 'file' ? `${viewer.apiBase}/resources/${resource.id}/download` : null,
-    frameUrl: kind === 'html' ? usercontentUrl(`/c/${frameTokenFor(viewer, resource.id)}/`) : null,
+    downloadUrl: access.download ? `${viewer.apiBase}/resources/${resource.id}/download` : null,
+    frameUrl: kind === 'html' || resource.previewKey ? usercontentUrl(`/c/${frameTokenFor(viewer, resource.id)}/`) : null,
   }
 }
 
@@ -74,6 +73,7 @@ export async function serveContent(event: H3Event, viewer: Viewer, id: string) {
 
 export async function serveDownload(event: H3Event, viewer: Viewer, id: string) {
   const { resource, access } = await requireReadable(viewer, id)
+  if (resource.type === 'folder') return serveArchive(event, viewer, [resource.id])
   event.context.logResourceId = resource.id
   if (!access.download) throw createError({ statusCode: 403, statusMessage: 'Le téléchargement est désactivé pour ce partage' })
   if (!isRangeContinuation(event)) await logAccess(event, viewer, resource, 'download')

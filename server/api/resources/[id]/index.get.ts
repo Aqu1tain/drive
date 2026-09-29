@@ -6,7 +6,10 @@ export default defineEventHandler(async (event): Promise<ResourceDetails> => {
   const rules = viewer.ctx.isOwner ? [] : await loadRules(chain.map(r => r.id))
   const path = crumbsFor(viewer, chain.slice(1), rules)
 
-  if (!viewer.ctx.isOwner) return { item: toItem(resource, { viewer, access }), path, stats: null }
+  if (!viewer.ctx.isOwner) {
+    const [item] = await withFavorites(viewer, [toItem(resource, { viewer, access })])
+    return { item: item!, path, stats: null }
+  }
 
   const summaries = await summarizeMany([resource])
   return {

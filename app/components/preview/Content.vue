@@ -1,15 +1,29 @@
 <script setup lang="ts">
+import { useQueryClient } from '@tanstack/vue-query'
 import type { PreviewInfo } from '#shared/types/api'
 
 const props = defineProps<{ info: PreviewInfo, dark?: boolean }>()
 const failed = ref(false)
 watch(() => props.info.contentUrl, () => (failed.value = false))
 
+const { data: me } = useMe()
+const queryClient = useQueryClient()
+
+/** Videos uploaded before thumbnails existed get one the first time their owner opens them. */
+async function addMissingThumbnail() {
+  const { item, contentUrl } = props.info
+  if (item.kind !== 'video' || item.thumbnailUrl || me.value?.user?.role !== 'owner') return
+  if (!await uploadVideoThumbnail(item.id, contentUrl).catch(() => false)) return
+  for (const key of ['folder', 'list', 'search', 'resource']) queryClient.invalidateQueries({ queryKey: [key] })
+}
+watch(() => [props.info.item.id, me.value?.user?.role], addMissingThumbnail, { immediate: true })
+
 const isMarkdown = computed(() => props.info.item.mimeType === 'text/markdown' || /\.(md|markdown)$/i.test(props.info.item.name))
 const viewer = computed(() => {
   if (failed.value) return 'none'
   const kind = props.info.kind
   if (kind === 'image' || kind === 'pdf' || kind === 'audio' || kind === 'video' || kind === 'html') return kind
+  if (props.info.frameUrl) return 'document'
   if (kind === 'text' || kind === 'spreadsheet' && props.info.item.mimeType === 'text/csv') return isMarkdown.value ? 'markdown' : 'text'
   return 'none'
 })
@@ -31,6 +45,7 @@ const viewer = computed(() => {
       <video :src="info.contentUrl" controls playsinline preload="metadata" class="max-h-full max-w-full rounded-lg bg-black" @error="failed = true" />
     </div>
     <PreviewHtml v-else-if="viewer === 'html' && info.frameUrl" :src="info.frameUrl" :scripts="info.scripts" :title="info.item.name" />
+    <PreviewHtml v-else-if="viewer === 'document' && info.frameUrl" :src="info.frameUrl" :scripts="false" :title="info.item.name" converted />
     <PreviewNone v-else :info="info" :dark="dark" />
   </div>
 </template>

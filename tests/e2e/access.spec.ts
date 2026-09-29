@@ -33,6 +33,25 @@ test('authorized reader: sign in, see, preview, download', async ({ page }) => {
   expect(file.id).toBeTruthy()
 })
 
+test('a reader keeps their own favorites', async ({ page }) => {
+  const reader = await createReader(owner)
+  const folder = await createFolder(owner, 'Dossier favoris', root.id)
+  await uploadText(owner, folder.id, 'planning.txt', 'Planning du camp')
+  await owner.post(`/api/resources/${folder.id}/access`, { data: { email: reader.email, notify: false } })
+
+  await signIn(page, reader.email, reader.password)
+  await page.getByRole('row', { name: /Dossier favoris/ }).dblclick()
+  await page.getByRole('row', { name: /planning\.txt/ }).click()
+  await page.keyboard.press('s')
+  await expect(page.getByRole('row', { name: /planning\.txt/ }).getByLabel('Favori')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Favoris' }).click()
+  await expect(page).toHaveURL(/\/starred/)
+  await expect(page.getByRole('row', { name: /planning\.txt/ })).toBeVisible()
+
+  await owner.delete(`/api/people/${reader.id}`)
+})
+
 test('forbidden reader: a known URL leads to an access denied page', async ({ page }) => {
   const reader = await createReader(owner)
   const secret = await uploadText(owner, root.id, 'secret.txt', 'Confidentiel')
@@ -59,7 +78,7 @@ test('public link: the shared file is immediately visible', async ({ browser }) 
   await page.goto(link.url)
   await expect(page.getByRole('heading', { name: 'Programme', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Programme du week-end' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Télécharger' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Télécharger' })).toBeVisible()
   await visitor.close()
 })
 
@@ -89,5 +108,20 @@ test('revocation: an open link stops working after a refresh', async ({ browser 
   await page.reload()
   await expect(page.getByText('Lien introuvable')).toBeVisible()
   await expect(page.getByText('Note visible')).toBeHidden()
+  await visitor.close()
+})
+
+test('public folder: everything downloads as one zip', async ({ browser }) => {
+  const folder = await createFolder(owner, 'Documents du camp', root.id)
+  await uploadText(owner, folder.id, 'programme.txt', 'Programme')
+  await uploadText(owner, folder.id, 'infos.txt', 'Infos')
+  const { link } = await (await owner.put(`/api/resources/${folder.id}/link`, { data: { enabled: true } })).json()
+
+  const visitor = await browser.newContext()
+  const page = await visitor.newPage()
+  await page.goto(link.url)
+  const download = page.waitForEvent('download')
+  await page.getByRole('link', { name: 'Tout télécharger' }).click()
+  expect((await download).suggestedFilename()).toMatch(/\.zip$/)
   await visitor.close()
 })

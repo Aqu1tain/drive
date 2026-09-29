@@ -1,5 +1,5 @@
 import { and, desc, gte, lt, or, sql, type SQL } from 'drizzle-orm'
-import { searchKeyOf } from '#shared/utils/names'
+import { searchKeyOf, searchWordsOf } from '#shared/utils/names'
 import { mimeRulesFor, type SearchQuery } from '#shared/utils/search'
 import type { ResourceItem } from '#shared/types/api'
 import type { Resource } from '../database/schema'
@@ -21,7 +21,16 @@ function kindCondition(kind: SearchQuery['type']): SQL | undefined {
   )
 }
 
-/** A term matches the name, the name of an enclosing folder, or, for the owner, a person who has access. */
+/** Every word of the term starts a word of the file text: "factur" finds "factures". */
+function contentCondition(term: string) {
+  const { resources, resourceTexts } = tables
+  const words = searchWordsOf(term)
+  if (words.length === 0) return undefined
+  const query = words.map(word => `${word}:*`).join(' & ')
+  return sql`${resources.id} in (select ${resourceTexts.resourceId} from ${resourceTexts} where ${resourceTexts.words} @@ to_tsquery('simple', ${query}))`
+}
+
+/** A term matches the name, the name of an enclosing folder, the file text, or, for the owner, a person who has access. */
 function termCondition(term: string, includePeople: boolean) {
   const { resources, accessRules, user, invitations } = tables
   const like = likePattern(term)
@@ -29,6 +38,7 @@ function termCondition(term: string, includePeople: boolean) {
   return or(
     sql`${resources.searchKey} like ${like}`,
     sql`exists (select 1 from ${resources} as folder where folder.id = any(${resources.ancestorIds}) and folder.search_key like ${like})`,
+    contentCondition(term),
     includePeople
       ? sql`${resources.id} in (
           select ar.resource_id from ${accessRules} ar
@@ -48,8 +58,9 @@ function readerScope(userId: string) {
 }
 
 export async function searchResources(viewer: Viewer, query: SearchQuery, limit = 50): Promise<ResourceItem[]> {
-  const { resources } = tables
+  const { resources, tags } = tables
   const isOwner = viewer.ctx.isOwner
+  if (query.tag && !isOwner) return []
   const nameKey = searchKeyOf(query.terms.join(' '))
 
   const candidates = await useDB().select().from(resources).where(and(
@@ -59,6 +70,7 @@ export async function searchResources(viewer: Viewer, query: SearchQuery, limit 
     query.after ? gte(resources.updatedAt, new Date(query.after)) : undefined,
     query.before ? lt(resources.updatedAt, new Date(query.before)) : undefined,
     query.folderId ? sql`${resources.ancestorIds} @> array[${query.folderId}::uuid]` : undefined,
+    query.tag ? sql`${resources.tagIds} && array(select ${tags.id} from ${tags} where ${tags.nameLower} = ${query.tag})` : undefined,
     isOwner ? undefined : readerScope(viewer.user!.id),
   )).orderBy(
     desc(sql`${resources.searchKey} like ${`%${nameKey}%`}`),
@@ -92,5 +104,5 @@ async function readableItems(viewer: Viewer, candidates: Resource[], limit: numb
     if (access.read) items.push(toItem(candidate, { viewer, access }))
     if (items.length >= limit) break
   }
-  return items
+  return withFavorites(viewer, items)
 }

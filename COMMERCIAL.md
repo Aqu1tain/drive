@@ -7,7 +7,7 @@ Drive est distribué sous licence [CC BY-NC-SA 4.0](LICENSE) :
 
 ## Obtenir une licence commerciale
 
-Contactez l'auteur via son profil GitHub : [github.com/Aqu1tain](https://github.com/Aqu1tain). Précisez l'organisation, l'usage prévu et le nombre d'utilisateurs ; les conditions (forfait ou redevance) sont définies au cas par cas.
+Écrivez à [contact@corentinrenard.com](mailto:contact@corentinrenard.com) en précisant l'organisation, l'usage prévu et le nombre d'utilisateurs. Les conditions (forfait ou redevance) sont définies au cas par cas.
 
 ## Contributions
 

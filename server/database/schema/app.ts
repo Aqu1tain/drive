@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { bigint, bigserial, boolean, index, integer, pgTable, text, timestamp, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, boolean, customType, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core'
 import { user } from './auth'
 
 const timestamps = {
@@ -22,9 +22,13 @@ export const resources = pgTable('resources', {
   checksum: text('checksum'),
   thumbnailKey: text('thumbnail_key'),
   thumbnailStatus: text('thumbnail_status', { enum: ['none', 'pending', 'ready', 'failed'] }).notNull().default('none'),
+  previewKey: text('preview_key'),
+  siteChecksum: text('site_checksum'),
+  processedChecksum: text('processed_checksum'),
   width: integer('width'),
   height: integer('height'),
   starred: boolean('starred').notNull().default(false),
+  tagIds: uuid('tag_ids').array().notNull().default(sql`'{}'::uuid[]`),
   inheritAccess: boolean('inherit_access').notNull().default(true),
   allowScripts: boolean('allow_scripts').notNull().default(false),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -38,10 +42,50 @@ export const resources = pgTable('resources', {
   index('resources_search_idx').using('gin', sql`${t.searchKey} gin_trgm_ops`),
   index('resources_deleted_idx').on(t.deletedAt),
   index('resources_starred_idx').on(t.starred),
+  index('resources_tags_idx').using('gin', t.tagIds),
   index('resources_recent_idx').on(t.updatedAt),
   uniqueIndex('resources_unique_name_idx')
     .on(sql`coalesce(${t.parentId}, '00000000-0000-0000-0000-000000000000'::uuid)`, t.nameLower)
     .where(sql`${t.deletedAt} is null`),
+])
+
+const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' })
+
+/** Words extracted from a file, kept apart so that listings never load them. */
+export const resourceTexts = pgTable('resource_texts', {
+  resourceId: uuid('resource_id').primaryKey().references(() => resources.id, { onDelete: 'cascade' }),
+  words: tsvector('words').notNull(),
+}, t => [
+  index('resource_texts_words_idx').using('gin', t.words),
+])
+
+/** Files of a static site uploaded as a zip, extracted once so that each one is served straight from storage. */
+export const siteFiles = pgTable('site_files', {
+  resourceId: uuid('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' }),
+  path: text('path').notNull(),
+  storageKey: text('storage_key').notNull(),
+  mimeType: text('mime_type').notNull(),
+  size: bigint('size', { mode: 'number' }).notNull(),
+}, t => [
+  primaryKey({ columns: [t.resourceId, t.path] }),
+])
+
+/** The owner's labels; resources point to them through `tag_ids`, so listings need no extra query. */
+export const tags = pgTable('tags', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  nameLower: text('name_lower').notNull().unique(),
+  color: text('color').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/** Readers' own favorites: the owner's stay a column on resources, since there is only one owner. */
+export const favorites = pgTable('favorites', {
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  resourceId: uuid('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [
+  primaryKey({ columns: [t.userId, t.resourceId] }),
 ])
 
 export const invitations = pgTable('invitations', {
@@ -106,4 +150,5 @@ export const accessEvents = pgTable('access_events', {
 export type Resource = typeof resources.$inferSelect
 export type AccessRule = typeof accessRules.$inferSelect
 export type Invitation = typeof invitations.$inferSelect
+export type Tag = typeof tags.$inferSelect
 export type AccessEvent = typeof accessEvents.$inferSelect

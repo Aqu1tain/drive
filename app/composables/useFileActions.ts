@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 import {
-  ArchiveRestore, Download, ExternalLink, Eye, FolderInput, FolderOpen, History, Info, Link, Pencil, Share2, Star, StarOff, Trash2,
+  ArchiveRestore, Download, ExternalLink, Eye, FolderInput, FolderOpen, History, Info, Link, Pencil, Share2, Star, StarOff, Tag, Trash2,
 } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
@@ -41,11 +41,20 @@ export function useFileActions() {
     queryClient.setQueriesData<ItemsPayload>({ queryKey: ['search'] }, apply)
   }
 
-  async function run<T>(task: () => Promise<T>, fallback: string) {
+  /** Optimistic edits are undone from this snapshot when the server refuses or the network is gone. */
+  function snapshot() {
+    const saved = ['folder', 'list', 'search'].flatMap(key => queryClient.getQueriesData({ queryKey: [key] }))
+    return () => {
+      for (const [key, data] of saved) queryClient.setQueryData(key, data)
+    }
+  }
+
+  async function run<T>(task: () => Promise<T>, fallback: string, rollback?: () => void) {
     try {
       return await task()
     }
     catch (error) {
+      rollback?.()
       toast.error(errorMessage(error, fallback))
       refresh()
       throw error
@@ -73,8 +82,9 @@ export function useFileActions() {
   }
 
   async function star(items: ResourceItem[], starred: boolean) {
+    const rollback = snapshot()
     for (const item of items) patchInCaches(item.id, { starred })
-    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'PATCH', body: { starred } }))), 'Impossible de mettre à jour les favoris')
+    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}/star`, { method: 'PUT', body: { starred } }))), 'Impossible de mettre à jour les favoris', rollback)
     queryClient.invalidateQueries({ queryKey: ['list', 'starred'] })
     toast(starred ? `${label(items)} ajouté aux favoris` : `${label(items)} retiré des favoris`)
   }
@@ -94,8 +104,9 @@ export function useFileActions() {
 
   async function trash(items: ResourceItem[]) {
     if (items.length === 0) return
+    const rollback = snapshot()
     removeFromCaches(new Set(items.map(i => i.id)))
-    await run(() => api('/api/resources/trash', { method: 'POST', body: { ids: items.map(i => i.id) } }), 'Impossible de déplacer vers la corbeille')
+    await run(() => api('/api/resources/trash', { method: 'POST', body: { ids: items.map(i => i.id) } }), 'Impossible de déplacer vers la corbeille', rollback)
     refresh()
     toast(`${label(items)} déplacé vers la corbeille`, {
       duration: 6000,
@@ -111,8 +122,9 @@ export function useFileActions() {
       danger: true,
     })
     if (!confirmed) return
+    const rollback = snapshot()
     removeFromCaches(new Set(items.map(i => i.id)))
-    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'DELETE' }))), 'La suppression a échoué')
+    await run(() => Promise.all(items.map(item => api(`/api/resources/${item.id}`, { method: 'DELETE' }))), 'La suppression a échoué', rollback)
     refresh()
     toast(`${label(items)} supprimé définitivement`)
   }
@@ -185,16 +197,18 @@ export function useFileActions() {
     }
   }
 
+  /** One file downloads as is; a folder or a selection becomes a single ZIP, streamed by the server. */
   function download(items: ResourceItem[], apiBase = '/api') {
-    const files = items.filter(item => item.type === 'file' && item.canDownload)
-    for (const [index, file] of files.entries()) {
-      setTimeout(() => {
-        const anchor = document.createElement('a')
-        anchor.href = `${apiBase}/resources/${file.id}/download`
-        anchor.download = file.name
-        anchor.click()
-      }, index * 300)
-    }
+    const allowed = items.filter(item => item.canDownload)
+    if (allowed.length === 0) return
+    const single = allowed.length === 1 ? allowed[0]! : null
+    const anchor = document.createElement('a')
+    anchor.href = single
+      ? `${apiBase}/resources/${single.id}/download`
+      : `${apiBase}/downloads?ids=${allowed.map(item => item.id).join(',')}`
+    anchor.download = single?.type === 'file' ? single.name : ''
+    anchor.click()
+    if (!single || single.type === 'folder') toast('Préparation de l’archive ZIP, le téléchargement démarre')
   }
 
   function showDetails(item: ResourceItem | null, tab: DetailsTab = 'details') {
@@ -211,8 +225,7 @@ export function useFileActions() {
   function menuFor(items: ResourceItem[], context: MenuContext): MenuEntry[] {
     if (items.length === 0) return []
     const single = items.length === 1 ? items[0]! : null
-    const files = items.filter(item => item.type === 'file')
-    const downloadable = files.some(item => item.canDownload)
+    const downloadable = items.some(item => item.canDownload)
 
     if (context.trash) {
       return [
@@ -230,23 +243,27 @@ export function useFileActions() {
         ]
       : []
 
+    const allStarred = items.every(item => item.starred)
+    const starEntry = { id: 'star', label: allStarred ? 'Retirer des favoris' : 'Ajouter aux favoris', icon: allStarred ? StarOff : Star, shortcut: 'S', onSelect: () => star(items, !allStarred) }
+
     if (context.mode !== 'owner') {
       return tidyMenu([
         ...openEntries,
         { kind: 'separator' },
+        context.mode === 'reader' && starEntry,
         downloadable && { id: 'download', label: 'Télécharger', icon: Download, onSelect: () => download(items, context.apiBase) },
         context.mode === 'reader' && single && { id: 'details', label: 'Détails', icon: Info, onSelect: () => showDetails(single) },
       ])
     }
 
-    const allStarred = items.every(item => item.starred)
     return tidyMenu([
       ...openEntries,
       { kind: 'separator' },
       single && { id: 'share', label: 'Partager', icon: Share2, shortcut: 'Mod+Alt+A', onSelect: () => dialogs.share(single) },
       single && { id: 'copy-link', label: 'Copier le lien', icon: Link, onSelect: () => copyLink(single) },
       { kind: 'separator' },
-      { id: 'star', label: allStarred ? 'Retirer des favoris' : 'Ajouter aux favoris', icon: allStarred ? StarOff : Star, shortcut: 'S', onSelect: () => star(items, !allStarred) },
+      starEntry,
+      { id: 'tags', label: 'Étiquettes…', icon: Tag, shortcut: 'L', onSelect: () => dialogs.tags(items) },
       { kind: 'separator' },
       single && { id: 'rename', label: 'Renommer', icon: Pencil, shortcut: 'F2', onSelect: () => dialogs.rename(single) },
       { id: 'move', label: 'Déplacer', icon: FolderInput, onSelect: () => dialogs.move(items) },

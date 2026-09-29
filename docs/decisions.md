@@ -34,6 +34,7 @@ Notes :
 Décision : un résolveur pur (`server/domain/access.ts`) testé unitairement, utilisé par tous les endpoints. Trois primitives : `read`, `download`, `manage`.
 
 - `OWNER` → tout. `READER` → lecture/téléchargement si une règle valide s'applique. Anonyme → uniquement via un lien public valide.
+- Favoris : ceux du propriétaire restent une colonne de `resources` ; chaque lecteur a les siens dans `favorites`, qui ne touche pas au fichier. Il ne peut en poser que sur ce qu'il peut lire, et la liste de ses favoris re-résout l'accès : un partage retiré disparaît aussi de ses favoris.
 - Héritage additif : une ressource cumule ses règles et celles de ses ancêtres, jusqu'au premier nœud qui coupe l'héritage (`inherit_access = false`).
 - Une ressource (ou un ancêtre) dans la corbeille n'est plus accessible aux tiers.
 - Règles : `user`, `invitation`, `link`. Pas de rôle Editor : il n'existe aucune règle d'écriture.
@@ -56,6 +57,7 @@ Décision : abstraction `StorageProvider` (`put`, `get` avec plage, `size`, `del
 
 - Clés générées par le serveur (`blobs/8f/8f311e17-…`), le nom d'origine n'est qu'une métadonnée.
 - Upload en streaming (`event.node.req`, contre-pression respectée), hash SHA-256 et détection de signature (file-type) à la volée.
+- Au-delà de 32 Mo, le navigateur envoie le fichier en parties de 8 Mo : requêtes courtes, réessayées une à une (4 tentatives, délai croissant), reprise à la dernière partie reçue. Côté serveur, multipart natif S3 ou fichiers temporaires en local, parties reçues dans l'ordre pour calculer le hash au fil de l'eau. Les sessions vivent en mémoire (un seul processus) ; un redémarrage les perd et le client recommence, une tâche horaire abandonne celles restées inactives un jour.
 - Le type MIME vient de la signature binaire quand elle existe (un exécutable renommé `.jpg` n'est jamais une image), sinon de l'extension.
 
 Alternatives : BLOB PostgreSQL (base énorme, sauvegardes lentes), S3 seul (développement local plus lourd).
@@ -67,14 +69,22 @@ Alternatives : BLOB PostgreSQL (base énorme, sauvegardes lentes), S3 seul (dév
 - En production, utiliser un domaine enregistrable distinct (ex. `drive-usercontent.net`).
 - Les mutations exigent l'en-tête `Origin` de l'application (CSRF), y compris contre l'origine usercontent.
 - sharp ne charge jamais de SVG (le chargeur est bloqué) : pas de miniature SVG.
+- Un ZIP qui contient un `index.html` (à la racine ou dans un unique dossier de premier niveau) devient un site : ses fichiers sont extraits une fois dans le stockage (`site_files`, 2 000 fichiers et 200 Mo décompressés au plus, comptés pendant la décompression), puis servis un par un sur l'origine isolée, avec les mêmes règles que le HTML : sandbox, scripts seulement si le propriétaire le rend interactif, adresse publiée `/p/<jeton>/` quand un lien public existe. Les chemins qui pourraient sortir du site sont écartés à l'extraction. Les fichiers d'un site portent `Access-Control-Allow-Origin: *`, sans quoi les modules JavaScript et les `fetch` d'une page à l'origine opaque échoueraient ; ils ne sont joignables qu'avec un jeton. L'accès est vérifié avant de dire si un chemin existe.
+- Les documents Office (docx, xlsx, pptx) sont convertis côté serveur en une page HTML autonome, servie sur la même origine isolée avec une CSP plus stricte encore : aucun script, aucune ressource externe (`default-src 'none'; img-src data:`), les liens s'ouvrent dans un nouvel onglet. Le texte des cellules et des paragraphes est échappé à la conversion.
 
 ## Recherche
 
-`pg_trgm` sur une clé normalisée (minuscules, sans accents) : nom, dossiers englobants, personnes ayant accès (propriétaire). Filtres `type:`, `access:`, `shared:`, `after:`, `before:`, `in:` exposés aussi en chips. Le texte intégral (PDF, Office) pourra s'ajouter via une table d'index alimentée par un extracteur, sans changer l'API.
+`pg_trgm` sur une clé normalisée (minuscules, sans accents) : nom, dossiers englobants, personnes ayant accès (propriétaire). Filtres `type:`, `access:`, `shared:`, `after:`, `before:`, `in:` exposés aussi en chips.
 
-## Miniatures
+Étiquettes : le propriétaire en pose autant qu'il veut sur ses fichiers et dossiers. Elles vivent dans `tags` (nom unique sans tenir compte de la casse, couleur d'une palette de huit) et chaque ressource porte `tag_ids uuid[]` avec un index GIN : toutes les listes existantes renvoient les étiquettes sans requête de plus, et `tag:"à relancer"` filtre la recherche. Supprimer une étiquette la retire des fichiers, sans rien toucher d'autre. Elles restent privées : aucun lecteur ne les voit ni ne peut les deviner, un `tag:` dans sa recherche ne renvoie rien.
 
-File en mémoire (2 workers), relancée au démarrage pour les éléments `pending`. Images uniquement (sharp, orientation EXIF, métadonnées supprimées). PDF et vidéo : phase 2.
+Le texte des fichiers est aussi cherché : PDF (100 premières pages), Word, Excel, PowerPoint, HTML et fichiers texte. Il est normalisé comme les noms puis stocké en `tsvector` (configuration `simple`, sans racinisation, donc valable pour toutes les langues) dans une table à part, `resource_texts`, pour que les listes ne le chargent jamais. Chaque mot cherché doit commencer un mot du fichier : « factur » trouve « factures ». Un lecteur ne trouve que ce qu'il peut ouvrir, le texte ne sort jamais de la base.
+
+## Traitement des fichiers
+
+Après chaque upload, une file en mémoire (2 workers) dérive de la version du fichier : sa miniature (images avec sharp, première page des PDF avec pdf.js et @napi-rs/canvas), son texte pour la recherche et, pour les documents Office, une page d'aperçu. `processed_checksum` retient la version traitée : au démarrage, tout fichier dont la version n'a pas été traitée est remis en file, ce qui rattrape aussi les fichiers antérieurs à cette fonctionnalité. Si le fichier est remplacé pendant le traitement, le résultat est jeté.
+
+Les fichiers de plus de 80 Mo ne sont pas traités. pdf.js tourne dans le processus du serveur, page par page ; un PDF piégé ne peut être déposé que par le propriétaire. Vidéo : pas de décodeur côté serveur (ffmpeg alourdirait l'image de plusieurs centaines de Mo). C'est le navigateur du propriétaire qui capture une image à une seconde, juste après l'upload à partir du fichier local, ou à la première ouverture pour les vidéos plus anciennes. Le serveur la réencode avec sharp comme n'importe quelle image (SVG refusé, 5 Mo maximum) : un lecteur ne peut jamais en envoyer.
 
 ## Journal d'activité
 
@@ -88,7 +98,6 @@ Pré-démarrage en production (`scripts/migrate.mjs`) : Nitro 2 n'attend pas les
 
 ## Limites connues
 
-- Node coupe une requête au bout de 5 min (`requestTimeout`) : un très gros fichier sur une connexion lente échouera. Upload par morceaux (tus ou multipart S3) en phase 2.
 - « Téléchargement désactivé » est une dissuasion, pas un DRM : un aperçu transmet forcément le contenu au navigateur.
 
 ## Performance

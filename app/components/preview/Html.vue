@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ExternalLink, Maximize, ShieldCheck } from '@lucide/vue'
 
-defineProps<{ src: string, scripts: boolean, title: string }>()
+const props = defineProps<{ src: string, scripts: boolean, title: string, converted?: boolean }>()
+const notice = computed(() => {
+  if (props.converted) return 'Aperçu converti, isolé du reste de l’application'
+  return props.scripts ? 'Page interactive, isolée du reste de l’application' : 'Aperçu sécurisé : les scripts sont désactivés'
+})
 const frame = useTemplateRef<HTMLIFrameElement>('frame')
 
 /** The isolated frame itself takes the whole screen; Échap gives the app back. */
@@ -13,7 +17,7 @@ defineExpose({ fullscreen })
   <div class="flex size-full flex-col">
     <div class="flex h-10 shrink-0 items-center gap-1 border-b border-line-weak bg-canvas pr-1.5 pl-3 text-sm text-ink-weak">
       <ShieldCheck class="mr-1 size-4 shrink-0 text-success" aria-hidden="true" />
-      <span class="min-w-0 flex-1 truncate">{{ scripts ? 'Page interactive, isolée du reste de l’application' : 'Aperçu sécurisé : les scripts sont désactivés' }}</span>
+      <span class="min-w-0 flex-1 truncate">{{ notice }}</span>
       <slot name="actions" />
       <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-ink hover:bg-hover" @click="fullscreen">
         <Maximize class="size-4" aria-hidden="true" />

@@ -20,3 +20,4 @@ export function newBlobKey() {
 }
 
 export const thumbnailKeyOf = (resourceId: string, checksum: string) => `thumbs/${resourceId.slice(0, 2)}/${resourceId}-${checksum.slice(0, 12)}.webp`
+export const previewKeyOf = (resourceId: string, checksum: string) => `previews/${resourceId.slice(0, 2)}/${resourceId}-${checksum.slice(0, 12)}.html`

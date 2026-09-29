@@ -15,9 +15,8 @@ export default defineEventHandler(async (event) => {
     if (access.read) readable.push({ resource, access })
   }
   const ids = new Set(readable.map(r => r.resource.id))
-  return {
-    items: readable
-      .filter(({ resource }) => !resource.ancestorIds.some(id => ids.has(id)))
-      .map(({ resource, access }) => toItem(resource, { viewer, access })),
-  }
+  const items = readable
+    .filter(({ resource }) => !resource.ancestorIds.some(id => ids.has(id)))
+    .map(({ resource, access }) => toItem(resource, { viewer, access }))
+  return { items: await withFavorites(viewer, items) }
 })

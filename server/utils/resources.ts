@@ -155,6 +155,8 @@ export function thumbnailPath(resource: Resource, base: string) {
   return `${base}/resources/${resource.id}/thumbnail?v=${resource.checksum.slice(0, 12)}`
 }
 
+export const resourceKind = (resource: Resource) => isSite(resource) ? 'html' as const : kindOf(resource.type, resource.mimeType)
+
 export function toItem(resource: Resource, options: { viewer: Viewer, access?: Access, summary?: AccessSummary, location?: string }): ResourceItem {
   const { viewer } = options
   const isOwner = viewer.ctx.isOwner
@@ -162,7 +164,7 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
     id: resource.id,
     parentId: resource.parentId,
     type: resource.type,
-    kind: kindOf(resource.type, resource.mimeType),
+    kind: resourceKind(resource),
     name: resource.name,
     extension: resource.extension,
     mimeType: resource.mimeType,
@@ -178,6 +180,7 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
   return {
     ...item,
     starred: resource.starred,
+    tagIds: resource.tagIds,
     allowScripts: resource.allowScripts,
     access: options.summary,
     lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null,
