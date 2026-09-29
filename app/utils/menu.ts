@@ -31,5 +31,6 @@ export function tidyMenu(entries: Array<MenuEntry | false | null | undefined | '
   return result
 }
 
-export const MENU_CONTENT = 'z-(--z-menu) min-w-56 rounded-lg border border-line-weak bg-raised p-1 shadow-lifted animate-pop-in origin-(--reka-dropdown-menu-content-transform-origin) focus:outline-none'
+/** Long menus scroll instead of running off a short screen. */
+export const MENU_CONTENT = 'z-(--z-menu) min-w-56 max-h-[var(--reka-dropdown-menu-content-available-height,var(--reka-context-menu-content-available-height,80vh))] overflow-y-auto rounded-lg border border-line-weak bg-raised p-1 shadow-lifted animate-pop-in origin-(--reka-dropdown-menu-content-transform-origin) focus:outline-none'
 export const MENU_ITEM = 'flex h-9 cursor-pointer select-none items-center gap-3 rounded-md px-2.5 text-base text-ink outline-none data-highlighted:bg-hover data-disabled:opacity-40'
