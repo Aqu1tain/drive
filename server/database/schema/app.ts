@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { bigint, bigserial, boolean, customType, index, integer, pgTable, text, timestamp, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, boolean, customType, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid, type AnyPgColumn } from 'drizzle-orm/pg-core'
 import { user } from './auth'
 
 const timestamps = {
@@ -54,6 +54,15 @@ export const resourceTexts = pgTable('resource_texts', {
   words: tsvector('words').notNull(),
 }, t => [
   index('resource_texts_words_idx').using('gin', t.words),
+])
+
+/** Readers' own favorites: the owner's stay a column on resources, since there is only one owner. */
+export const favorites = pgTable('favorites', {
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  resourceId: uuid('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [
+  primaryKey({ columns: [t.userId, t.resourceId] }),
 ])
 
 export const invitations = pgTable('invitations', {

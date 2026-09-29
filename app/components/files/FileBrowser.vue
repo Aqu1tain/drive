@@ -421,7 +421,7 @@ function onKeydown(event: KeyboardEvent) {
       break
     case 's':
     case 'S':
-      if (mod || !isOwner.value || props.trash || !selectedItems.value.length) return
+      if (mod || props.mode === 'share' || props.trash || !selectedItems.value.length) return
       actions.star(selectedItems.value, !selectedItems.value.every(item => item.starred))
       break
     case 'F10':

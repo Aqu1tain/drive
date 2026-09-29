@@ -27,5 +27,5 @@ async function readerRecent(viewer: Viewer) {
     const { access } = await accessOf(viewer, resource)
     if (access.read) items.push(toItem(resource, { viewer, access }))
   }
-  return items
+  return withFavorites(viewer, items)
 }

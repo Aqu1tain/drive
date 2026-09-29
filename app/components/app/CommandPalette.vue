@@ -67,6 +67,7 @@ const navigation = computed<Command[]>(() => props.owner
   : [
       { id: 'nav-shared-with-me', label: 'Partagé avec moi', icon: Inbox, run: go('/shared-with-me') },
       { id: 'nav-recent', label: 'Récents', icon: Clock, run: go('/recent') },
+      { id: 'nav-starred', label: 'Favoris', icon: Star, run: go('/starred') },
       { id: 'nav-settings', label: 'Paramètres', icon: Settings, run: go('/settings') },
     ])
 

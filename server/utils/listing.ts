@@ -69,5 +69,6 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
     const childAccess = resolveChildAccess(viewer.ctx, access, toAccessNode(child), (byChild.get(child.id) ?? []).map(row => row.rule))
     return childAccess.read ? [toItem(child, { viewer, access: childAccess })] : []
   })
-  return { folder: toItem(folder, { viewer, access }), breadcrumbs, items }
+  const [marked, ...markedItems] = await withFavorites(viewer, [toItem(folder, { viewer, access }), ...items])
+  return { folder: marked!, breadcrumbs, items: markedItems }
 }

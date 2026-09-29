@@ -364,6 +364,37 @@ describe('upload safety', () => {
   })
 })
 
+describe('reader favorites', () => {
+  it('lets a reader star what they can read, for themselves only', async () => {
+    const [paul, marie] = [await readerClient(owner), await readerClient(owner)]
+    const folder = await folderIn(root, 'Favoris')
+    const file = await fileIn(folder, `${unique('plan')}.txt`)
+    for (const reader of [paul, marie]) await owner.post(`/api/resources/${folder}/access`, { email: reader.email, notify: false })
+
+    expect((await paul.client.put(`/api/resources/${file.id}/star`, { starred: true })).status).toBe(200)
+    const listing = await paul.client.get(`/api/folders/${folder}`)
+    expect(listing.body.items.find((item: { id: string }) => item.id === file.id).starred).toBe(true)
+    expect((await paul.client.get('/api/starred')).body.items.map((item: { id: string }) => item.id)).toEqual([file.id])
+
+    expect((await marie.client.get('/api/starred')).body.items).toEqual([])
+    expect((await marie.client.get(`/api/folders/${folder}`)).body.items[0].starred).toBe(false)
+    expect((await owner.get(`/api/resources/${file.id}`)).body.item.starred).toBe(false)
+  })
+
+  it('never reveals a favorite whose access is gone', async () => {
+    const { client: reader, email } = await readerClient(owner)
+    const hidden = await fileIn(root, `${unique('prive')}.txt`)
+    expect((await reader.put(`/api/resources/${hidden.id}/star`, { starred: true })).status).toBe(403)
+
+    const shared = await fileIn(root, `${unique('partage')}.txt`)
+    const share = await owner.post(`/api/resources/${shared.id}/access`, { email, notify: false })
+    await reader.put(`/api/resources/${shared.id}/star`, { starred: true })
+    expect((await reader.get('/api/starred')).body.items).toHaveLength(1)
+    await owner.delete(`/api/access/${share.body.ruleId}`)
+    expect((await reader.get('/api/starred')).body.items).toEqual([])
+  })
+})
+
 describe('readers', () => {
   it('see only what is shared with them, and can never write', async () => {
     const { client: reader, email } = await readerClient(owner, 'Paul')

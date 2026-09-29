@@ -52,7 +52,7 @@ Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire
 | ⌘/Ctrl A | Tout sélectionner |
 | Suppr / ⌫ | Corbeille |
 | F2 | Renommer |
-| S | Favori |
+| S | Favori (propriétaire et lecteurs, chacun les siens) |
 | ⌘/Ctrl / | Aide des raccourcis |
 | ← → (aperçu plein écran) | Fichier précédent / suivant |
 

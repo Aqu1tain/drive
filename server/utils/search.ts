@@ -102,5 +102,5 @@ async function readableItems(viewer: Viewer, candidates: Resource[], limit: numb
     if (access.read) items.push(toItem(candidate, { viewer, access }))
     if (items.length >= limit) break
   }
-  return items
+  return withFavorites(viewer, items)
 }
