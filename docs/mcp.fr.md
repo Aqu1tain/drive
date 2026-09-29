@@ -56,18 +56,27 @@ L'assistant agit au nom de la personne qui l'a autorisé, et chaque règle de l'
 
 | Outil | Propriétaire | Lecteur | Ce qu'il fait |
 |---|---|---|---|
-| `list_folder` | oui | oui | Liste un dossier. Sans dossier : Mon Drive pour le propriétaire, ce qui a été partagé avec lui pour un lecteur. |
-| `search` | oui | oui | La même recherche que dans l'application : mots, `type:`, `after:`, `before:`, `in:`, et pour le propriétaire `access:`, `shared:`, `tag:`. |
+| `list_folder` | oui | oui | Liste un dossier, page par page. Sans dossier : Mon Drive pour le propriétaire, ce qui a été partagé avec lui pour un lecteur. |
+| `search` | oui | oui | La même recherche que dans l'application : mots, `type:`, `after:`, `before:`, `in:`, et pour le propriétaire `access:`, `shared:`, `tag:`. Par pages aussi. |
 | `get_item` | oui | oui | Détails et emplacement d'un élément ; pour le propriétaire, avec qui il est partagé et combien de fois il a été consulté. |
 | `read_file` | oui | oui | Texte des fichiers texte, texte extrait des fichiers PDF, Word, Excel, PowerPoint et HTML, et images. |
 | `create_folder` | oui | non | Crée un dossier. |
 | `upload_text_file` | oui | non | Enregistre du texte dans un fichier, jusqu'à 1 Mo. |
+| `update_text_file` | oui | non | Remplace le contenu d'un fichier texte existant ; dans un dossier avec historique des versions, l'ancien contenu est gardé. |
+| `upload_file` | oui | non | Enregistre n'importe quel fichier à partir d'un contenu en base64, jusqu'à 10 Mo. |
+| `copy` | oui | non | Copie des fichiers, à côté des originaux ou dans un dossier. |
 | `rename` | oui | non | Renomme un fichier ou un dossier. |
 | `move` | oui | non | Déplace des fichiers et des dossiers. |
-| `move_to_trash` | oui | non | Met des éléments à la corbeille, d'où le propriétaire peut les restaurer. |
+| `move_to_trash` | oui | non | Met des éléments à la corbeille. |
+| `list_trash` | oui | non | Liste le contenu de la corbeille. |
+| `restore_from_trash` | oui | non | Remet des éléments de la corbeille à leur place. |
+| `list_versions` | oui | non | Les versions précédentes d'un fichier, là où l'historique est activé. |
+| `restore_version` | oui | non | Rend une version précédente de nouveau actuelle, en gardant l'actuelle comme version. |
 | `list_activity` | oui | non | Le journal d'activité, pour tout l'espace ou pour un élément. |
 
 L'assistant d'un lecteur ne voit même pas les outils du propriétaire, et en appeler un échoue.
+
+Chaque élément a un `type`, `file` ou `folder`, et un `kind` qui dit ce qu'il est (`pdf`, `image`, `spreadsheet`…). Les longues listes arrivent par pages : une réponse avec `nextCursor` en a d'autres, à redemander en le passant comme `cursor`.
 
 La lecture suit la même règle que l'aperçu dans l'application : pouvoir ouvrir un élément suffit pour lire son texte. Une image, en revanche, est remise telle quelle, c'est donc une copie : il faut aussi le droit de télécharger. Quand le propriétaire a désactivé le téléchargement pour un partage, l'assistant obtient le texte des documents mais pas les images. Les textes longs arrivent en parties de 200 000 caractères au plus. Les documents de plus de 25 Mo et les images de plus de 5 Mo ne sont pas lus.
 

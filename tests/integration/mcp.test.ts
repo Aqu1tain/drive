@@ -176,7 +176,10 @@ describe('owner connection', () => {
   })
 
   it('offers every tool, with honest annotations', async () => {
-    expect(await toolNames(token)).toEqual(['create_folder', 'get_item', 'list_activity', 'list_folder', 'move', 'move_to_trash', 'read_file', 'rename', 'search', 'upload_text_file'])
+    expect(await toolNames(token)).toEqual([
+      'copy', 'create_folder', 'get_item', 'list_activity', 'list_folder', 'list_trash', 'list_versions', 'move', 'move_to_trash',
+      'read_file', 'rename', 'restore_from_trash', 'restore_version', 'search', 'update_text_file', 'upload_file', 'upload_text_file',
+    ])
     const tools = (await rpc(token, 'tools/list')).body.result.tools as Array<{ name: string, annotations: Record<string, boolean> }>
     expect(tools.find(tool => tool.name === 'read_file')!.annotations).toMatchObject({ readOnlyHint: true })
     expect(tools.find(tool => tool.name === 'move_to_trash')!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true })
@@ -218,6 +221,40 @@ describe('owner connection', () => {
     expect(parsed(await call(token, 'move', { ids: [file.body.id], folderId: created.id })).moved).toEqual([file.body.id])
     expect(parsed(await call(token, 'move_to_trash', { ids: [saved.id] })).trashed).toEqual([{ id: saved.id, name: 'resume.md' }])
     expect((await owner.get('/api/trash')).body.items.some((item: { id: string }) => item.id === saved.id)).toBe(true)
+  })
+
+  it('undoes its own mistakes: trash, versions, copies, updates and binary files', async () => {
+    const folder = parsed(await call(token, 'create_folder', { name: unique('undo'), folderId: root }))
+    await owner.patch(`/api/resources/${folder.id}`, { versioning: true })
+    const note = parsed(await call(token, 'upload_text_file', { name: 'plan.md', content: 'Plan A', folderId: folder.id }))
+
+    const updated = parsed(await call(token, 'update_text_file', { id: note.id, content: 'Plan B' }))
+    expect(updated).toMatchObject({ id: note.id, name: 'plan.md', previousContent: 'kept in the version history' })
+    const versions = parsed(await call(token, 'list_versions', { id: note.id }))
+    expect(versions.versions).toHaveLength(1)
+    parsed(await call(token, 'restore_version', { id: note.id, versionId: versions.versions[0].id }))
+    expect((await owner.get(`/api/resources/${note.id}/content`)).body).toBe('Plan A')
+
+    const [copy] = parsed(await call(token, 'copy', { ids: [note.id] })).copies
+    expect(copy).toMatchObject({ name: 'plan (1).md', type: 'file', kind: 'text' })
+    expect((await owner.get(`/api/resources/${copy.id}/content`)).body).toBe('Plan A')
+    expect((await call(token, 'copy', { ids: [folder.id] })).result!.isError).toBe(true)
+
+    const png = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#00aa55' } }).png().toBuffer()
+    const image = parsed(await call(token, 'upload_file', { name: 'dot.png', contentBase64: png.toString('base64'), folderId: folder.id }))
+    expect(image).toMatchObject({ kind: 'image', mimeType: 'image/png', size: png.length })
+
+    await call(token, 'move_to_trash', { ids: [copy.id] })
+    const trash = parsed(await call(token, 'list_trash', { limit: 200 }))
+    expect(trash.items.some((item: { id: string }) => item.id === copy.id)).toBe(true)
+    expect(parsed(await call(token, 'restore_from_trash', { ids: [copy.id] })).restored).toMatchObject([{ id: copy.id, name: 'plan (1).md' }])
+
+    const listed = parsed(await call(token, 'list_folder', { folderId: folder.id, limit: 2 }))
+    expect(listed).toMatchObject({ total: 3, nextCursor: '2' })
+    expect(listed.items).toHaveLength(2)
+    const rest = parsed(await call(token, 'list_folder', { folderId: folder.id, limit: 2, cursor: listed.nextCursor }))
+    expect(rest.items).toHaveLength(1)
+    expect(rest.nextCursor).toBeUndefined()
   })
 
   it('returns images as images', async () => {
@@ -272,6 +309,8 @@ describe('reader connection', () => {
     const clientId = await register('Reader AI')
     const { access_token: token } = await connect(reader.client, clientId)
     expect(await toolNames(token)).toEqual(['get_item', 'list_folder', 'read_file', 'search'])
+    const refused = await call(token, 'restore_from_trash', { ids: [root] })
+    expect(refused.error ?? refused.result?.isError).toBeTruthy()
 
     const top = parsed(await call(token, 'list_folder'))
     expect(top.items.map((item: { id: string }) => item.id)).toContain(folder)

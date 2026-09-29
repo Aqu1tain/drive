@@ -56,18 +56,27 @@ The assistant acts as the person who allowed it, and every rule of the app appli
 
 | Tool | Owner | Reader | What it does |
 |---|---|---|---|
-| `list_folder` | yes | yes | Lists a folder. Without a folder: My Drive for the owner, what was shared with them for a reader. |
-| `search` | yes | yes | Same search as the app: words, `type:`, `after:`, `before:`, `in:`, and for the owner `access:`, `shared:`, `tag:`. |
+| `list_folder` | yes | yes | Lists a folder, a page at a time. Without a folder: My Drive for the owner, what was shared with them for a reader. |
+| `search` | yes | yes | Same search as the app: words, `type:`, `after:`, `before:`, `in:`, and for the owner `access:`, `shared:`, `tag:`. Paged too. |
 | `get_item` | yes | yes | Details and location of an item; for the owner, who it is shared with and how often it was viewed. |
 | `read_file` | yes | yes | Text of text files, text extracted from PDF, Word, Excel, PowerPoint and HTML files, and images. |
 | `create_folder` | yes | no | Creates a folder. |
 | `upload_text_file` | yes | no | Saves text as a file, up to 1 MB. |
+| `update_text_file` | yes | no | Replaces the content of an existing text file; in a folder with version history the old content is kept. |
+| `upload_file` | yes | no | Saves any file from base64 content, up to 10 MB. |
+| `copy` | yes | no | Copies files, next to the originals or into a folder. |
 | `rename` | yes | no | Renames a file or folder. |
 | `move` | yes | no | Moves files and folders. |
-| `move_to_trash` | yes | no | Moves items to the trash, from where the owner can restore them. |
+| `move_to_trash` | yes | no | Moves items to the trash. |
+| `list_trash` | yes | no | Lists what is in the trash. |
+| `restore_from_trash` | yes | no | Brings trashed items back where they were. |
+| `list_versions` | yes | no | Earlier versions of a file, where version history is on. |
+| `restore_version` | yes | no | Makes an earlier version current again, keeping the current one as a version. |
 | `list_activity` | yes | no | The activity journal, for the whole drive or one item. |
 
 A reader's assistant does not even see the owner's tools, and calling one fails.
+
+Every item has a `type`, `file` or `folder`, and a `kind` that says what it is (`pdf`, `image`, `spreadsheet`...). Long lists come in pages: a response with `nextCursor` has more, pass it back as `cursor`.
 
 Reading follows the same rule as the preview in the app: being able to open an item is enough to read its text. An image, though, is handed over as the file itself, so it also needs the right to download: when the owner turned downloading off for a share, the assistant gets the text of documents but not the images. Long texts come in parts of up to 200,000 characters. Documents over 25 MB and images over 5 MB are not read.
 
