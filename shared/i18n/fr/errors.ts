@@ -10,6 +10,7 @@ export default {
   accessNotFound: 'Accès introuvable',
   linkNotFound: 'Lien introuvable',
   tagNotFound: 'Étiquette introuvable',
+  appNotFound: 'Application introuvable',
   videoNotFound: 'Vidéo introuvable',
   noThumbnail: 'Pas de miniature',
   noContent: 'Aucun contenu',
