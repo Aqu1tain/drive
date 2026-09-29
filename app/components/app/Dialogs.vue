@@ -40,5 +40,5 @@ onBeforeUnmount(() => {
   <DialogsConflict v-if="dialogs.state.conflict" :request="dialogs.state.conflict" @close="dialogs.state.conflict = null" />
   <input ref="fileInput" type="file" multiple class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">
   <input ref="folderInput" type="file" webkitdirectory class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">
-  <input ref="pageInput" type="file" accept=".html,.htm,text/html" class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">
+  <input ref="pageInput" type="file" accept=".html,.htm,text/html,.zip,application/zip" class="hidden" aria-hidden="true" tabindex="-1" @change="onPick">
 </template>
