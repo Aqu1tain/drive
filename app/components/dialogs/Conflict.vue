@@ -6,7 +6,7 @@ const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
 
 const open = ref(true)
-const strategy = ref<'replace' | 'keep' | 'skip'>(props.request.kind === 'folder' ? 'replace' : 'keep')
+const strategy = ref<'replace' | 'keep' | 'skip'>(props.request.kind === 'folder' || props.request.versioned ? 'replace' : 'keep')
 const applyToAll = ref(false)
 let settled = false
 
@@ -18,7 +18,7 @@ const options = computed(() => props.request.kind === 'folder'
       { value: 'skip', label: t('dialogs.conflict.skip'), hint: t('dialogs.conflict.skipFolderHint') },
     ]
   : [
-      { value: 'replace', label: t('dialogs.conflict.replace'), hint: t('dialogs.conflict.replaceHint') },
+      { value: 'replace', label: t('dialogs.conflict.replace'), hint: t(props.request.versioned ? 'dialogs.conflict.replaceKeepsVersion' : 'dialogs.conflict.replaceHint') },
       { value: 'keep', label: t('dialogs.conflict.keepBoth'), hint: t('dialogs.conflict.keepFileHint', { name: keepName.value }) },
       { value: 'skip', label: t('dialogs.conflict.skip'), hint: t('dialogs.conflict.skipFileHint') },
     ])

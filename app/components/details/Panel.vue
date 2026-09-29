@@ -33,7 +33,25 @@ const { data: activity } = useQuery({
 
 const current = computed(() => details.value?.item ?? props.item)
 const stats = computed(() => activity.value?.stats ?? details.value?.stats ?? null)
-const tabs = [['details', t('common.details')], ['access', t('details.access')], ['activity', t('details.activity')]] as const
+const tabs = computed(() => [
+  ['details', t('common.details')],
+  ['access', t('details.access')],
+  ['activity', t('details.activity')],
+  ...(current.value?.type === 'file' ? [['versions', t('versions.tab')] as const] : []),
+] as const)
+watch(() => current.value?.type, type => type === 'folder' && panel.state.tab === 'versions' && (panel.state.tab = 'details'))
+
+async function setVersioning(value: boolean) {
+  await api(`/api/resources/${id.value}`, { method: 'PATCH', body: { versioning: value } })
+  queryClient.invalidateQueries({ queryKey: ['resource'] })
+  queryClient.invalidateQueries({ queryKey: ['versions'] })
+}
+const versioning = computed({ get: () => details.value?.versioning?.enabled ?? false, set: setVersioning })
+const versioningHint = computed(() => {
+  const state = details.value?.versioning
+  if (!state?.enabled) return t('versions.folderOff')
+  return state.source?.id === id.value ? t('versions.folderOwn') : t('versions.folderInherited', { folder: state.source?.name ?? '' })
+})
 
 async function toggleScripts(value: boolean) {
   await api(`/api/resources/${id.value}`, { method: 'PATCH', body: { allowScripts: value } })
@@ -136,6 +154,9 @@ function linkTerms(link: { allowDownload: boolean, expiresAt: string | null }) {
           <div v-if="current.kind === 'html'" class="mt-5 border-t border-line-weak pt-4">
             <UiSwitch v-model="allowScripts" :label="t('details.interactive')" :description="t('details.interactiveHint')" />
           </div>
+          <div v-if="current.type === 'folder' && details?.versioning" class="mt-5 border-t border-line-weak pt-4">
+            <UiSwitch v-model="versioning" :label="t('versions.folderSwitch')" :description="versioningHint" />
+          </div>
         </template>
       </TabsContent>
 
@@ -180,6 +201,10 @@ function linkTerms(link: { allowDownload: boolean, expiresAt: string | null }) {
           <ActivityList v-if="activity.events.length" :events="activity.events" :show-resource="current.type === 'folder'" dense />
           <p v-else class="py-6 text-center text-base text-ink-weak">{{ t('details.noViews') }}</p>
         </template>
+      </TabsContent>
+
+      <TabsContent v-if="current.type === 'file'" value="versions" class="min-h-0 flex-1 overflow-y-auto p-4 focus:outline-none">
+        <DetailsVersions :item="current" :path="details?.path ?? []" />
       </TabsContent>
     </TabsRoot>
   </div>

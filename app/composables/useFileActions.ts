@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 import {
-  ArchiveRestore, Download, ExternalLink, Eye, FolderInput, FolderOpen, History, Info, Link, Pencil, Share2, Star, StarOff, Tag, Trash2,
+  ArchiveRestore, Download, ExternalLink, Eye, FileClock, FileUp, FolderInput, FolderOpen, History, Info, Link, Pencil, Share2, Star, StarOff, Tag, Trash2,
 } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
@@ -256,9 +256,11 @@ export function useFileActions() {
       single && { id: 'rename', label: t('common.rename'), icon: Pencil, shortcut: 'F2', onSelect: () => dialogs.rename(single) },
       { id: 'move', label: t('actions.move'), icon: FolderInput, onSelect: () => dialogs.move(items) },
       downloadable && { id: 'download', label: t('common.download'), icon: Download, onSelect: () => download(items) },
+      single?.type === 'file' && { id: 'upload-version', label: t('versions.uploadNew'), icon: FileUp, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-version', { detail: single })) },
       { kind: 'separator' },
       single && { id: 'details', label: t('common.details'), icon: Info, onSelect: () => showDetails(single, 'details') },
       single && { id: 'activity', label: t('actions.activity'), icon: History, onSelect: () => showDetails(single, 'activity') },
+      single?.type === 'file' && { id: 'versions', label: t('versions.menu'), icon: FileClock, onSelect: () => showDetails(single, 'versions') },
       { kind: 'separator' },
       { id: 'trash', label: t('actions.trash'), icon: Trash2, shortcut: 'Delete', danger: true, onSelect: () => trash(items) },
     ])
