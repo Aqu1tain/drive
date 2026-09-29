@@ -94,6 +94,16 @@ Les fichiers de plus de 80 Mo ne sont pas traités. pdf.js tourne dans le proces
 - IP : préfixe /24 (IPv4) ou /48 (IPv6) haché avec HMAC, ou rien (`NUXT_ACTIVITY_IP_MODE=none`). Rétention configurable (`NUXT_ACTIVITY_RETENTION_DAYS`), purge quotidienne.
 - Logs techniques séparés (stdout JSON : requestId, userId, resourceId, status, latence) avec jetons masqués.
 
+## Historique des versions
+
+Activé par dossier et hérité par ses sous-dossiers : `resources.versioning` vaut vrai, faux ou null (suivre le parent), et un dossier qui correspond à ce qu'il hériterait enregistre null, pour que l'interrupteur ne laisse jamais de choix périmés. Rien n'est activé par défaut. Désactiver garde les versions existantes.
+
+- Une version naît quand un fichier est remplacé (import avec « Remplacer », ou « Importer une nouvelle version ») dans un dossier dont l'historique est activé, sauf si le nouveau contenu est identique. L'ancien blob est gardé dans `file_versions` au lieu d'être supprimé ; miniatures et aperçus ne sont faits que pour la version actuelle. Le fichier garde son identifiant, son nom et ses partages.
+- Restaurer ne perd jamais rien : le contenu actuel rejoint l'historique avant que la version choisie prenne sa place, quel que soit le réglage du dossier.
+- Le nettoyage suit l'idée de SharePoint et de Nextcloud : la valeur d'une vieille version tient à l'état qu'elle capture. Toutes les versions du dernier jour, puis la dernière de chaque jour pendant un mois, puis une par semaine, 100 par fichier au plus. Une version nommée n'est jamais supprimée automatiquement (la règle de Nextcloud). Une tâche quotidienne et chaque nouvelle version appliquent la règle.
+- Les versions comptent dans l'espace utilisé, et supprimer un fichier définitivement les supprime. Elles appartiennent au propriétaire : lecteurs, liens et assistants ne voient que le contenu actuel.
+- Recherche derrière l'interface : Google Drive (gérer les versions, conserver indéfiniment), Dropbox (aperçu puis retour en arrière), Proton Drive (restaurer garde les versions plus récentes), Nextcloud (versions nommées), SharePoint (allègement automatique), Figma (jalons nommés).
+
 ## Langues
 
 L'interface, les messages du serveur, les emails et les pages partagées existent en anglais et en français. L'anglais est la langue par défaut ; une instance peut choisir le français avec `DEFAULT_LOCALE` (écrit par `install.sh --lang fr`), et chaque navigateur peut choisir sa langue dans les paramètres, gardée dans un cookie `drive_locale`.
