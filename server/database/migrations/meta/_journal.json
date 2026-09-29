@@ -43,6 +43,13 @@
       "when": 1790674701031,
       "tag": "0005_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790680532498,
+      "tag": "0006_zip_sites",
+      "breakpoints": true
     }
   ]
 }

@@ -19,6 +19,8 @@ const BY_EXTENSION: Record<string, string> = {
   zip: 'application/zip', gz: 'application/gzip', 'tar.gz': 'application/gzip', tar: 'application/x-tar', '7z': 'application/x-7z-compressed', rar: 'application/vnd.rar',
 }
 
+export const mimeOfExtension = (extension: string) => BY_EXTENSION[extension.toLowerCase()]
+
 /** Containers that file-type reports generically while the extension is more precise (docx, xlsx, epub... are zips). */
 const GENERIC_SNIFFS = new Set(['application/zip', 'application/x-cfb', 'application/xml', 'application/octet-stream'])
 
