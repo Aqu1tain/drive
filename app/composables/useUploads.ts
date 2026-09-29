@@ -55,6 +55,15 @@ function markDone(task: UploadTask, item: ResourceItem) {
   task.resourceId = item.id
   task.renamed = item.name !== task.name
   queryClient?.invalidateQueries({ queryKey: ['folder', task.parentId ?? 'root'] })
+  if (item.kind === 'video' && !item.thumbnailUrl) addVideoThumbnail(task, item.id)
+}
+
+/** The local file is at hand: its frame is captured without downloading anything. */
+async function addVideoThumbnail(task: UploadTask, resourceId: string) {
+  const src = URL.createObjectURL(task.file)
+  const added = await uploadVideoThumbnail(resourceId, src).catch(() => false)
+  URL.revokeObjectURL(src)
+  if (added) queryClient?.invalidateQueries({ queryKey: ['folder', task.parentId ?? 'root'] })
 }
 
 function xhrError(xhr: XMLHttpRequest) {
