@@ -12,7 +12,8 @@ export default defineEventHandler(async (event) => {
   if (!rule || isExpired(rule.expiresAt, new Date())) throw createError({ statusCode: 404, statusMessage: 'Not Found' })
 
   const viewer: Viewer = { kind: 'share', apiBase: '', ctx: { isOwner: false, linkRuleId: rule.id }, linkRule: rule }
-  const { resource, stream } = await serveHtmlPage(event, viewer.ctx, rule.resourceId)
-  await logAccess(event, viewer, resource, 'view')
-  return streamBody(event, await stream())
+  const served = await serveHtmlPage(event, viewer.ctx, rule.resourceId)
+  if ('redirect' in served) return sendRedirect(event, served.redirect)
+  if (served.document) await logAccess(event, viewer, served.resource, 'view')
+  return streamBody(event, await served.stream())
 })
