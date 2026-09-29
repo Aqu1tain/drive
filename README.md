@@ -8,7 +8,9 @@
 
 Auto-hébergé, une commande pour l'installer sur n'importe quel serveur avec Docker.
 
-<img src="docs/screenshots/home.webp" alt="Accueil de Drive" width="100%">
+
+https://github.com/user-attachments/assets/0758bd03-45e3-4256-baf3-085744d5e24b
+
 
 </div>
 
