@@ -7,7 +7,7 @@ import type { ResourceItem } from '#shared/types/api'
 
 export type BrowserMode = 'owner' | 'reader' | 'share'
 
-const named = (items: ResourceItem[]) => ({ count: items.length, name: items[0]?.name ?? '' })
+const named = (items: ResourceItem[], fallback = '') => ({ count: items.length, name: items[0]?.name ?? fallback })
 
 /** Everything a person can do to files, in one place: menus, palette and shortcuts all read from here. */
 export function useFileActions() {
@@ -87,7 +87,7 @@ export function useFileActions() {
     refresh()
     if (quiet) return
     const movedToRoot = result.restored.filter(r => r.movedToRoot).length
-    toast.success(t(movedToRoot ? 'actions.toast.restoredToRoot' : 'actions.toast.restored', named(items)))
+    toast.success(t(movedToRoot ? 'actions.toast.restoredToRoot' : 'actions.toast.restored', named(items, result.restored[0]?.name)))
   }
 
   async function trash(items: ResourceItem[]) {
