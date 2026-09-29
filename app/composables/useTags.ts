@@ -9,7 +9,7 @@ export function useTags(enabled: MaybeRef<boolean> = true) {
     enabled,
     staleTime: 60_000,
   })
-  const tags = computed(() => (query.data.value ?? []).toSorted((a, b) => a.name.localeCompare(b.name, 'fr')))
+  const tags = computed(() => (query.data.value ?? []).toSorted((a, b) => a.name.localeCompare(b.name, currentLocale())))
   return { tags }
 }
 

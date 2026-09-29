@@ -32,6 +32,7 @@ const preferences = usePreferences()
 const breakpoints = useBreakpoints()
 const actions = useFileActions()
 const dialogs = useDialogs()
+const { t } = useI18n()
 
 const isOwner = computed(() => props.mode === 'owner')
 const isGrid = computed(() => preferences.view === 'grid')
@@ -49,7 +50,7 @@ const isEmpty = computed(() => !props.loading && props.items.length === 0)
 
 type SortKey = typeof preferences.sortBy
 const COMPARE: Record<SortKey, (a: ResourceItem, b: ResourceItem) => number> = {
-  name: (a, b) => a.name.localeCompare(b.name, 'fr', { numeric: true, sensitivity: 'base' }),
+  name: (a, b) => a.name.localeCompare(b.name, currentLocale(), { numeric: true, sensitivity: 'base' }),
   updatedAt: (a, b) => a.updatedAt.localeCompare(b.updatedAt),
   size: (a, b) => a.size - b.size,
   lastExternalViewAt: (a, b) => (a.lastExternalViewAt ?? '').localeCompare(b.lastExternalViewAt ?? ''),
@@ -334,8 +335,8 @@ function onContextMenu(event: MouseEvent) {
   setSelection([])
   menuEntries.value = isOwner.value && props.folder && !props.trash
     ? [
-        { id: 'new-folder', label: 'Nouveau dossier', icon: FolderPlus, onSelect: () => dialogs.newFolder(props.folder!.id) },
-        { id: 'upload', label: 'Importer des fichiers', icon: Upload, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
+        { id: 'new-folder', label: t('files.newFolder'), icon: FolderPlus, onSelect: () => dialogs.newFolder(props.folder!.id) },
+        { id: 'upload', label: t('files.uploadFiles'), icon: Upload, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
       ]
     : []
 }
@@ -481,7 +482,7 @@ function onDragStart(event: DragEvent, item: ResourceItem, index: number) {
   event.dataTransfer.setData('application/x-drive-ids', JSON.stringify(draggingIds.value))
   event.dataTransfer.setData('text/plain', selectedItems.value.map(i => i.name).join('\n'))
   const ghost = document.createElement('div')
-  ghost.textContent = selectedItems.value.length === 1 ? item.name : plural(selectedItems.value.length, 'élément')
+  ghost.textContent = selectedItems.value.length === 1 ? item.name : t('common.items', { count: selectedItems.value.length })
   ghost.className = 'fixed -top-20 left-0 rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white shadow-lifted'
   document.body.appendChild(ghost)
   event.dataTransfer.setDragImage(ghost, -12, -12)
@@ -576,13 +577,13 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
             class="grid h-10 items-center gap-x-4 pr-2 pl-4 text-sm font-semibold text-ink-weak"
             :style="{ gridTemplateColumns: gridTemplate }"
           >
-            <FilesSortHeader label="Nom" :sort="ariaSort('name')" :disabled="!sortable" @click="toggleSort('name')" />
-            <div v-if="show.location" role="columnheader">Emplacement</div>
-            <div v-if="show.access" role="columnheader">Accès</div>
-            <FilesSortHeader :label="trash ? 'Supprimé' : 'Modifié'" :sort="ariaSort('updatedAt')" :disabled="!sortable || trash" @click="toggleSort('updatedAt')" />
-            <FilesSortHeader v-if="show.size" label="Taille" align="end" :sort="ariaSort('size')" :disabled="!sortable" @click="toggleSort('size')" />
-            <FilesSortHeader v-if="show.viewed" label="Consulté" :sort="ariaSort('lastExternalViewAt')" :disabled="!sortable" @click="toggleSort('lastExternalViewAt')" />
-            <div role="columnheader"><span class="sr-only">Actions</span></div>
+            <FilesSortHeader :label="t('common.name')" :sort="ariaSort('name')" :disabled="!sortable" @click="toggleSort('name')" />
+            <div v-if="show.location" role="columnheader">{{ t('files.columns.location') }}</div>
+            <div v-if="show.access" role="columnheader">{{ t('files.columns.access') }}</div>
+            <FilesSortHeader :label="t(trash ? 'files.columns.deleted' : 'files.columns.modified')" :sort="ariaSort('updatedAt')" :disabled="!sortable || trash" @click="toggleSort('updatedAt')" />
+            <FilesSortHeader v-if="show.size" :label="t('files.columns.size')" align="end" :sort="ariaSort('size')" :disabled="!sortable" @click="toggleSort('size')" />
+            <FilesSortHeader v-if="show.viewed" :label="t('files.columns.viewed')" :sort="ariaSort('lastExternalViewAt')" :disabled="!sortable" @click="toggleSort('lastExternalViewAt')" />
+            <div role="columnheader"><span class="sr-only">{{ t('files.columns.actions') }}</span></div>
           </div>
         </div>
 
@@ -628,7 +629,7 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
                 <div class="@container min-w-0 flex-1">
                   <div class="flex min-w-0 items-center gap-1.5">
                     <span class="truncate text-ink" :title="sorted[row.index]!.name">{{ sorted[row.index]!.name }}</span>
-                    <Star v-if="sorted[row.index]!.starred" class="size-3.5 shrink-0 fill-current text-[#f0a500]" aria-label="Favori" />
+                    <Star v-if="sorted[row.index]!.starred" class="size-3.5 shrink-0 fill-current text-[#f0a500]" :aria-label="t('files.favorite')" />
                     <TagsPills v-if="isOwner" :ids="sorted[row.index]!.tagIds" />
                   </div>
                   <div v-if="!room.wide" class="truncate text-sm text-ink-weak">
@@ -656,7 +657,7 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
                   <button
                     type="button"
                     tabindex="-1"
-                    :aria-label="`Actions pour ${sorted[row.index]!.name}`"
+                    :aria-label="t('files.actionsFor', { name: sorted[row.index]!.name })"
                     class="inline-flex size-8 items-center justify-center rounded-md text-ink-weak transition-opacity hover:bg-hover hover:text-ink data-[state=open]:bg-hover data-[state=open]:opacity-100"
                     :class="breakpoints.coarse || selectedSet.has(sorted[row.index]!.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
                   >

@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const meter = new Transform({
     transform(chunk: Buffer, _encoding, callback) {
       received += chunk.length
-      if (received > declared) return callback(createError({ statusCode: 400, statusMessage: 'Taille reçue incohérente' }))
+      if (received > declared) return callback(createError({ statusCode: 400, statusMessage: tr('errors.sizeMismatch') }))
       hash.update(chunk)
       if (headBytes < SNIFF_BYTES) {
         head.push(chunk)
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
   const storageKey = newBlobKey()
   try {
     await storage.put(storageKey, meter)
-    if (received !== declared) throw createError({ statusCode: 400, statusMessage: 'Import incomplet' })
+    if (received !== declared) throw createError({ statusCode: 400, statusMessage: tr('errors.uploadIncomplete') })
   }
   catch (error) {
     await storage.delete(storageKey).catch(() => {})

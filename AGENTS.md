@@ -1,60 +1,62 @@
-# Guide pour les agents IA
+# Guide for AI agents
 
-Ce fichier aide un assistant (Claude Code, Codex, Cursor…) à installer, exploiter ou faire évoluer Drive.
+This file helps an assistant (Claude Code, Codex, Cursor…) install, run or evolve Drive.
 
-## Installer Drive sur un serveur
+## Installing Drive on a server
 
-Suivez [docs/install.md](docs/install.md), section « Méthode pas à pas ». Règles :
+Follow [docs/install.md](docs/install.md), section "Step by step". Rules:
 
-- Exécutez les commandes une par une et lancez la vérification de chaque étape avant de passer à la suivante.
-- Utilisez le mode sans interaction : `./install.sh --domain … --content-domain … --yes` ou `./install.sh --ip --yes`.
-- Ne créez pas le compte propriétaire à la place de la personne : donnez-lui l'adresse `…/setup?token=…` affichée par le script.
-- Ne publiez jamais le contenu de `.env` (secrets) et ne le committez pas.
-- En cas d'échec, lisez `./install.sh logs` et le tableau « Dépannage » de docs/install.md avant de modifier quoi que ce soit.
+- Run the commands one at a time, and run the check of each step before moving on to the next.
+- Use the non-interactive mode: `./install.sh --domain … --content-domain … --yes` or `./install.sh --ip --yes`.
+- Add `--lang fr` when the person wants the installer and the interface in French.
+- Do not create the owner account on the person's behalf: give them the `…/setup?token=…` address printed by the script.
+- Never publish the contents of `.env` (secrets) and never commit it.
+- If something fails, read `./install.sh logs` and the "Troubleshooting" table in docs/install.md before changing anything.
 
-## Le produit en une phrase
+## The product in one sentence
 
-Un seul propriétaire dépose, range et partage ; tous les autres sont lecteurs et ne modifient jamais rien de partagé (leurs favoris et leur profil leur appartiennent). Toute fonctionnalité qui ne sert pas ce principe doit être remise en question.
+A single owner uploads, organizes and shares; everyone else is a reader and never changes anything shared (their favorites and their profile belong to them). Any feature that does not serve this principle should be questioned.
 
-## Carte du code
+## Code map
 
-| Chemin | Contenu |
+| Path | Contents |
 |---|---|
-| `server/domain/access.ts` | Résolveur de permissions pur (lecture, téléchargement, gestion). Testé dans `tests/unit/access.test.ts` |
-| `server/utils/` | Services auto-importés par Nitro : ressources, listing, partage, activité, contenu, recherche, uploads, traitement des fichiers |
-| `server/lib/documents/` | Lecture des PDF et documents Office : texte, miniature, page d'aperçu (fonctions pures) |
-| `server/api/` | Endpoints. Les écritures passent toutes par `requireOwner`, les lectures par `requireReadable` |
-| `server/routes/c`, `server/routes/p` | Origine isolée pour le HTML (aperçus et pages publiées) |
-| `server/lib/` | Stockage (local, S3), cryptographie, MIME, configuration Better Auth |
-| `server/database/` | Schéma Drizzle et migrations SQL |
-| `app/components/files/` | Navigateur de fichiers (liste et grille virtualisées, clavier, glisser-déposer) |
-| `app/composables/useFileActions.ts` | Toutes les actions sur fichiers : menus, palette et raccourcis en dérivent |
-| `app/assets/css/main.css` | Design tokens (clair et sombre). Aucune couleur brute dans les composants |
-| `docs/decisions.md`, `docs/ux.md` | Décisions d'architecture et conventions d'interface à respecter |
+| `server/domain/access.ts` | Pure permission resolver (read, download, manage). Tested in `tests/unit/access.test.ts` |
+| `server/utils/` | Services auto-imported by Nitro: resources, listing, sharing, activity, content, search, uploads, file processing |
+| `server/lib/documents/` | Reading PDF and Office documents: text, thumbnail, preview page (pure functions) |
+| `shared/i18n/` | English and French catalogs, one file per area, and `translate` (typed keys, plurals) |
+| `server/api/` | Endpoints. Every write goes through `requireOwner`, every read through `requireReadable` |
+| `server/routes/c`, `server/routes/p` | Isolated origin for HTML (previews and published pages) |
+| `server/lib/` | Storage (local, S3), cryptography, MIME, Better Auth configuration |
+| `server/database/` | Drizzle schema and SQL migrations |
+| `app/components/files/` | File browser (virtualized list and grid, keyboard, drag and drop) |
+| `app/composables/useFileActions.ts` | Every file action: menus, palette and shortcuts derive from it |
+| `app/assets/css/main.css` | Design tokens (light and dark). No raw colors in components |
+| `docs/decisions.md`, `docs/ux.md` | Architecture decisions and interface conventions to follow |
 
-## Invariants de sécurité
+## Security invariants
 
-- Toute autorisation passe par le résolveur. Pas de `if (user.role …)` dispersés dans les endpoints.
-- Aucun contenu actif (HTML, SVG) n'est rendu sur l'origine de l'application. Les pages HTML passent par l'origine `USERCONTENT_URL`, avec une CSP `sandbox`, sans cookies.
-- Les noms de fichiers ne servent jamais de chemins : les clés de stockage sont générées par le serveur.
-- Les jetons de partage sont stockés hachés (recherche) et scellés (affichage), jamais en clair.
-- Une révocation doit prendre effet à la requête suivante : ne mettez pas en cache une décision d'accès.
+- All authorization goes through the resolver. No `if (user.role …)` scattered across endpoints.
+- No active content (HTML, SVG) is rendered on the application's origin. HTML pages go through the `USERCONTENT_URL` origin, with a `sandbox` CSP and without cookies.
+- File names are never used as paths: storage keys are generated by the server.
+- Share tokens are stored hashed (for lookup) and sealed (for display), never in clear text.
+- A revocation must take effect on the next request: never cache an access decision.
 
-## Développer
+## Developing
 
 ```bash
 pnpm install
-cp .env.example .env                        # renseigner NUXT_AUTH_SECRET
+cp .env.example .env                        # fill in NUXT_AUTH_SECRET
 docker compose -f compose.dev.yaml up -d
 pnpm dev
 ```
 
-Avant de proposer une modification :
+Before proposing a change:
 
 ```bash
 pnpm typecheck && pnpm test:unit
-pnpm test:integration   # serveur de dev lancé
-pnpm test:e2e           # parcours navigateur et audit axe
+pnpm test:integration   # dev server running
+pnpm test:e2e           # browser journeys and axe audit
 ```
 
-Conventions : TypeScript strict, code sans commentaires superflus, retours anticipés, fonctions courtes. Commits conventionnels et atomiques (`feat(share): …`, `fix(upload): …`). Textes de l'interface en français, sans tiret cadratin.
+Conventions: strict TypeScript, no needless comments, early returns, short functions. Conventional, atomic commits (`feat(share): …`, `fix(upload): …`). Every interface text goes through the catalogs in `shared/i18n` (`t()` in components, `say()` in plain modules, `tr()` on the server): add the English key and its French twin, the type check fails if one is missing. No em dashes, in any language. The documentation is in English, with a French version in each `*.fr.md` file: update both when you change one.

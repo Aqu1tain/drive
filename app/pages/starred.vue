@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/vue-query'
 import { Star } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
-useHead({ title: 'Favoris' })
+const { t } = useI18n()
+useHead({ title: t('views.starred.title') })
 const { data: me } = useMe()
 const mode = computed(() => me.value?.user?.role === 'owner' ? 'owner' as const : 'reader' as const)
 const { data, isPending } = useQuery({
@@ -17,13 +18,13 @@ const { data, isPending } = useQuery({
     :items="data?.items ?? []"
     :loading="isPending"
     :mode="mode"
-    label="Favoris"
-    title="Favoris"
+    :label="t('views.starred.title')"
+    :title="t('views.starred.title')"
     show-location
     :folder-to="id => mode === 'owner' ? `/drive/folder/${id}` : `/shared-with-me/folder/${id}`"
   >
     <template #empty>
-      <UiEmptyState :icon="Star" title="Aucun favori" description="Ajoutez une étoile à un fichier ou un dossier (touche S) pour le retrouver ici en un clic." />
+      <UiEmptyState :icon="Star" :title="t('views.starred.empty')" :description="t('views.starred.emptyHint')" />
     </template>
   </FilesDriveView>
 </template>

@@ -5,11 +5,12 @@ const props = defineProps<{ owner: boolean }>()
 const context = useSelectionContext()
 const uploads = useUploads()
 const route = useRoute()
+const { t } = useI18n()
 
-const ROOT = { id: null, name: 'Mon Drive' }
+const ROOT = { id: null, name: t('common.myDrive') }
 const depth = ref(0)
 const accepts = computed(() => props.owner && route.path !== '/trash')
-/** Folder views show their own drop zone and may aim at a subfolder; everywhere else, files land in Mon Drive. */
+/** Folder views show their own drop zone and may aim at a subfolder; everywhere else, files land in My Drive. */
 const visible = computed(() => depth.value > 0 && accepts.value && !context.state.folder)
 
 const hasFiles = (event: DragEvent) => !!event.dataTransfer?.types.includes('Files')
@@ -62,7 +63,11 @@ onBeforeUnmount(() => {
     <div v-if="visible" class="pointer-events-none fixed inset-3 z-(--z-dropzone) flex items-end justify-center rounded-xl border-2 border-dashed border-accent bg-accent-softer/60 pb-10">
       <div class="flex items-center gap-3 rounded-lg bg-accent px-5 py-3 text-white shadow-lifted">
         <CloudUpload class="size-5" aria-hidden="true" />
-        <span class="text-base">Déposer pour importer dans <strong class="font-semibold">Mon Drive</strong></span>
+        <span class="text-base">
+          <UiTranslate message="nav.dropToUpload">
+            <template #folder><strong class="font-semibold">{{ ROOT.name }}</strong></template>
+          </UiTranslate>
+        </span>
       </div>
     </div>
   </Transition>

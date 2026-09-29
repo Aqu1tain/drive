@@ -4,6 +4,7 @@ import type { Person } from '#shared/types/api'
 
 const props = defineProps<{ person: Person }>()
 const emit = defineEmits<{ close: [] }>()
+const { t } = useI18n()
 const open = ref(true)
 watch(open, value => !value && emit('close'))
 const password = ref('')
@@ -15,7 +16,7 @@ async function submit() {
   error.value = null
   try {
     await api(`/api/people/${props.person.id}`, { method: 'PATCH', body: { password: password.value } })
-    toast('Mot de passe modifié. Ses sessions ont été fermées.')
+    toast(t('people.passwordDialog.changed'))
     open.value = false
   }
   catch (e) {
@@ -28,13 +29,13 @@ async function submit() {
 </script>
 
 <template>
-  <UiDialog v-model:open="open" :title="`Mot de passe de ${person.name || person.email}`" size="sm">
+  <UiDialog v-model:open="open" :title="t('people.passwordDialog.title', { name: person.name || person.email })" size="sm">
     <form id="person-password" @submit.prevent="submit">
-      <UiInput v-model="password" label="Nouveau mot de passe" type="text" autocomplete="off" required autofocus hint="Au moins 10 caractères." :error="error" />
+      <UiInput v-model="password" :label="t('people.passwordDialog.password')" type="text" autocomplete="off" required autofocus :hint="t('people.passwordDialog.passwordHint')" :error="error" />
     </form>
     <template #footer>
-      <UiButton variant="ghost" @click="open = false">Annuler</UiButton>
-      <UiButton type="submit" form="person-password" variant="primary" :loading="busy">Enregistrer</UiButton>
+      <UiButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UiButton>
+      <UiButton type="submit" form="person-password" variant="primary" :loading="busy">{{ t('common.save') }}</UiButton>
     </template>
   </UiDialog>
 </template>

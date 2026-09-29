@@ -1,24 +1,26 @@
+import type { MessageKey } from '#shared/i18n'
+
 interface AuthError {
   code?: string
   status?: number
-  message?: string
 }
 
-const MESSAGES: Record<string, string> = {
-  INVALID_EMAIL_OR_PASSWORD: 'Adresse email ou mot de passe incorrect.',
-  INVALID_OTP: 'Ce code est incorrect ou a expiré.',
-  OTP_EXPIRED: 'Ce code a expiré. Demandez-en un nouveau.',
-  TOO_MANY_ATTEMPTS: 'Trop de tentatives. Demandez un nouveau code.',
-  INVALID_TWO_FACTOR_AUTHENTICATION: 'Code de vérification incorrect.',
-  INVALID_CODE: 'Code de vérification incorrect.',
-  PASSWORD_TOO_SHORT: 'Le mot de passe doit contenir au moins 10 caractères.',
-  INVALID_PASSWORD: 'Mot de passe incorrect.',
-  SESSION_EXPIRED: 'Pour des raisons de sécurité, reconnectez-vous avant cette action.',
+const MESSAGES: Record<string, MessageKey> = {
+  INVALID_EMAIL_OR_PASSWORD: 'auth.errors.invalidCredentials',
+  INVALID_OTP: 'auth.errors.invalidOtp',
+  OTP_EXPIRED: 'auth.errors.otpExpired',
+  TOO_MANY_ATTEMPTS: 'auth.errors.tooManyAttempts',
+  INVALID_TWO_FACTOR_AUTHENTICATION: 'auth.errors.invalidCode',
+  INVALID_CODE: 'auth.errors.invalidCode',
+  PASSWORD_TOO_SHORT: 'auth.errors.passwordTooShort',
+  INVALID_PASSWORD: 'auth.errors.invalidPassword',
+  SESSION_EXPIRED: 'auth.errors.sessionExpired',
+  ACCOUNT_DISABLED: 'auth.errors.accountDisabled',
 }
 
-export function authErrorMessage(error: AuthError | null | undefined, fallback = 'La connexion a échoué. Réessayez.') {
+export function authErrorMessage(error: AuthError | null | undefined, fallback = say('auth.errors.failed')) {
   if (!error) return fallback
-  if (error.status === 429) return 'Trop de tentatives. Patientez une minute avant de réessayer.'
-  if (error.status === 403 && /désactivé/i.test(error.message ?? '')) return 'Ce compte est désactivé. Contactez le propriétaire.'
-  return (error.code && MESSAGES[error.code]) || fallback
+  if (error.status === 429) return say('auth.errors.rateLimited')
+  const key = error.code && MESSAGES[error.code]
+  return key ? say(key) : fallback
 }

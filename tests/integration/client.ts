@@ -20,7 +20,8 @@ export class Client {
 
   async request<T = any>(method: string, path: string, options: { json?: unknown, body?: BodyInit, headers?: Record<string, string>, base?: string } = {}): Promise<Response<T>> {
     const headers: Record<string, string> = { origin: this.origin, ...options.headers }
-    if (this.cookies.size) headers.cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ')
+    const jar = [...this.cookies].map(([k, v]) => `${k}=${v}`)
+    if (jar.length) headers.cookie = [options.headers?.cookie, ...jar].filter(Boolean).join('; ')
     let body = options.body
     if (options.json !== undefined) {
       headers['content-type'] = 'application/json'

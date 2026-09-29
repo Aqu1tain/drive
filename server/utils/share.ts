@@ -25,7 +25,7 @@ const gone = (message: string) => createError({ statusCode: 410, statusMessage: 
 /** Resolves a public link or a personal invitation link into a viewer scoped to what it grants. */
 export async function requireShareViewer(event: H3Event): Promise<Viewer> {
   const token = getRouterParam(event, 'token') ?? ''
-  if (!/^[\w-]{16,64}$/.test(token)) throw createError({ statusCode: 404, statusMessage: 'Lien introuvable' })
+  if (!/^[\w-]{16,64}$/.test(token)) throw createError({ statusCode: 404, statusMessage: tr('errors.linkNotFound') })
   const tokenHash = hashToken(token)
   const db = useDB()
   const { accessRules, invitations } = tables
@@ -34,13 +34,13 @@ export async function requireShareViewer(event: H3Event): Promise<Viewer> {
 
   const [rule] = await db.select().from(accessRules).where(and(eq(accessRules.tokenHash, tokenHash), eq(accessRules.kind, 'link'))).limit(1)
   if (rule) {
-    if (isExpired(rule.expiresAt, now)) throw gone('Ce lien a expiré')
+    if (isExpired(rule.expiresAt, now)) throw gone(tr('errors.linkExpired'))
     return { ...base, ctx: { isOwner: false, linkRuleId: rule.id }, linkRule: rule, visitorId: visitorIdOf(event) }
   }
 
   const [invitation] = await db.select().from(invitations).where(eq(invitations.tokenHash, tokenHash)).limit(1)
-  if (!invitation || invitation.mode !== 'link') throw createError({ statusCode: 404, statusMessage: 'Ce lien n’existe pas ou a été désactivé' })
-  if (!isInvitationUsable(invitation, now)) throw gone(invitation.status === 'revoked' ? 'Ce lien a été révoqué' : 'Ce lien a expiré')
+  if (!invitation || invitation.mode !== 'link') throw createError({ statusCode: 404, statusMessage: tr('errors.linkUnavailable') })
+  if (!isInvitationUsable(invitation, now)) throw gone(invitation.status === 'revoked' ? tr('errors.linkRevoked') : tr('errors.linkExpired'))
 
   if (!invitation.lastUsedAt || now.getTime() - invitation.lastUsedAt.getTime() > 60_000) {
     await db.update(invitations).set({ lastUsedAt: now }).where(eq(invitations.id, invitation.id))

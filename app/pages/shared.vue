@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/vue-query'
 import { Share2 } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
-useHead({ title: 'Partagés' })
+const { t } = useI18n()
+useHead({ title: t('views.shared.title') })
 const { data, isPending } = useQuery({
   queryKey: ['list', 'shared'],
   queryFn: () => api<{ items: ResourceItem[] }>('/api/shared'),
@@ -11,9 +12,9 @@ const { data, isPending } = useQuery({
 </script>
 
 <template>
-  <FilesDriveView :items="data?.items ?? []" :loading="isPending" mode="owner" label="Éléments partagés" title="Partagés" show-location :folder-to="id => `/drive/folder/${id}`">
+  <FilesDriveView :items="data?.items ?? []" :loading="isPending" mode="owner" :label="t('views.shared.label')" :title="t('views.shared.title')" show-location :folder-to="id => `/drive/folder/${id}`">
     <template #empty>
-      <UiEmptyState :icon="Share2" title="Aucun fichier partagé" description="Les fichiers que vous partagerez apparaîtront ici, avec les personnes qui y ont accès." />
+      <UiEmptyState :icon="Share2" :title="t('views.shared.empty')" :description="t('views.shared.emptyHint')" />
     </template>
   </FilesDriveView>
 </template>

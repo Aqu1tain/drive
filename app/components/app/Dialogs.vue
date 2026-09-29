@@ -5,8 +5,9 @@ const context = useSelectionContext()
 const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
 const folderInput = useTemplateRef<HTMLInputElement>('folderInput')
 const pageInput = useTemplateRef<HTMLInputElement>('pageInput')
+const { t } = useI18n()
 
-const target = () => context.state.folder ?? { id: null, name: 'Mon Drive' }
+const target = () => context.state.folder ?? { id: null, name: t('common.myDrive') }
 
 function onPick(event: Event) {
   const input = event.target as HTMLInputElement

@@ -4,6 +4,7 @@ import type { Crumb } from '#shared/types/api'
 
 const props = defineProps<{ crumbs: Crumb[], to: (crumb: Crumb) => string, droppable?: boolean, loading?: boolean }>()
 const emit = defineEmits<{ drop: [crumb: Crumb, event: DragEvent] }>()
+const { t } = useI18n()
 
 const MAX_VISIBLE = 4
 const collapsed = computed(() => props.crumbs.length > MAX_VISIBLE)
@@ -27,12 +28,12 @@ function onDrop(event: DragEvent, crumb: Crumb) {
 </script>
 
 <template>
-  <nav aria-label="Fil d’Ariane" class="min-w-0">
+  <nav :aria-label="t('files.breadcrumb')" class="min-w-0">
     <ol class="flex min-w-0 items-center gap-0.5">
       <template v-for="(crumb, index) in visible" :key="String(crumb.id)">
         <li v-if="index === 1 && hidden.length" class="flex items-center gap-0.5">
           <UiDropdownMenu :entries="hiddenEntries">
-            <button type="button" class="h-8 rounded-md px-2 text-lg text-ink-weak hover:bg-hover" aria-label="Dossiers masqués">…</button>
+            <button type="button" class="h-8 rounded-md px-2 text-lg text-ink-weak hover:bg-hover" :aria-label="t('files.hiddenFolders')">…</button>
           </UiDropdownMenu>
           <ChevronRight class="size-4 shrink-0 text-ink-hint" aria-hidden="true" />
         </li>

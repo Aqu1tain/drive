@@ -13,6 +13,7 @@ const actions = useFileActions()
 const selection = useSelectionContext()
 const preferences = usePreferences()
 const colorMode = useColorMode()
+const { t } = useI18n()
 
 const open = computed({ get: () => dialogs.state.palette, set: value => dialogs.palette(value) })
 const query = ref('')
@@ -45,7 +46,7 @@ const files = computed(() => query.value.trim() ? found.value?.items ?? [] : (re
 const selectionCommands = computed<Command[]>(() => {
   const items = selection.state.items
   if (!items.length) return []
-  const name = items.length === 1 ? items[0]!.name : plural(items.length, 'élément')
+  const name = items.length === 1 ? items[0]!.name : t('common.items', { count: items.length })
   return actions.menuFor(items, { mode: selection.state.mode, open: selection.state.open ?? undefined })
     .filter(isAction)
     .map(entry => ({ id: `sel-${entry.id}`, label: `${entry.label}`, hint: name, icon: entry.icon!, shortcut: entry.shortcut, run: entry.onSelect }))
@@ -54,34 +55,34 @@ const selectionCommands = computed<Command[]>(() => {
 const go = (path: string) => () => navigateTo(path)
 const navigation = computed<Command[]>(() => props.owner
   ? [
-      { id: 'nav-home', label: 'Accueil', icon: House, run: go('/home') },
-      { id: 'nav-drive', label: 'Mon Drive', icon: HardDrive, run: go('/drive') },
-      { id: 'nav-recent', label: 'Récents', icon: Clock, run: go('/recent') },
-      { id: 'nav-starred', label: 'Favoris', icon: Star, run: go('/starred') },
-      { id: 'nav-shared', label: 'Partagés', icon: Share2, run: go('/shared') },
-      { id: 'nav-activity', label: 'Activité', icon: Activity, run: go('/activity') },
-      { id: 'nav-people', label: 'Personnes', icon: Users, run: go('/people') },
-      { id: 'nav-trash', label: 'Corbeille', icon: Trash2, run: go('/trash') },
-      { id: 'nav-settings', label: 'Paramètres', icon: Settings, run: go('/settings') },
+      { id: 'nav-home', label: t('nav.home'), icon: House, run: go('/home') },
+      { id: 'nav-drive', label: t('common.myDrive'), icon: HardDrive, run: go('/drive') },
+      { id: 'nav-recent', label: t('nav.recent'), icon: Clock, run: go('/recent') },
+      { id: 'nav-starred', label: t('nav.starred'), icon: Star, run: go('/starred') },
+      { id: 'nav-shared', label: t('nav.shared'), icon: Share2, run: go('/shared') },
+      { id: 'nav-activity', label: t('nav.activity'), icon: Activity, run: go('/activity') },
+      { id: 'nav-people', label: t('nav.people'), icon: Users, run: go('/people') },
+      { id: 'nav-trash', label: t('nav.trash'), icon: Trash2, run: go('/trash') },
+      { id: 'nav-settings', label: t('nav.settings'), icon: Settings, run: go('/settings') },
     ]
   : [
-      { id: 'nav-shared-with-me', label: 'Partagé avec moi', icon: Inbox, run: go('/shared-with-me') },
-      { id: 'nav-recent', label: 'Récents', icon: Clock, run: go('/recent') },
-      { id: 'nav-starred', label: 'Favoris', icon: Star, run: go('/starred') },
-      { id: 'nav-settings', label: 'Paramètres', icon: Settings, run: go('/settings') },
+      { id: 'nav-shared-with-me', label: t('nav.sharedWithMe'), icon: Inbox, run: go('/shared-with-me') },
+      { id: 'nav-recent', label: t('nav.recent'), icon: Clock, run: go('/recent') },
+      { id: 'nav-starred', label: t('nav.starred'), icon: Star, run: go('/starred') },
+      { id: 'nav-settings', label: t('nav.settings'), icon: Settings, run: go('/settings') },
     ])
 
 const general = computed<Command[]>(() => [
   ...(props.owner
     ? [
-        { id: 'upload', label: 'Importer des fichiers', icon: Upload, run: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
-        { id: 'upload-folder', label: 'Importer un dossier', icon: FolderUp, run: () => document.dispatchEvent(new CustomEvent('drive:upload-folder')) },
-        { id: 'new-folder', label: 'Nouveau dossier', icon: FolderPlus, run: () => dialogs.newFolder(selection.state.folder?.id ?? null) },
+        { id: 'upload', label: t('nav.uploadFiles'), icon: Upload, run: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
+        { id: 'upload-folder', label: t('nav.uploadFolder'), icon: FolderUp, run: () => document.dispatchEvent(new CustomEvent('drive:upload-folder')) },
+        { id: 'new-folder', label: t('nav.newFolder'), icon: FolderPlus, run: () => dialogs.newFolder(selection.state.folder?.id ?? null) },
       ]
     : []),
-  { id: 'view', label: preferences.view === 'list' ? 'Afficher en grille' : 'Afficher en liste', icon: preferences.view === 'list' ? LayoutGrid : List, run: () => (preferences.view = preferences.view === 'list' ? 'grid' : 'list') },
-  { id: 'theme', label: colorMode.value === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre', icon: colorMode.value === 'dark' ? Sun : Moon, run: () => (colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark') },
-  { id: 'shortcuts', label: 'Raccourcis clavier', icon: Keyboard, shortcut: 'Mod+/', run: () => dialogs.shortcuts() },
+  { id: 'view', label: t(preferences.view === 'list' ? 'nav.palette.gridView' : 'nav.palette.listView'), icon: preferences.view === 'list' ? LayoutGrid : List, run: () => (preferences.view = preferences.view === 'list' ? 'grid' : 'list') },
+  { id: 'theme', label: t(colorMode.value === 'dark' ? 'nav.palette.lightTheme' : 'nav.palette.darkTheme'), icon: colorMode.value === 'dark' ? Sun : Moon, run: () => (colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark') },
+  { id: 'shortcuts', label: t('nav.shortcuts.title'), icon: Keyboard, shortcut: 'Mod+/', run: () => dialogs.shortcuts() },
 ])
 
 function matches(command: Command, text: string) {
@@ -94,9 +95,9 @@ function matches(command: Command, text: string) {
 const groups = computed(() => {
   const text = query.value
   return [
-    { id: 'selection', label: 'Sélection', commands: selectionCommands.value.filter(c => matches(c, text)) },
-    { id: 'actions', label: 'Actions', commands: general.value.filter(c => matches(c, text)) },
-    { id: 'navigation', label: 'Aller à', commands: navigation.value.filter(c => matches(c, text)) },
+    { id: 'selection', label: t('nav.palette.selection'), commands: selectionCommands.value.filter(c => matches(c, text)) },
+    { id: 'actions', label: t('nav.palette.actions'), commands: general.value.filter(c => matches(c, text)) },
+    { id: 'navigation', label: t('nav.palette.goTo'), commands: navigation.value.filter(c => matches(c, text)) },
   ].filter(group => group.commands.length)
 })
 
@@ -117,17 +118,17 @@ const searchAll = () => run(() => navigateTo({ path: '/search', query: { q: quer
     <DialogPortal>
       <DialogOverlay class="fixed inset-0 z-(--z-modal) bg-backdrop animate-fade-in" />
       <DialogContent :aria-describedby="undefined" class="fixed top-[12vh] left-1/2 z-(--z-modal) w-[min(640px,calc(100vw-1.5rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-line-weak bg-raised shadow-lifted animate-pop-in focus:outline-none">
-        <DialogTitle class="sr-only">Palette de commandes</DialogTitle>
+        <DialogTitle class="sr-only">{{ t('nav.palette.title') }}</DialogTitle>
         <ListboxRoot ref="listbox" highlight-on-hover class="flex flex-col">
           <div class="flex h-14 items-center gap-3 border-b border-line-weak px-4">
             <Search class="size-5 shrink-0 text-ink-weak" aria-hidden="true" />
-            <ListboxFilter v-model="query" auto-focus placeholder="Rechercher un fichier ou une action…" class="h-full min-w-0 flex-1 bg-transparent text-md text-ink placeholder:text-ink-hint focus:outline-none" />
+            <ListboxFilter v-model="query" auto-focus :placeholder="t('nav.palette.placeholder')" class="h-full min-w-0 flex-1 bg-transparent text-md text-ink placeholder:text-ink-hint focus:outline-none" />
             <UiSpinner v-if="isFetching" class="size-4 text-ink-hint" />
-            <UiKbd keys="Échap" />
+            <UiKbd keys="Esc" />
           </div>
           <ListboxContent class="max-h-[min(460px,60vh)] overflow-y-auto p-2">
             <ListboxGroup v-if="files.length">
-              <ListboxGroupLabel class="px-2.5 pt-1 pb-1.5 text-xs font-semibold text-ink-weak">{{ query.trim() ? 'Fichiers' : 'Récents' }}</ListboxGroupLabel>
+              <ListboxGroupLabel class="px-2.5 pt-1 pb-1.5 text-xs font-semibold text-ink-weak">{{ t(query.trim() ? 'nav.palette.files' : 'nav.palette.recent') }}</ListboxGroupLabel>
               <ListboxItem v-for="item in files" :key="item.id" :value="`file-${item.id}`" class="flex h-11 cursor-pointer items-center gap-3 rounded-md px-2.5 outline-none data-highlighted:bg-hover" @select="openFile(item)">
                 <FilesFileIcon :kind="item.kind" />
                 <span class="min-w-0 flex-1 truncate text-base text-ink">{{ item.name }}</span>
@@ -135,7 +136,7 @@ const searchAll = () => run(() => navigateTo({ path: '/search', query: { q: quer
               </ListboxItem>
               <ListboxItem v-if="query.trim()" value="search-all" class="flex h-10 cursor-pointer items-center gap-3 rounded-md px-2.5 text-accent-ink outline-none data-highlighted:bg-hover" @select="searchAll">
                 <Search class="size-4" aria-hidden="true" />
-                <span class="flex-1 truncate text-base">Tous les résultats pour « {{ query.trim() }} »</span>
+                <span class="flex-1 truncate text-base">{{ t('nav.search.allResults', { query: query.trim() }) }}</span>
                 <ArrowRight class="size-4" aria-hidden="true" />
               </ListboxItem>
             </ListboxGroup>
@@ -148,7 +149,7 @@ const searchAll = () => run(() => navigateTo({ path: '/search', query: { q: quer
               </ListboxItem>
             </ListboxGroup>
             <p v-if="!files.length && !groups.length && !isFetching" class="px-3 py-8 text-center text-base text-ink-weak">
-              Aucun résultat pour « {{ query }} ».
+              {{ t('nav.palette.noResults', { query }) }}
             </p>
           </ListboxContent>
         </ListboxRoot>

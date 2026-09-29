@@ -2,12 +2,25 @@ import type { H3Event } from 'h3'
 import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm'
 import { kindOf } from '#shared/utils/search'
 import type { ActivityEvent, ActivityStats } from '#shared/types/api'
+import type { MessageKey } from '#shared/i18n'
 import { hashIp } from '../lib/crypto'
 import type { AccessEvent, Resource } from '../database/schema'
 
 const { accessEvents, resources } = tables
 
 const VIEW_DEDUP_MS = 10 * 60 * 1000
+
+/** Fixed labels are stored as tokens and named in the reader's language; rows written before hold the French words. */
+export const ACTIVITY_LABELS = { publicLink: '@public-link', inheritRestored: '@inherit-restored', inheritRemoved: '@inherit-removed' } as const
+const LABEL_KEYS: Record<string, MessageKey> = {
+  '@public-link': 'labels.publicLink',
+  'Lien public': 'labels.publicLink',
+  '@inherit-restored': 'labels.inheritRestored',
+  'Accès hérités rétablis': 'labels.inheritRestored',
+  '@inherit-removed': 'labels.inheritRemoved',
+  'Accès hérités retirés': 'labels.inheritRemoved',
+}
+const readLabel = <T extends string | null>(label: T) => (label && LABEL_KEYS[label] ? tr(LABEL_KEYS[label]) : label) as T
 
 interface Actor {
   actorKind: 'owner' | 'user' | 'invitation' | 'link'
@@ -30,7 +43,7 @@ function actorOf(viewer: Viewer): Actor {
       visitorId: viewer.visitorId,
     }
   }
-  return { actorKind: 'link', actorLabel: 'Lien public', accessRuleId: viewer.linkRule?.id, visitorId: viewer.visitorId }
+  return { actorKind: 'link', actorLabel: ACTIVITY_LABELS.publicLink, accessRuleId: viewer.linkRule?.id, visitorId: viewer.visitorId }
 }
 
 function sameActor(actor: Actor, ipHash: string | null) {
@@ -121,7 +134,7 @@ export async function activityStats(resource: Resource): Promise<ActivityStats> 
     downloads: counts?.downloads ?? 0,
     visitors: counts?.visitors ?? 0,
     lastViewAt: last?.at.toISOString() ?? null,
-    lastViewBy: last?.by ?? null,
+    lastViewBy: last ? readLabel(last.by) : null,
   }
 }
 
@@ -135,8 +148,8 @@ export async function toActivityEvents(events: AccessEvent[]): Promise<ActivityE
       id: event.id,
       type: event.type,
       actorKind: event.actorKind,
-      actorLabel: event.actorLabel,
-      targetLabel: event.targetLabel,
+      actorLabel: readLabel(event.actorLabel),
+      targetLabel: readLabel(event.targetLabel),
       resource: resource ? { id: resource.id, name: resource.name, type: resource.type, kind: kindOf(resource.type, resource.mimeType) } : null,
       createdAt: event.createdAt.toISOString(),
     }

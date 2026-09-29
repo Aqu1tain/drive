@@ -9,7 +9,6 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      htmlAttrs: { lang: 'fr' },
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'referrer', content: 'strict-origin-when-cross-origin' },
@@ -70,11 +69,12 @@ export default defineNuxtConfig({
       appUrl: 'http://localhost:3000',
       usercontentUrl: 'http://127.0.0.1:3000',
       appName: 'Drive',
+      defaultLocale: 'en',
     },
   },
 
   nitro: {
-    experimental: { tasks: true },
+    experimental: { tasks: true, asyncContext: true },
     scheduledTasks: {
       '0 3 * * *': ['activity:prune'],
       '0 * * * *': ['uploads:sweep'],

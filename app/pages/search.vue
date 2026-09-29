@@ -5,13 +5,14 @@ import type { ResourceItem } from '#shared/types/api'
 import { parseSearchQuery, stringifySearchQuery, type SearchQuery } from '#shared/utils/search'
 
 const route = useRoute()
+const { t } = useI18n()
 const { data: me } = useMe()
 const mode = computed(() => me.value?.user?.role === 'owner' ? 'owner' as const : 'reader' as const)
 const q = computed(() => String(route.query.q ?? ''))
 const parsed = computed(() => parseSearchQuery(q.value))
 const { tags } = useTags(computed(() => mode.value === 'owner'))
 const tagName = computed(() => parsed.value.tag && (tags.value.find(tag => tag.name.toLowerCase() === parsed.value.tag)?.name ?? parsed.value.tag))
-useHead({ title: computed(() => q.value ? `« ${parsed.value.terms.join(' ') || tagName.value || q.value} »` : 'Recherche') })
+useHead({ title: computed(() => q.value ? t('search.quoted', { query: parsed.value.terms.join(' ') || tagName.value || q.value }) : t('search.title')) })
 
 const { data, isPending } = useQuery({
   queryKey: computed(() => ['search', 'page', q.value]),
@@ -24,8 +25,8 @@ function update(patch: Partial<SearchQuery>) {
 }
 
 const title = computed(() => {
-  if (parsed.value.terms.length) return `Résultats pour « ${parsed.value.terms.join(' ')} »`
-  return tagName.value ? `Étiquette « ${tagName.value} »` : 'Résultats'
+  if (parsed.value.terms.length) return t('search.resultsFor', { query: parsed.value.terms.join(' ') })
+  return tagName.value ? t('search.tagged', { name: tagName.value }) : t('search.results')
 })
 </script>
 
@@ -34,7 +35,7 @@ const title = computed(() => {
     :items="q ? data?.items ?? [] : []"
     :loading="!!q && isPending"
     :mode="mode"
-    label="Résultats de recherche"
+    :label="t('search.label')"
     :title="title"
     show-location
     :sortable="false"
@@ -46,10 +47,10 @@ const title = computed(() => {
     <template #empty>
       <UiEmptyState
         :icon="SearchX"
-        :title="q ? `Aucun résultat pour « ${parsed.terms.join(' ') || q} »` : 'Que cherchez-vous ?'"
-        :description="q ? 'Essayez de modifier votre recherche ou de retirer certains filtres.' : 'Tapez un nom de fichier, de dossier ou de personne dans la barre de recherche.'"
+        :title="q ? t('search.noResults', { query: parsed.terms.join(' ') || q }) : t('search.prompt')"
+        :description="t(q ? 'search.noResultsHint' : 'search.promptHint')"
       >
-        <UiButton v-if="q && (parsed.type || parsed.access || parsed.after || parsed.sharedWith)" @click="update({ type: undefined, access: undefined, after: undefined, before: undefined, sharedWith: undefined })">Retirer les filtres</UiButton>
+        <UiButton v-if="q && (parsed.type || parsed.access || parsed.after || parsed.sharedWith)" @click="update({ type: undefined, access: undefined, after: undefined, before: undefined, sharedWith: undefined })">{{ t('search.clearFilters') }}</UiButton>
       </UiEmptyState>
     </template>
   </FilesDriveView>

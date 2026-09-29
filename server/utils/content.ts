@@ -41,7 +41,7 @@ function parseRange(header: string | undefined, size: number) {
 
 export async function sendResourceContent(event: H3Event, resource: Resource, disposition: 'inline' | 'attachment') {
   if (resource.type !== 'file' || !resource.storageKey) {
-    throw createError({ statusCode: 404, statusMessage: 'Aucun contenu' })
+    throw createError({ statusCode: 404, statusMessage: tr('errors.noContent') })
   }
 
   const contentType = contentTypeFor(resource, disposition)

@@ -4,11 +4,12 @@ import { Check } from '@lucide/vue'
 import { TAG_COLORS } from '#shared/utils/tags'
 import type { TagInfo } from '#shared/types/api'
 
-const COLOR_NAMES = ['Violet', 'Bleu', 'Turquoise', 'Vert', 'Ocre', 'Orange', 'Rouge', 'Rose']
+const COLOR_NAMES = ['violet', 'blue', 'turquoise', 'green', 'ochre', 'orange', 'red', 'pink'] as const
 
 const props = defineProps<{ tag: TagInfo }>()
 const emit = defineEmits<{ close: [] }>()
 const queryClient = useQueryClient()
+const { t } = useI18n()
 
 const open = ref(true)
 watch(open, value => !value && emit('close'))
@@ -26,7 +27,7 @@ async function submit() {
     open.value = false
   }
   catch (e) {
-    error.value = errorMessage(e, 'Impossible de modifier l’étiquette')
+    error.value = errorMessage(e, t('tags.editFailed'))
   }
   finally {
     saving.value = false
@@ -35,15 +36,15 @@ async function submit() {
 </script>
 
 <template>
-  <UiDialog v-model:open="open" title="Modifier l’étiquette" size="sm">
+  <UiDialog v-model:open="open" :title="t('tags.edit')" size="sm">
     <form id="tag-form" class="flex flex-col gap-4" @submit.prevent="submit">
-      <UiInput v-model="name" label="Nom" :error="error" autocomplete="off" />
+      <UiInput v-model="name" :label="t('common.name')" :error="error" autocomplete="off" />
       <fieldset>
-        <legend class="mb-2 text-sm font-semibold text-ink">Couleur</legend>
+        <legend class="mb-2 text-sm font-semibold text-ink">{{ t('tags.color') }}</legend>
         <div class="flex flex-wrap gap-2">
           <label v-for="(value, index) in TAG_COLORS" :key="value" class="relative">
             <input v-model="color" type="radio" name="tag-color" :value="value" class="peer sr-only">
-            <span class="sr-only">{{ COLOR_NAMES[index] }}</span>
+            <span class="sr-only">{{ t(`tags.colors.${COLOR_NAMES[index]!}`) }}</span>
             <span
               class="flex size-8 items-center justify-center rounded-full text-white ring-offset-2 ring-offset-raised peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:ring-2 peer-focus-visible:ring-focus-ring"
               :style="{ background: value }"
@@ -56,8 +57,8 @@ async function submit() {
       </fieldset>
     </form>
     <template #footer>
-      <UiButton variant="ghost" @click="open = false">Annuler</UiButton>
-      <UiButton variant="primary" type="submit" form="tag-form" :loading="saving">Enregistrer</UiButton>
+      <UiButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UiButton>
+      <UiButton variant="primary" type="submit" form="tag-form" :loading="saving">{{ t('common.save') }}</UiButton>
     </template>
   </UiDialog>
 </template>

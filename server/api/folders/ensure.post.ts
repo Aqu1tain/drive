@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   for (const segment of body.path) {
     const fields = nameFields(segment)
     const existing = await findSibling(parent?.id ?? null, fields.nameLower)
-    if (existing?.type === 'file') throw createError({ statusCode: 409, statusMessage: `Un fichier « ${existing.name} » bloque la création du dossier` })
+    if (existing?.type === 'file') throw createError({ statusCode: 409, statusMessage: tr('errors.fileBlocksFolder', { name: existing.name }) })
     if (existing) {
       parent = existing
       continue

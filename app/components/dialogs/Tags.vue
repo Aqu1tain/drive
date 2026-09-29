@@ -11,6 +11,7 @@ const emit = defineEmits<{ close: [] }>()
 const actions = useFileActions()
 const queryClient = useQueryClient()
 const { tags } = useTags()
+const { t } = useI18n()
 
 const open = ref(true)
 watch(open, value => !value && emit('close'))
@@ -47,7 +48,7 @@ async function create() {
     newName.value = ''
   }
   catch (e) {
-    error.value = errorMessage(e, 'Impossible de créer l’étiquette')
+    error.value = errorMessage(e, t('tags.createFailed'))
   }
   finally {
     creating.value = false
@@ -74,19 +75,19 @@ async function apply() {
     open.value = false
   }
   catch (e) {
-    error.value = errorMessage(e, 'Impossible de mettre à jour les étiquettes')
+    error.value = errorMessage(e, t('tags.applyFailed'))
   }
   finally {
     saving.value = false
   }
 }
 
-const description = computed(() => props.items.length === 1 ? props.items[0]!.name : `${props.items.length} éléments sélectionnés`)
+const description = computed(() => props.items.length === 1 ? props.items[0]!.name : t('files.selectedItems', { count: props.items.length }))
 </script>
 
 <template>
-  <UiDialog v-model:open="open" title="Étiquettes" :description="description" size="sm">
-    <ul v-if="tags.length" class="-mx-2 mb-4 flex flex-col py-1" aria-label="Étiquettes existantes">
+  <UiDialog v-model:open="open" :title="t('tags.title')" :description="description" size="sm">
+    <ul v-if="tags.length" class="-mx-2 mb-4 flex flex-col py-1" :aria-label="t('tags.existing')">
       <li v-for="tag in tags" :key="tag.id">
         <button
           type="button"
@@ -108,14 +109,14 @@ const description = computed(() => props.items.length === 1 ? props.items[0]!.na
         </button>
       </li>
     </ul>
-    <p v-else class="mb-4 text-base text-ink-weak">Aucune étiquette pour l’instant. Créez la première ci-dessous.</p>
+    <p v-else class="mb-4 text-base text-ink-weak">{{ t('tags.none') }}</p>
     <form class="flex items-end gap-2" @submit.prevent="create">
-      <UiInput v-model="newName" label="Nouvelle étiquette" class="flex-1" :error="error" autocomplete="off" />
-      <UiButton type="submit" :icon="Plus" :loading="creating" :disabled="!newName.trim()">Créer</UiButton>
+      <UiInput v-model="newName" :label="t('tags.newTag')" class="flex-1" :error="error" autocomplete="off" />
+      <UiButton type="submit" :icon="Plus" :loading="creating" :disabled="!newName.trim()">{{ t('common.create') }}</UiButton>
     </form>
     <template #footer>
-      <UiButton variant="ghost" @click="open = false">Annuler</UiButton>
-      <UiButton variant="primary" :loading="saving" @click="apply">Appliquer</UiButton>
+      <UiButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UiButton>
+      <UiButton variant="primary" :loading="saving" @click="apply">{{ t('common.apply') }}</UiButton>
     </template>
   </UiDialog>
 </template>

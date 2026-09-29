@@ -3,6 +3,7 @@ import MarkdownIt from 'markdown-it'
 
 const props = defineProps<{ src: string, markdown: boolean, size: number }>()
 const emit = defineEmits<{ error: [] }>()
+const { t } = useI18n()
 
 const LIMIT = 512 * 1024
 const text = ref<string | null>(null)
@@ -40,7 +41,7 @@ watch(() => props.src, async (src) => {
       <!-- markdown-it runs with html disabled: every tag in the source is escaped, links are validated -->
       <article v-else-if="markdown" class="markdown rounded-lg bg-canvas p-6 shadow-norm sm:p-8" v-html="html" />
       <pre v-else class="rounded-lg bg-canvas p-5 font-mono text-sm leading-relaxed whitespace-pre-wrap break-words text-ink shadow-norm">{{ text }}</pre>
-      <p v-if="truncated && text !== null" class="mt-3 text-center text-sm text-ink-weak">Aperçu limité aux 512 premiers Ko.</p>
+      <p v-if="truncated && text !== null" class="mt-3 text-center text-sm text-ink-weak">{{ t('preview.truncated') }}</p>
     </div>
   </div>
 </template>

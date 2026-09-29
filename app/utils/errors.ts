@@ -5,23 +5,25 @@ interface FetchErrorLike {
   message?: string
 }
 
-const GENERIC: Record<number, string> = {
-  401: 'Votre session a expiré. Reconnectez-vous.',
-  403: 'Vous n’avez pas les droits pour cette action.',
-  404: 'Cet élément n’existe plus.',
-  413: 'Ce fichier dépasse la taille autorisée.',
-  429: 'Trop de tentatives. Réessayez dans une minute.',
-  507: 'L’espace de stockage est plein.',
+import type { MessageKey } from '#shared/i18n'
+
+const GENERIC: Record<number, MessageKey> = {
+  401: 'errors.client.sessionExpired',
+  403: 'errors.client.forbidden',
+  404: 'errors.client.gone',
+  413: 'errors.client.tooLarge',
+  429: 'errors.client.tooManyAttempts',
+  507: 'errors.client.storageFull',
 }
 
-/** Turns any fetch failure into a sentence a person can act on. Never "Error 500". */
-export function errorMessage(error: unknown, fallback = 'Une erreur est survenue. Réessayez.') {
+/** Turns any fetch failure into a sentence a person can act on, in their language. Never "Error 500". */
+export function errorMessage(error: unknown, fallback = say('errors.client.generic')) {
   const e = error as FetchErrorLike
   const status = e?.statusCode
   const message = e?.data?.statusMessage ?? e?.statusMessage
   if (message && status && status < 500 && !/^(Bad Request|Not Found|Forbidden|Unauthorized|Validation Error)$/i.test(message)) return message
-  if (status && GENERIC[status]) return GENERIC[status]
-  if (!status && typeof navigator !== 'undefined' && !navigator.onLine) return 'Vous êtes hors ligne. Vérifiez votre connexion.'
+  if (status && GENERIC[status]) return say(GENERIC[status])
+  if (!status && typeof navigator !== 'undefined' && !navigator.onLine) return say('errors.client.offline')
   return fallback
 }
 

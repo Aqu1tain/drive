@@ -1,0 +1,22 @@
+export default {
+  title: 'Tags',
+  named: 'Tags: {names}',
+  existing: 'Existing tags',
+  none: 'No tags yet. Create the first one below.',
+  newTag: 'New tag',
+  createFailed: 'Couldn’t create the tag',
+  applyFailed: 'Couldn’t update the tags',
+  edit: 'Edit tag',
+  editFailed: 'Couldn’t update the tag',
+  color: 'Color',
+  colors: {
+    violet: 'Purple',
+    blue: 'Blue',
+    turquoise: 'Turquoise',
+    green: 'Green',
+    ochre: 'Ochre',
+    orange: 'Orange',
+    red: 'Red',
+    pink: 'Pink',
+  },
+}

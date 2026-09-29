@@ -5,6 +5,7 @@ import type { ResourceDetails } from '#shared/types/api'
 const route = useRoute()
 const { data: me } = useMe()
 const failed = ref<string | null>(null)
+const { t } = useI18n()
 
 onMounted(async () => {
   try {
@@ -18,7 +19,7 @@ onMounted(async () => {
     return navigateTo({ path: folderPath(readableParent), query: { preview: item.id, full: '1' } }, { replace: true })
   }
   catch (error) {
-    failed.value = errorStatus(error) === 403 ? 'Vous n’avez pas ou plus accès à cet élément.' : 'Cet élément n’existe plus.'
+    failed.value = t(errorStatus(error) === 403 ? 'views.open.denied' : 'views.open.missing')
   }
 })
 </script>
@@ -27,7 +28,7 @@ onMounted(async () => {
   <div class="flex flex-1 items-center justify-center">
     <div v-if="failed" class="text-center">
       <p class="mb-4 text-base text-ink-weak">{{ failed }}</p>
-      <UiButton variant="primary" @click="navigateTo('/')">Retour à l’accueil</UiButton>
+      <UiButton variant="primary" @click="navigateTo('/')">{{ t('views.open.home') }}</UiButton>
     </div>
     <UiSpinner v-else class="size-6 text-ink-hint" />
   </div>

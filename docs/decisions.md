@@ -1,105 +1,117 @@
-# Décisions structurantes
+**English** · [Français](decisions.fr.md)
+
+# Key decisions
 
 ## Stack
 
-Décision : Nuxt 4.5 (Vue 3, Nitro 2 / h3 v1) en TypeScript, PostgreSQL 17, Drizzle ORM, Better Auth, Tailwind 4, Reka UI, TanStack Query/Virtual. Le tout dockerisé.
+Decision: Nuxt 4.5 (Vue 3, Nitro 2 / h3 v1) in TypeScript, PostgreSQL 17, Drizzle ORM, Better Auth, Tailwind 4, Reka UI, TanStack Query/Virtual. All of it dockerized.
 
-Pourquoi :
-- une seule application pour l'UI et l'API, un seul conteneur à déployer ;
-- rendu hybride : l'app propriétaire est une SPA (`ssr: false`), les pages de partage public sont rendues côté serveur (premier affichage immédiat sur mobile, aperçus de lien) ;
-- Drizzle reste proche du SQL : tableaux d'ancêtres, index GIN, `pg_trgm`, sous-requêtes corrélées sans lutter contre l'ORM.
+Why:
+- a single application for the UI and the API, a single container to deploy;
+- hybrid rendering: the owner app is an SPA (`ssr: false`), public share pages are rendered on the server (instant first paint on mobile, link previews);
+- Drizzle stays close to SQL: ancestor arrays, GIN indexes, `pg_trgm`, correlated subqueries, without fighting the ORM.
 
-Alternatives considérées : Next.js (équivalent, mais l'écosystème Vue/Reka était préféré), Prisma (génération de client et SQL avancé moins direct).
+Alternatives considered: Next.js (equivalent, but the Vue/Reka ecosystem was preferred), Prisma (client generation, and advanced SQL is less direct).
 
-## Authentification
+## Authentication
 
-Décision : Better Auth 1.7 : email + mot de passe (scrypt), passkeys, TOTP, code de connexion par email. Inscription publique désactivée : les comptes ne sont créés que par le serveur (installation, acceptation d'invitation, action du propriétaire).
+Decision: Better Auth 1.7: email and password (scrypt), passkeys, TOTP, sign-in code by email. Public sign-up is disabled: accounts are only created by the server (installation, accepted invitation, action by the owner).
 
-Pourquoi : sessions en base révocables, rate limiting, contrôle d'origine, plugins maintenus. Aucune primitive cryptographique réimplémentée.
+Why: revocable sessions stored in the database, rate limiting, origin checks, maintained plugins. No cryptographic primitive is reimplemented.
 
-Notes :
-- `role` (`owner` | `reader`) et `status` (`active` | `disabled`) sont des champs serveur (`input: false`) ; un index unique partiel garantit un seul propriétaire ;
-- l'IP client est calculée par l'application (en-tête interne `x-drive-client-ip`) et jamais reprise d'un en-tête fourni par le client, sauf `NUXT_TRUST_PROXY=true` derrière un proxy ;
-- `NUXT_SETUP_TOKEN` protège optionnellement l'installation initiale.
+Notes:
+- `role` (`owner` | `reader`) and `status` (`active` | `disabled`) are server fields (`input: false`); a partial unique index guarantees a single owner;
+- the client IP is computed by the application (internal header `x-drive-client-ip`) and never taken from a header supplied by the client, except with `NUXT_TRUST_PROXY=true` behind a proxy;
+- `NUXT_SETUP_TOKEN` optionally protects the initial setup.
 
-## Modèle de données
+## Data model
 
-- `resources` : fichiers et dossiers dans un arbre. `ancestor_ids uuid[]` (racine → parent) matérialise le chemin : sous-arbre = `ancestor_ids @> [id]` (index GIN), fil d'Ariane et héritage en une requête. Un déplacement réécrit le préfixe du sous-arbre en une requête.
-- Unicité du nom (insensible à la casse) par dossier via index partiel (`deleted_at is null`) : aucun doublon silencieux, même en cas de course.
-- `updated_at` n'est modifié que par les vraies modifications (contenu, renommage), jamais par une consultation ou un déplacement.
-- Pas de table `uploads` : un upload est une requête unique en streaming, l'état de la file vit côté client.
+- `resources`: files and folders in a tree. `ancestor_ids uuid[]` (root → parent) materializes the path: subtree = `ancestor_ids @> [id]` (GIN index), breadcrumb and inheritance in a single query. A move rewrites the prefix of the subtree in one query.
+- Names are unique per folder (case-insensitive) through a partial index (`deleted_at is null`): no silent duplicates, even under a race.
+- `updated_at` only changes on real modifications (content, rename), never on a view or a move.
+- No `uploads` table: an upload is a single streaming request, and the queue state lives on the client.
 
 ## Permissions
 
-Décision : un résolveur pur (`server/domain/access.ts`) testé unitairement, utilisé par tous les endpoints. Trois primitives : `read`, `download`, `manage`.
+Decision: a pure resolver (`server/domain/access.ts`), unit tested and used by every endpoint. Three primitives: `read`, `download`, `manage`.
 
-- `OWNER` → tout. `READER` → lecture/téléchargement si une règle valide s'applique. Anonyme → uniquement via un lien public valide.
-- Favoris : ceux du propriétaire restent une colonne de `resources` ; chaque lecteur a les siens dans `favorites`, qui ne touche pas au fichier. Il ne peut en poser que sur ce qu'il peut lire, et la liste de ses favoris re-résout l'accès : un partage retiré disparaît aussi de ses favoris.
-- Héritage additif : une ressource cumule ses règles et celles de ses ancêtres, jusqu'au premier nœud qui coupe l'héritage (`inherit_access = false`).
-- Une ressource (ou un ancêtre) dans la corbeille n'est plus accessible aux tiers.
-- Règles : `user`, `invitation`, `link`. Pas de rôle Editor : il n'existe aucune règle d'écriture.
-- Les endpoints d'écriture exigent `requireOwner`, indépendamment de l'UI.
+- `OWNER` → everything. `READER` → read/download if a valid rule applies. Anonymous → only through a valid public link.
+- Favorites: the owner's remain a column of `resources`; each reader has their own in `favorites`, which never touches the file. A reader can only add favorites on what they can read, and the list of their favorites re-resolves access: a share that is removed also disappears from their favorites.
+- Additive inheritance: a resource combines its own rules with those of its ancestors, up to the first node that breaks inheritance (`inherit_access = false`).
+- A resource (or an ancestor) in the trash is no longer accessible to anyone else.
+- Rules: `user`, `invitation`, `link`. No Editor role: there is no write rule at all.
+- Write endpoints require `requireOwner`, regardless of the UI.
 
-## Invitations et liens
+## Invitations and links
 
-- Invitation « compte » : lien à usage unique qui crée un compte lecteur (email considéré vérifié : le lien a été remis à cette adresse). Ses règles deviennent des règles `user`.
-- Invitation « lien personnel » : lien réutilisable, activité attribuée à l'invitation avec une mention honnête (le lien peut être transféré).
-- Lien public : visiteur pseudonyme (cookie `drive_vid` aléatoire), jamais présenté comme identifié.
-- Les jetons (192 bits) sont stockés hachés (recherche) et scellés AES-256-GCM (pour pouvoir recopier le lien). Un dump de base seul ne donne aucun lien fonctionnel.
+- "Account" invitation: a single-use link that creates a reader account (the email is considered verified, since the link was sent to that address). Its rules become `user` rules.
+- "Personal link" invitation: a reusable link, with activity attributed to the invitation and an honest note (the link can be forwarded).
+- Public link: pseudonymous visitor (random `drive_vid` cookie), never presented as identified.
+- Tokens (192 bits) are stored hashed (for lookup) and sealed with AES-256-GCM (so the link can be copied again). A database dump alone yields no working link.
 
-## Révocation
+## Revocation
 
-Chaque requête re-résout l'accès. Aucune URL de stockage n'est exposée : le contenu passe toujours par l'API (proxy contrôlé, support `Range`). Les jetons d'aperçu HTML (30 min) portent l'identité, pas le droit : l'accès est revérifié à chaque requête.
+Every request re-resolves access. No storage URL is exposed: content always goes through the API (controlled proxy, `Range` support). HTML preview tokens (30 min) carry identity, not permission: access is checked again on every request.
 
-## Stockage
+## Storage
 
-Décision : abstraction `StorageProvider` (`put`, `get` avec plage, `size`, `delete`), implémentations filesystem et S3 (MinIO, R2, AWS…).
+Decision: a `StorageProvider` abstraction (`put`, `get` with a range, `size`, `delete`), with filesystem and S3 implementations (MinIO, R2, AWS…).
 
-- Clés générées par le serveur (`blobs/8f/8f311e17-…`), le nom d'origine n'est qu'une métadonnée.
-- Upload en streaming (`event.node.req`, contre-pression respectée), hash SHA-256 et détection de signature (file-type) à la volée.
-- Au-delà de 8 Mo, le navigateur envoie le fichier en parties de 8 Mo : aucune requête ne dure assez longtemps pour atteindre la limite de 5 minutes de Node, même sur une connexion montante lente, et chacune est réessayée seule, reprise à la dernière partie reçue. Tout envoi, en une fois ou par partie, est réessayé 6 fois avec un délai croissant (une trentaine de secondes, de quoi traverser une coupure ou un redémarrage du serveur) ; il garde sa place dans la file pendant ce temps, pour qu'une panne ne fasse pas échouer tous les fichiers suivants en quelques secondes. Si la coupure survient après l'enregistrement, le nouvel essai trouve le fichier sous le même nom avec la même taille et le reconnaît au lieu d'en créer un second. Côté serveur, multipart natif S3 ou fichiers temporaires en local, parties reçues dans l'ordre pour calculer le hash au fil de l'eau. Les sessions vivent en mémoire (un seul processus) ; un redémarrage les perd et le client recommence, une tâche horaire abandonne celles restées inactives un jour.
-- Le type MIME vient de la signature binaire quand elle existe (un exécutable renommé `.jpg` n'est jamais une image), sinon de l'extension.
+- Keys generated by the server (`blobs/8f/8f311e17-…`); the original name is only metadata.
+- Streaming upload (`event.node.req`, backpressure respected), with the SHA-256 hash and signature detection (file-type) computed on the fly.
+- Above 8 MB, the browser sends the file in 8 MB parts: no request lasts long enough to hit Node's 5-minute limit, even on a slow uplink, and each part is retried on its own, resuming from the last part received. Every upload, whole or per part, is retried 6 times with increasing delays (about thirty seconds, enough to ride out a network drop or a server restart); it keeps its place in the queue meanwhile, so that an outage does not make every following file fail within seconds. If the connection drops after the file was saved, the next attempt finds the file under the same name with the same size and recognizes it instead of creating a second one. On the server, native S3 multipart or local temporary files, with parts received in order so the hash is computed as they arrive. Sessions live in memory (a single process); a restart loses them and the client starts over, and an hourly task abandons those left idle for a day.
+- The MIME type comes from the binary signature when there is one (an executable renamed `.jpg` is never an image), otherwise from the extension.
 
-Alternatives : BLOB PostgreSQL (base énorme, sauvegardes lentes), S3 seul (développement local plus lourd).
+Alternatives: PostgreSQL BLOBs (huge database, slow backups), S3 only (heavier local development).
 
-## Contenu actif (HTML, SVG)
+## Active content (HTML, SVG)
 
-- Jamais exécuté sur l'origine de l'application. Les réponses de contenu portent `Content-Security-Policy: sandbox` et `nosniff` ; le HTML y est servi en `text/plain`.
-- Le HTML est rendu sur une origine distincte (`NUXT_PUBLIC_USERCONTENT_URL`), qui refuse toutes les routes de l'app et ne pose jamais de cookie. CSP `sandbox` (origine opaque) ; scripts autorisés uniquement si le propriétaire active « Page interactive ».
-- En production, utiliser un domaine enregistrable distinct (ex. `drive-usercontent.net`).
-- Les mutations exigent l'en-tête `Origin` de l'application (CSRF), y compris contre l'origine usercontent.
-- sharp ne charge jamais de SVG (le chargeur est bloqué) : pas de miniature SVG.
-- Un ZIP qui contient un `index.html` (à la racine ou dans un unique dossier de premier niveau) devient un site : ses fichiers sont extraits une fois dans le stockage (`site_files`, 2 000 fichiers et 200 Mo décompressés au plus, comptés pendant la décompression), puis servis un par un sur l'origine isolée, avec les mêmes règles que le HTML : sandbox, scripts seulement si le propriétaire le rend interactif, adresse publiée `/p/<jeton>/` quand un lien public existe. Les chemins qui pourraient sortir du site sont écartés à l'extraction. Les fichiers d'un site portent `Access-Control-Allow-Origin: *`, sans quoi les modules JavaScript et les `fetch` d'une page à l'origine opaque échoueraient ; ils ne sont joignables qu'avec un jeton. L'accès est vérifié avant de dire si un chemin existe.
-- Les documents Office (docx, xlsx, pptx) sont convertis côté serveur en une page HTML autonome, servie sur la même origine isolée avec une CSP plus stricte encore : aucun script, aucune ressource externe (`default-src 'none'; img-src data:`), les liens s'ouvrent dans un nouvel onglet. Le texte des cellules et des paragraphes est échappé à la conversion.
+- Never executed on the application's origin. Content responses carry `Content-Security-Policy: sandbox` and `nosniff`; HTML is served there as `text/plain`.
+- HTML is rendered on a separate origin (`NUXT_PUBLIC_USERCONTENT_URL`), which refuses every app route and never sets a cookie. CSP `sandbox` (opaque origin); scripts are allowed only if the owner turns on "Interactive page".
+- In production, use a separate registrable domain (e.g. `drive-usercontent.net`).
+- Mutations require the application's `Origin` header (CSRF), including against the usercontent origin.
+- sharp never loads SVG (its loader is blocked): no SVG thumbnails.
+- A ZIP that contains an `index.html` (at the root or in a single top-level folder) becomes a site: its files are extracted once into storage (`site_files`, at most 2,000 files and 200 MB uncompressed, counted during decompression), then served one by one on the isolated origin under the same rules as HTML: sandbox, scripts only if the owner makes it interactive, published address `/p/<token>/` when a public link exists. Paths that could escape the site are discarded during extraction. The files of a site carry `Access-Control-Allow-Origin: *`, without which JavaScript modules and `fetch` calls from a page on an opaque origin would fail; they can only be reached with a token. Access is checked before revealing whether a path exists.
+- Office documents (docx, xlsx, pptx) are converted on the server into a self-contained HTML page, served on the same isolated origin with an even stricter CSP: no scripts, no external resources (`default-src 'none'; img-src data:`), and links open in a new tab. The text of cells and paragraphs is escaped during conversion.
 
-## Recherche
+## Search
 
-`pg_trgm` sur une clé normalisée (minuscules, sans accents) : nom, dossiers englobants, personnes ayant accès (propriétaire). Filtres `type:`, `access:`, `shared:`, `after:`, `before:`, `in:` exposés aussi en chips.
+`pg_trgm` on a normalized key (lowercase, no accents): name, enclosing folders, people with access (owner). The `type:`, `access:`, `shared:`, `after:`, `before:` and `in:` filters are also exposed as chips.
 
-Étiquettes : le propriétaire en pose autant qu'il veut sur ses fichiers et dossiers. Elles vivent dans `tags` (nom unique sans tenir compte de la casse, couleur d'une palette de huit) et chaque ressource porte `tag_ids uuid[]` avec un index GIN : toutes les listes existantes renvoient les étiquettes sans requête de plus, et `tag:"à relancer"` filtre la recherche. Supprimer une étiquette la retire des fichiers, sans rien toucher d'autre. Elles restent privées : aucun lecteur ne les voit ni ne peut les deviner, un `tag:` dans sa recherche ne renvoie rien.
+Tags: the owner can put as many as they like on their files and folders. They live in `tags` (name unique regardless of case, color from a palette of eight), and each resource carries `tag_ids uuid[]` with a GIN index: every existing list returns the tags without an extra query, and `tag:"follow up"` filters the search. Deleting a tag removes it from the files without touching anything else. Tags stay private: no reader can see or guess them, and a `tag:` in a reader's search returns nothing.
 
-Le texte des fichiers est aussi cherché : PDF (100 premières pages), Word, Excel, PowerPoint, HTML et fichiers texte. Il est normalisé comme les noms puis stocké en `tsvector` (configuration `simple`, sans racinisation, donc valable pour toutes les langues) dans une table à part, `resource_texts`, pour que les listes ne le chargent jamais. Chaque mot cherché doit commencer un mot du fichier : « factur » trouve « factures ». Un lecteur ne trouve que ce qu'il peut ouvrir, le texte ne sort jamais de la base.
+The text of files is searched too: PDF (first 100 pages), Word, Excel, PowerPoint, HTML and text files. It is normalized like names, then stored as a `tsvector` (`simple` configuration, no stemming, so it works for every language) in a separate table, `resource_texts`, so that lists never load it. Each search word must match the start of a word in the file: "invoic" finds "invoices". A reader only finds what they can open, and the text never leaves the database.
 
-## Traitement des fichiers
+## File processing
 
-Après chaque upload, une file en mémoire (2 workers) dérive de la version du fichier : sa miniature (images avec sharp, première page des PDF avec pdf.js et @napi-rs/canvas), son texte pour la recherche et, pour les documents Office, une page d'aperçu. `processed_checksum` retient la version traitée : au démarrage, tout fichier dont la version n'a pas été traitée est remis en file, ce qui rattrape aussi les fichiers antérieurs à cette fonctionnalité. Si le fichier est remplacé pendant le traitement, le résultat est jeté.
+After each upload, an in-memory queue (2 workers) derives from the file's version its thumbnail (images with sharp, first page of PDFs with pdf.js and @napi-rs/canvas), its text for search and, for Office documents, a preview page. `processed_checksum` records the version that was processed: at startup, every file whose version has not been processed goes back into the queue, which also catches up files uploaded before this feature existed. If the file is replaced during processing, the result is discarded.
 
-Les fichiers de plus de 80 Mo ne sont pas traités. pdf.js tourne dans le processus du serveur, page par page ; un PDF piégé ne peut être déposé que par le propriétaire. Vidéo : pas de décodeur côté serveur (ffmpeg alourdirait l'image de plusieurs centaines de Mo). C'est le navigateur du propriétaire qui capture une image à une seconde, juste après l'upload à partir du fichier local, ou à la première ouverture pour les vidéos plus anciennes. Le serveur la réencode avec sharp comme n'importe quelle image (SVG refusé, 5 Mo maximum) : un lecteur ne peut jamais en envoyer.
+Files over 80 MB are not processed. pdf.js runs in the server process, page by page; a booby-trapped PDF can only be uploaded by the owner. Video: no decoder on the server (ffmpeg would add several hundred MB to the image). The owner's browser captures a frame at one second, right after the upload from the local file, or on first open for older videos. The server re-encodes it with sharp like any other image (SVG refused, 5 MB maximum): a reader can never send one.
 
-## Journal d'activité
+## Activity log
 
-- Événements logiques : une consultation = un événement (déduplication 10 min par acteur), pas un par asset. Les requêtes `Range` de continuation ne comptent pas comme téléchargement.
-- IP : préfixe /24 (IPv4) ou /48 (IPv6) haché avec HMAC, ou rien (`NUXT_ACTIVITY_IP_MODE=none`). Rétention configurable (`NUXT_ACTIVITY_RETENTION_DAYS`), purge quotidienne.
-- Logs techniques séparés (stdout JSON : requestId, userId, resourceId, status, latence) avec jetons masqués.
+- Logical events: one view = one event (10-minute deduplication per actor), not one per asset. Continuation `Range` requests do not count as downloads.
+- IP: /24 (IPv4) or /48 (IPv6) prefix hashed with HMAC, or nothing at all (`NUXT_ACTIVITY_IP_MODE=none`). Configurable retention (`NUXT_ACTIVITY_RETENTION_DAYS`), with a daily purge.
+- Technical logs kept separate (JSON on stdout: requestId, userId, resourceId, status, latency), with tokens masked.
+
+## Languages
+
+The interface, server messages, emails and shared pages exist in English and French. English is the default; an instance can pick French with `DEFAULT_LOCALE` (written by `install.sh --lang fr`), and each browser can pick its own language in the settings, kept in a `drive_locale` cookie.
+
+- Catalogs live in `shared/i18n`, one file per area and per language. Keys are typed from the English catalog and the French one must have the same shape, so a missing translation is a build error. Plurals use `Intl.PluralRules`, numbers and dates `Intl` with the current language.
+- No i18n library: a hundred lines cover lookups, plurals and parameters, and the same code runs in the app, on the server and in tests.
+- The server answers in the language of the request (cookie, otherwise the instance default) through Nitro's async context, so helpers deep in the call stack can word their errors without passing the event around. Emails follow the sender's language. Document previews are made in the background, in the instance language.
+- The activity log stores fixed labels as tokens (`@public-link`...) and names them when read, in the reader's language; rows written before hold French words, which are recognized too.
+- The end-to-end suite runs in French (a cookie in `playwright.config.ts`), with one test for the English default and the switch.
 
 ## Migrations
 
-Pré-démarrage en production (`scripts/migrate.mjs`) : Nitro 2 n'attend pas les plugins asynchrones. En dev, un plugin les applique au lancement.
+Applied before startup in production (`scripts/migrate.mjs`): Nitro 2 does not wait for async plugins. In development, a plugin applies them at launch.
 
-## Limites connues
+## Known limitations
 
-- « Téléchargement désactivé » est une dissuasion, pas un DRM : un aperçu transmet forcément le contenu au navigateur.
+- "Download disabled" is a deterrent, not DRM: a preview necessarily sends the content to the browser.
 
 ## Performance
 
-Un dossier est chargé en une requête (tri et sélection instantanés côté client) et affiché en liste virtualisée. Mesures sur 10 000 fichiers en développement : API 170 ms, premier affichage 550 ms, 29 lignes dans le DOM, saut à la fin 60 ms, tout sélectionner 210 ms, tri 220 ms. Au-delà de quelques dizaines de milliers d'éléments par dossier, il faudra paginer côté serveur.
+A folder is loaded in a single request (instant sorting and selection on the client) and displayed in a virtualized list. Measurements on 10,000 files in development: API 170 ms, first render 550 ms, 29 rows in the DOM, jump to the end 60 ms, select all 210 ms, sort 220 ms. Beyond a few tens of thousands of items per folder, server-side pagination will be needed.
