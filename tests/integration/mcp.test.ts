@@ -192,7 +192,7 @@ describe('owner connection', () => {
     expect(listing.items[0].url).toBe(`${BASE_URL}/open/${file.body.id}`)
 
     const top = parsed(await call(token, 'list_folder'))
-    expect(top.path).toBe('Mon Drive')
+    expect(top.path).toBe('My Drive')
     expect(top.items.some((item: { id: string }) => item.id === root)).toBe(true)
 
     const found = parsed(await call(token, 'search', { query: `${word} type:text` }))

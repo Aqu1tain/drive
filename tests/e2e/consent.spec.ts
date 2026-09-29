@@ -6,6 +6,8 @@ const REDIRECT_URI = 'http://127.0.0.1:8976/callback'
 
 let owner: APIRequestContext
 
+test.use({ storageState: { cookies: [], origins: [] }, locale: 'en-US' })
+
 test.beforeAll(async () => {
   owner = await ownerApi()
 })
@@ -32,9 +34,9 @@ async function authorizationUrl(name: string) {
 
 async function signInFromConsent(page: Page, email: string, password: string) {
   await expect(page).toHaveURL(/\/login\?redirect=/)
-  await page.getByLabel('Adresse email').fill(email)
-  await page.getByLabel('Mot de passe').fill(password)
-  await page.getByRole('button', { name: 'Se connecter' }).click()
+  await page.getByLabel('Email address').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page).toHaveURL(/\/oauth\/consent\?/)
 }
 
