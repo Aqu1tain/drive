@@ -10,6 +10,7 @@ export default {
   appNotFound: 'App not found',
   versionNotFound: 'Version not found',
   foldersOnly: 'Only folders have this setting',
+  filesOnly: 'Only files can be copied',
   videoNotFound: 'Video not found',
   noThumbnail: 'No thumbnail',
   noContent: 'No content',

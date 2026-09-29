@@ -13,6 +13,7 @@ export default {
   appNotFound: 'Application introuvable',
   versionNotFound: 'Version introuvable',
   foldersOnly: 'Seuls les dossiers ont ce réglage',
+  filesOnly: 'Seuls les fichiers peuvent être copiés',
   videoNotFound: 'Vidéo introuvable',
   noThumbnail: 'Pas de miniature',
   noContent: 'Aucun contenu',
