@@ -69,6 +69,7 @@ Alternatives : BLOB PostgreSQL (base énorme, sauvegardes lentes), S3 seul (dév
 - En production, utiliser un domaine enregistrable distinct (ex. `drive-usercontent.net`).
 - Les mutations exigent l'en-tête `Origin` de l'application (CSRF), y compris contre l'origine usercontent.
 - sharp ne charge jamais de SVG (le chargeur est bloqué) : pas de miniature SVG.
+- Un ZIP qui contient un `index.html` (à la racine ou dans un unique dossier de premier niveau) devient un site : ses fichiers sont extraits une fois dans le stockage (`site_files`, 2 000 fichiers et 200 Mo décompressés au plus, comptés pendant la décompression), puis servis un par un sur l'origine isolée, avec les mêmes règles que le HTML : sandbox, scripts seulement si le propriétaire le rend interactif, adresse publiée `/p/<jeton>/` quand un lien public existe. Les chemins qui pourraient sortir du site sont écartés à l'extraction. Les fichiers d'un site portent `Access-Control-Allow-Origin: *`, sans quoi les modules JavaScript et les `fetch` d'une page à l'origine opaque échoueraient ; ils ne sont joignables qu'avec un jeton. L'accès est vérifié avant de dire si un chemin existe.
 - Les documents Office (docx, xlsx, pptx) sont convertis côté serveur en une page HTML autonome, servie sur la même origine isolée avec une CSP plus stricte encore : aucun script, aucune ressource externe (`default-src 'none'; img-src data:`), les liens s'ouvrent dans un nouvel onglet. Le texte des cellules et des paragraphes est échappé à la conversion.
 
 ## Recherche
