@@ -62,7 +62,7 @@ Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire
 - Aperçu plein écran : `?preview=<id>&full=1`, navigation ← → dans le dossier. Échap ou « retour » navigateur rend la liste intacte.
 - Images, PDF (pdf.js), texte, Markdown, audio, vidéo, HTML (origine isolée, iframe sandbox). Sinon : icône, « Ce fichier ne peut pas être prévisualisé », Télécharger.
 - Word, Excel et PowerPoint : page convertie côté serveur, affichée comme le HTML. Un classeur montre ses feuilles l'une sous l'autre avec des onglets d'accès rapide ; une présentation montre le texte de chaque diapositive, avec la mention que la mise en page complète demande le téléchargement.
-- Les miniatures de PDF montrent le haut de la première page, pas son centre souvent vide.
+- Les miniatures de PDF montrent le haut de la première page, pas son centre souvent vide. Les vidéos ont une miniature prise à une seconde, la première image étant souvent noire.
 
 ## Partage
 
