@@ -1,4 +1,5 @@
 import { unzipSync } from 'fflate'
+import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { docx, pdf } from '../fixtures'
 import { Client, USERCONTENT_URL, ownerClient, readerClient, unique } from './client'
@@ -286,6 +287,26 @@ describe('file processing', () => {
 
     await eventually(() => searchIds(owner, secret), ids => ids.includes(visible.id) && ids.includes(hidden.id))
     expect(await searchIds(reader, secret)).toEqual([visible.id])
+  })
+
+  it('stores a video frame sent by the owner as the thumbnail, re-encoded', async () => {
+    const mp4 = new Uint8Array([0, 0, 0, 0x18, ...new TextEncoder().encode('ftypmp42'), 0, 0, 0, 0, ...new TextEncoder().encode('mp42isom')])
+    const video = (await owner.upload(root, `${unique('clip')}.mp4`, mp4)).body
+    expect(video.kind).toBe('video')
+    const frame = await sharp({ create: { width: 64, height: 36, channels: 3, background: '#6d4aff' } }).png().toBuffer()
+    const put = (client: Client, id: string, body: Uint8Array) => client.request('PUT', `/api/resources/${id}/thumbnail`, { body: body as BodyInit })
+
+    const saved = await put(owner, video.id, frame)
+    expect(saved.status).toBe(200)
+    const thumbnail = await owner.get(saved.body.thumbnailUrl)
+    expect(thumbnail.headers.get('content-type')).toBe('image/webp')
+
+    const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><image href="http://example.com/x.png"/></svg>')
+    expect((await put(owner, video.id, svg)).status).toBe(400)
+    const text = await fileIn(root)
+    expect((await put(owner, text.id, frame)).status).toBe(404)
+    const { client: reader } = await readerClient(owner)
+    expect((await put(reader, video.id, frame)).status).toBe(403)
   })
 
   it('forgets the text of a replaced version', async () => {
