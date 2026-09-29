@@ -14,7 +14,7 @@ Suivez [docs/install.md](docs/install.md), section « Méthode pas à pas ». R�
 
 ## Le produit en une phrase
 
-Un seul propriétaire dépose, range et partage ; tous les autres sont lecteurs et ne modifient jamais rien. Toute fonctionnalité qui ne sert pas ce principe doit être remise en question.
+Un seul propriétaire dépose, range et partage ; tous les autres sont lecteurs et ne modifient jamais rien de partagé (leurs favoris et leur profil leur appartiennent). Toute fonctionnalité qui ne sert pas ce principe doit être remise en question.
 
 ## Carte du code
 

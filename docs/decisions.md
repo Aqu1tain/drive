@@ -34,6 +34,7 @@ Notes :
 Décision : un résolveur pur (`server/domain/access.ts`) testé unitairement, utilisé par tous les endpoints. Trois primitives : `read`, `download`, `manage`.
 
 - `OWNER` → tout. `READER` → lecture/téléchargement si une règle valide s'applique. Anonyme → uniquement via un lien public valide.
+- Favoris : ceux du propriétaire restent une colonne de `resources` ; chaque lecteur a les siens dans `favorites`, qui ne touche pas au fichier. Il ne peut en poser que sur ce qu'il peut lire, et la liste de ses favoris re-résout l'accès : un partage retiré disparaît aussi de ses favoris.
 - Héritage additif : une ressource cumule ses règles et celles de ses ancêtres, jusqu'au premier nœud qui coupe l'héritage (`inherit_access = false`).
 - Une ressource (ou un ancêtre) dans la corbeille n'est plus accessible aux tiers.
 - Règles : `user`, `invitation`, `link`. Pas de rôle Editor : il n'existe aucune règle d'écriture.
