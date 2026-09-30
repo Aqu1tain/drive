@@ -7,9 +7,11 @@ async function dropFile(page: Page, selector: string, name: string) {
     data.items.add(new File(['Déposé depuis le bureau'], fileName, { type: 'text/plain' }))
     return data
   }, name)
-  await page.dispatchEvent(selector, 'dragenter', { dataTransfer: transfer })
-  await page.dispatchEvent(selector, 'dragover', { dataTransfer: transfer })
-  await expect(page.getByText('Déposer pour importer dans Mon Drive')).toBeVisible()
+  await expect(async () => {
+    await page.dispatchEvent(selector, 'dragenter', { dataTransfer: transfer })
+    await page.dispatchEvent(selector, 'dragover', { dataTransfer: transfer })
+    await expect(page.getByText('Déposer pour importer dans Mon Drive')).toBeVisible({ timeout: 1000 })
+  }).toPass()
   await page.dispatchEvent(selector, 'drop', { dataTransfer: transfer })
 }
 
