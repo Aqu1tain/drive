@@ -67,7 +67,7 @@ function networkTraits(event: H3Event) {
 export async function logAccess(event: H3Event, viewer: Viewer, resource: Resource, type: 'view' | 'download') {
   const db = useDB()
   if (viewer.kind === 'owner') {
-    if (type === 'view') await db.update(resources).set({ ownerOpenedAt: new Date() }).where(eq(resources.id, resource.id))
+    if (type === 'view') await markOpened(viewer, resource.id)
     return
   }
   if (viewer.kind === 'share' && (await getSessionUser(event))?.role === 'owner') return

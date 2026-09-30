@@ -181,12 +181,10 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
 
   return {
     ...item,
-    starred: resource.starred,
     tagIds: resource.tagIds,
     allowScripts: resource.allowScripts,
     access: options.summary,
     lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null,
-    ownerOpenedAt: resource.ownerOpenedAt?.toISOString() ?? null,
     deletedAt: resource.deletedAt?.toISOString() ?? null,
   }
 }

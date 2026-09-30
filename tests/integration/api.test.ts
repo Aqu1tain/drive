@@ -45,8 +45,11 @@ describe('file operations', () => {
     expect(listing.body.items.map((i: { name: string }) => i.name)).toEqual(['rapport.txt'])
     expect(listing.body.breadcrumbs.at(-1).name).toBe('A')
 
-    const renamed = await owner.patch(`/api/resources/${file.id}`, { name: 'rapport final.txt', starred: true })
-    expect(renamed.body).toMatchObject({ name: 'rapport final.txt', starred: true })
+    const renamed = await owner.patch(`/api/resources/${file.id}`, { name: 'rapport final.txt' })
+    expect(renamed.body).toMatchObject({ name: 'rapport final.txt' })
+    await owner.put(`/api/resources/${file.id}/star`, { starred: true })
+    expect((await owner.get(`/api/folders/${a}`)).body.items[0].starred).toBe(true)
+    expect((await owner.get('/api/starred')).body.items.map((i: { id: string }) => i.id)).toContain(file.id)
 
     const moved = await owner.post('/api/resources/move', { ids: [file.id], targetId: b })
     expect(moved.status).toBe(200)

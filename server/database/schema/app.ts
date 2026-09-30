@@ -27,14 +27,12 @@ export const resources = pgTable('resources', {
   processedChecksum: text('processed_checksum'),
   width: integer('width'),
   height: integer('height'),
-  starred: boolean('starred').notNull().default(false),
   tagIds: uuid('tag_ids').array().notNull().default(sql`'{}'::uuid[]`),
   inheritAccess: boolean('inherit_access').notNull().default(true),
   allowScripts: boolean('allow_scripts').notNull().default(false),
   /** Folders only: true keeps earlier versions of the files inside, false stops, null follows the parent folder. */
   versioning: boolean('versioning'),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
-  ownerOpenedAt: timestamp('owner_opened_at', { withTimezone: true }),
   lastExternalViewAt: timestamp('last_external_view_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -43,7 +41,6 @@ export const resources = pgTable('resources', {
   index('resources_ancestors_idx').using('gin', t.ancestorIds),
   index('resources_search_idx').using('gin', sql`${t.searchKey} gin_trgm_ops`),
   index('resources_deleted_idx').on(t.deletedAt),
-  index('resources_starred_idx').on(t.starred),
   index('resources_tags_idx').using('gin', t.tagIds),
   index('resources_recent_idx').on(t.updatedAt),
   uniqueIndex('resources_unique_name_idx')
@@ -96,11 +93,20 @@ export const tags = pgTable('tags', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-/** Readers' own favorites: the owner's stay a column on resources, since there is only one owner. */
+/** Each person's favorites: a bookmark, never a change to the file. */
 export const favorites = pgTable('favorites', {
   userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
   resourceId: uuid('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [
+  primaryKey({ columns: [t.userId, t.resourceId] }),
+])
+
+/** When each person last opened something, for their own "Recent". */
+export const resourceOpens = pgTable('resource_opens', {
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  resourceId: uuid('resource_id').notNull().references(() => resources.id, { onDelete: 'cascade' }),
+  openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [
   primaryKey({ columns: [t.userId, t.resourceId] }),
 ])

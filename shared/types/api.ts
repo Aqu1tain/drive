@@ -46,7 +46,8 @@ export interface ResourceItem {
   allowScripts?: boolean
   access?: AccessSummary
   lastExternalViewAt?: string | null
-  ownerOpenedAt?: string | null
+  /** When the viewer last opened it, on their home page. */
+  openedAt?: string | null
   deletedAt?: string | null
   canDownload: boolean
   location?: string

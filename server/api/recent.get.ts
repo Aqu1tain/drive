@@ -4,13 +4,16 @@ export default defineEventHandler(async (event) => {
   const viewer = await requireViewer(event)
   if (!viewer.ctx.isOwner) return { items: await readerRecent(viewer) }
 
-  const { resources } = tables
-  const items = await useDB().select().from(resources)
+  const { resources, resourceOpens } = tables
+  const opened = openedBy(viewer.user!.id)
+  const rows = await useDB().select({ resource: resources }).from(resources)
+    .leftJoin(resourceOpens, opened.join)
     .where(and(eq(resources.type, 'file'), notInTrash))
-    .orderBy(desc(sql`greatest(${resources.ownerOpenedAt}, ${resources.updatedAt})`))
+    .orderBy(desc(opened.recency))
     .limit(100)
+  const items = rows.map(row => row.resource)
   const [summaries, locations] = await Promise.all([summarizeMany(items), locationsOf(items)])
-  return { items: items.map(item => toItem(item, { viewer, summary: summaries.get(item.id), location: locations.get(item.id) })) }
+  return { items: await withFavorites(viewer, items.map(item => toItem(item, { viewer, summary: summaries.get(item.id), location: locations.get(item.id) }))) }
 })
 
 async function readerRecent(viewer: Viewer) {

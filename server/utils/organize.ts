@@ -28,7 +28,6 @@ export async function createFolder(viewer: Viewer, parentId: string | null | und
 
 export interface ResourceChanges {
   name?: string
-  starred?: boolean
   inheritAccess?: boolean
   allowScripts?: boolean
   versioning?: boolean
@@ -45,7 +44,6 @@ export async function updateResource(event: H3Event, viewer: Viewer, id: string,
     if (sibling && sibling.id !== resource.id) nameTaken(fields.name)
     Object.assign(patch, resource.type === 'folder' ? { ...fields, extension: null } : fields, { updatedAt: new Date() })
   }
-  if (changes.starred !== undefined) patch.starred = changes.starred
   if (changes.inheritAccess !== undefined) patch.inheritAccess = changes.inheritAccess
   if (changes.versioning !== undefined) {
     if (resource.type !== 'folder') throw createError({ statusCode: 400, statusMessage: tr('errors.foldersOnly') })

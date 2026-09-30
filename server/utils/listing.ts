@@ -44,7 +44,7 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
     return {
       folder: null,
       breadcrumbs: [rootCrumb()],
-      items: await withFolderPreviews(viewer, withVersioning(children, false, children.map(child => toItem(child, { viewer, summary: summarizeAccess(byChild.get(child.id) ?? [], []) })))),
+      items: await withFolderPreviews(viewer, await withFavorites(viewer, withVersioning(children, false, children.map(child => toItem(child, { viewer, summary: summarizeAccess(byChild.get(child.id) ?? [], []) }))))),
     }
   }
 
@@ -57,14 +57,14 @@ export async function listFolder(viewer: Viewer, folderId: string | null, option
     const effective = effectiveRuleRows(chain, rows)
     const own = effective.filter(row => !row.inheritedFrom)
     const { enabled } = await versioningOf(folder)
-    return {
-      folder: { ...toItem(folder, { viewer, access, summary: summarizeAccess(own, effective.filter(row => row.inheritedFrom)) }), versioning: enabled },
-      breadcrumbs,
-      items: await withFolderPreviews(viewer, withVersioning(children, enabled, children.map(child => toItem(child, {
+    const [marked, ...items] = await withFavorites(viewer, [
+      { ...toItem(folder, { viewer, access, summary: summarizeAccess(own, effective.filter(row => row.inheritedFrom)) }), versioning: enabled },
+      ...withVersioning(children, enabled, children.map(child => toItem(child, {
         viewer,
         summary: summarizeAccess(byChild.get(child.id) ?? [], child.inheritAccess ? effective : []),
-      })))),
-    }
+      }))),
+    ])
+    return { folder: marked!, breadcrumbs, items: await withFolderPreviews(viewer, items) }
   }
 
   const items = children.flatMap((child) => {
@@ -106,7 +106,7 @@ export async function resourceDetails(viewer: Viewer, id: string): Promise<Resou
 
   const summaries = await summarizeMany([resource])
   return {
-    item: (await withFolderPreviews(viewer, [toItem(resource, { viewer, access, summary: summaries.get(resource.id) })]))[0]!,
+    item: (await withFolderPreviews(viewer, await withFavorites(viewer, [toItem(resource, { viewer, access, summary: summaries.get(resource.id) })])))[0]!,
     path,
     stats: await activityStats(resource),
     versioning: await versioningOf(resource),

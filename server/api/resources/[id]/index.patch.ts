@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 const bodySchema = z.object({
   name: z.string().min(1).max(300).optional(),
-  starred: z.boolean().optional(),
   inheritAccess: z.boolean().optional(),
   allowScripts: z.boolean().optional(),
   versioning: z.boolean().optional(),

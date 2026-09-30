@@ -1,10 +1,8 @@
-import { and, asc, eq } from 'drizzle-orm'
-
 export default defineEventHandler(async (event) => {
   const viewer = await requireViewer(event)
-  if (!viewer.ctx.isOwner) return { items: await withFolderPreviews(viewer, await readerFavorites(viewer)) }
-  const { resources } = tables
-  const items = await useDB().select().from(resources).where(and(eq(resources.starred, true), notInTrash)).orderBy(asc(resources.nameLower))
-  const [summaries, locations] = await Promise.all([summarizeMany(items), locationsOf(items)])
-  return { items: await withFolderPreviews(viewer, items.map(item => toItem(item, { viewer, summary: summaries.get(item.id), location: locations.get(item.id) }))) }
+  const favorites = await favoritesOf(viewer)
+  if (!viewer.ctx.isOwner) return { items: await withFolderPreviews(viewer, favorites.map(({ resource, access }) => ({ ...toItem(resource, { viewer, access }), starred: true }))) }
+  const resources = favorites.map(({ resource }) => resource)
+  const [summaries, locations] = await Promise.all([summarizeMany(resources), locationsOf(resources)])
+  return { items: await withFolderPreviews(viewer, resources.map(item => ({ ...toItem(item, { viewer, summary: summaries.get(item.id), location: locations.get(item.id) }), starred: true }))) }
 })
