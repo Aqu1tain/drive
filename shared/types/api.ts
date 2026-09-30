@@ -3,6 +3,17 @@ import type { FileKind } from '../utils/search'
 /** Owners run the organization, members work in what is shared with them, readers only read. */
 export type Role = 'owner' | 'member' | 'reader'
 
+/** The Drive for Organizations license as the owners see it. */
+export interface OrganizationStatus {
+  active: boolean
+  name: string | null
+  seats: number
+  used: number
+  expiresAt: string | null
+  /** A key is set but was not signed by the licensor, or is damaged. */
+  invalidKey: boolean
+}
+
 export interface SessionUser {
   id: string
   name: string

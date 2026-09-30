@@ -23,6 +23,8 @@ export default {
   cannotManage: 'Only the people who manage this item can do this',
   topLevelOwnerOnly: 'Only an owner can add items at the top of the drive',
   restoreFolderFirst: 'The folder it was in is in the trash too: restore that folder first',
+  organizationsNeedLicense: 'Several people managing files needs a Drive for Organizations license',
+  noSeatLeft: 'All {seats} seats of your license are taken: free one or add seats',
   readersOnly: 'For readers only',
   ownerExists: 'The owner account already exists',
   invalidSetupToken: 'Invalid setup token',

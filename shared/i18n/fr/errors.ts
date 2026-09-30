@@ -26,6 +26,8 @@ export default {
   cannotManage: 'Action réservée aux personnes qui gèrent cet élément',
   topLevelOwnerOnly: 'Seul un propriétaire peut ajouter des éléments à la racine du Drive',
   restoreFolderFirst: 'Le dossier qui le contenait est aussi dans la corbeille : restaurez d’abord ce dossier',
+  organizationsNeedLicense: 'Plusieurs personnes qui gèrent des fichiers : il faut une licence Drive pour les Organisations',
+  noSeatLeft: 'Les {seats} places de votre licence sont prises : libérez-en une ou ajoutez des places',
   readersOnly: 'Réservé aux lecteurs',
   ownerExists: 'Le propriétaire existe déjà',
   invalidSetupToken: 'Jeton d’installation invalide',
