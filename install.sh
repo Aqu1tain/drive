@@ -8,6 +8,7 @@
 #   ./install.sh --ip --yes
 #
 # Afterwards:  ./install.sh update | backup | status | logs | uninstall
+#              ./install.sh license KEY   (Drive for Organizations)
 # In French:   add --lang fr, or set DRIVE_LANG=fr
 set -euo pipefail
 
@@ -63,6 +64,7 @@ Non-interactive (scripts, AI agents):
   ./install.sh --ip --yes
 
 Afterwards:  ./install.sh update | backup | status | logs | uninstall
+             ./install.sh license KEY   (Drive for Organizations)
 
 Options:
   --domain NAME           Domain of the app (HTTPS certificate issued automatically)
@@ -91,6 +93,7 @@ Sans interaction (scripts, agents IA) :
   ./install.sh --ip --yes --lang fr
 
 Ensuite :  ./install.sh update | backup | status | logs | uninstall
+           ./install.sh license CLÉ   (Drive pour les Organisations)
 
 Options :
   --domain NOM            Domaine de l'application (certificat HTTPS obtenu automatiquement)
@@ -113,6 +116,7 @@ usage() { "usage_$UI_LANG"; }
 while [ $# -gt 0 ]; do
   case "$1" in
     install|update|backup|status|logs|uninstall) COMMAND="$1" ;;
+    license) COMMAND="license"; LICENSE_ARG="${2:-}"; [ $# -gt 1 ] && shift ;;
     --domain) APP_DOMAIN="$2"; MODE="domain"; shift ;;
     --content-domain) CONTENT_DOMAIN="$2"; shift ;;
     --ip) MODE="ip" ;;
@@ -378,6 +382,16 @@ case "$COMMAND" in
     ok "Drive is up to date" "Drive est à jour"
     ;;
   backup) backup ;;
+  license)
+    [ -n "$LICENSE_ARG" ] || fail "Usage: ./install.sh license KEY" "Usage : ./install.sh license CLÉ"
+    if grep -q '^LICENSE_KEY=' "$INSTALL_DIR/.env"; then
+      sed -i.bak "s|^LICENSE_KEY=.*|LICENSE_KEY=$LICENSE_ARG|" "$INSTALL_DIR/.env" && rm -f "$INSTALL_DIR/.env.bak"
+    else
+      printf 'LICENSE_KEY=%s\n' "$LICENSE_ARG" >> "$INSTALL_DIR/.env"
+    fi
+    compose up -d app >/dev/null
+    ok "License saved and Drive restarted: check it in Settings" "Licence enregistrée et Drive redémarré : vérifiez-la dans les Paramètres"
+    ;;
   status) compose ps ;;
   logs) compose logs -f --tail 100 app ;;
   uninstall)
