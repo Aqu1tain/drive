@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Drive: your own file space, on any server with Docker.
+# Drive: share your files and keep control, on any server with Docker.
 #
 #   curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash
 #
@@ -55,7 +55,7 @@ choose_language() {
 
 usage_en() {
   cat <<'EOF'
-Drive: your own file space, on any server with Docker.
+Drive: share your files and keep control, on any server with Docker.
 
   curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash
 
@@ -84,7 +84,7 @@ EOF
 
 usage_fr() {
   cat <<'EOF'
-Drive : votre espace de fichiers personnel, sur n'importe quel serveur avec Docker.
+Drive : partagez vos fichiers en gardant le contrôle, sur n'importe quel serveur avec Docker.
 
   curl -fsSL https://raw.githubusercontent.com/Aqu1tain/drive/main/install.sh | bash -s -- --lang fr
 

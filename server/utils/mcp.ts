@@ -43,7 +43,7 @@ const ITEMS = 'Every item has a type, file or folder, and a kind that says what 
 function instructionsFor(viewer: Viewer, appName: string) {
   const name = viewer.user!.name || viewer.user!.email
   if (!viewer.ctx.isMember) {
-    return `${appName} is a personal drive. You act for ${name}, who can read what the owner shared with them; nothing can be changed from here. Find items with search or list_folder, then read them with read_file. ${ITEMS}`
+    return `${appName} is a drive run by its owners. You act for ${name}, who can read what was shared with them; nothing can be changed from here. Find items with search or list_folder, then read them with read_file. ${ITEMS}`
   }
   const role = viewer.ctx.isOwner
     ? `${appName} is the drive of ${name}, and you act as one of its owners. Find items with search or list_folder, read them with read_file, and organize them. `
