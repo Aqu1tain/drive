@@ -111,4 +111,4 @@ Stack : Nuxt 4, Vue 3, TypeScript, PostgreSQL 17, Drizzle, Better Auth, Tailwind
 
 ## Licence
 
-[CC BY-NC-SA 4.0](LICENSE) : usage non commercial libre, modifications partagées sous la même licence. Pour un usage commercial, une licence payante est nécessaire : voir [COMMERCIAL.fr.md](COMMERCIAL.fr.md).
+Code consultable sous [PolyForm Strict License 1.0.0](LICENSE) : utilisation gratuite à des fins non commerciales, sans modification ni redistribution. Pour un usage commercial, une licence payante est nécessaire : voir [COMMERCIAL.fr.md](COMMERCIAL.fr.md). Les versions jusqu'à la 1.4.1 ont été publiées sous CC BY-NC-SA 4.0.

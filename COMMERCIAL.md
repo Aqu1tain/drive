@@ -1,16 +1,27 @@
 **English** · [Français](COMMERCIAL.fr.md)
 
-# Commercial use
+# License and commercial use
 
-Drive is distributed under the [CC BY-NC-SA 4.0](LICENSE) license:
+Drive is source-available, not open source. The code is public so that you can check what runs on your server, under the [PolyForm Strict License 1.0.0](LICENSE).
 
-- **Free for non-commercial use**: individuals, non-profits, education, personal use. You may install, modify and redistribute Drive, provided you credit the author and share your changes under the same license.
-- **Commercial use requires a license**: any use in a commercial setting (a company, a paid activity, a service sold to clients, paid hosting) requires a commercial license, for a fee.
+## What you may do
+
+- Install and use Drive for noncommercial purposes: for yourself, a hobby, a charity, a school, a public body.
+- Read the code and run it to check how it works.
+
+## What you may not do
+
+- Change Drive, build new work from it, or distribute it, modified or not. GitHub lets anyone fork a public repository, but a fork gives no right to use, change or redistribute that copy.
+- Use it for commercial purposes without a license: in a company, for a paid activity, as a service sold to clients or as paid hosting.
 
 ## Getting a commercial license
 
-Write to [contact@corentinrenard.com](mailto:contact@corentinrenard.com) with your organization, the intended use and the number of users. Terms (flat fee or royalty) are set case by case.
+Write to [contact@corentinrenard.com](mailto:contact@corentinrenard.com) with your organization, the intended use and the number of users. Drive for Organisations, for teams with several members, will be sold with a license key.
+
+## Earlier versions
+
+Versions up to 1.4.1 were published under CC BY-NC-SA 4.0, which keeps applying to those versions only. Everything from 1.5.0 on is under the PolyForm Strict License 1.0.0.
 
 ## Contributions
 
-By submitting a contribution (pull request), you agree that it is distributed under CC BY-NC-SA 4.0 and may be included in commercially licensed versions.
+Pull requests are welcome on one condition: by submitting a contribution, you confirm it is your own work and grant the copyright holder a perpetual, worldwide, irrevocable and royalty-free license to use, change, sublicense and distribute it under any terms, including commercial ones.
