@@ -580,6 +580,18 @@ describe('members of the organization', () => {
     expect((await again.upload(folder, 'x.txt', 'x')).status).toBe(403)
   })
 
+  it('can become owners, who see and manage everything, but nobody changes their own role', async () => {
+    const alice = await member()
+    const secret = await folderIn(root)
+    expect((await owner.patch(`/api/people/${alice.id}`, { role: 'owner' })).status).toBe(200)
+    const again = await new Client().signIn(alice.email, alice.password)
+    expect((await again.get(`/api/folders/${secret}`)).body.folder).toMatchObject({ canEdit: true, canManage: true })
+    expect((await again.get('/api/people')).status).toBe(200)
+
+    expect((await again.patch(`/api/people/${alice.id}`, { role: 'reader' })).status).toBe(404)
+    expect((await owner.patch(`/api/people/${alice.id}`, { role: 'member' })).status).toBe(200)
+  })
+
   it('never continue an upload someone else started', async () => {
     const alice = await member()
     const bob = await member()
