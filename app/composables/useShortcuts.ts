@@ -24,7 +24,7 @@ export function useShortcuts() {
       document.dispatchEvent(new CustomEvent('drive:focus-search'))
       return
     }
-    if (mod && event.altKey && event.code === 'KeyA' && selection.state.items.length === 1 && selection.state.mode === 'owner') {
+    if (mod && event.altKey && event.code === 'KeyA' && selection.state.items.length === 1 && selection.state.mode === 'member') {
       event.preventDefault()
       dialogs.share(selection.state.items[0]!)
     }

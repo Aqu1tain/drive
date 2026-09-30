@@ -13,7 +13,7 @@ const { data, isPending } = useQuery({
 </script>
 
 <template>
-  <FilesDriveView :items="data?.items ?? []" :loading="isPending" mode="owner" :label="t('views.trash.title')" :title="t('views.trash.title')" trash show-location :can-details="false">
+  <FilesDriveView :items="data?.items ?? []" :loading="isPending" mode="member" :label="t('views.trash.title')" :title="t('views.trash.title')" trash show-location :can-details="false">
     <template #actions>
       <UiButton v-if="data?.items.length" size="sm" variant="ghost" class="text-danger" @click="actions.emptyTrash()">{{ t('actions.confirm.emptyTrash') }}</UiButton>
     </template>

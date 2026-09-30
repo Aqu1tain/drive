@@ -5,8 +5,8 @@ import type { ResourceItem } from '#shared/types/api'
 
 const { t } = useI18n()
 useHead({ title: t('views.recent.title') })
-const { data: me } = useMe()
-const mode = computed(() => me.value?.user?.role === 'owner' ? 'owner' as const : 'reader' as const)
+const { isMember } = useRole()
+const mode = computed(() => isMember.value ? 'member' as const : 'reader' as const)
 const { data, isPending } = useQuery({
   queryKey: ['list', 'recent'],
   queryFn: () => api<{ items: ResourceItem[] }>('/api/recent'),
@@ -22,10 +22,10 @@ const { data, isPending } = useQuery({
     :title="t('views.recent.title')"
     show-location
     :sortable="false"
-    :folder-to="id => mode === 'owner' ? `/drive/folder/${id}` : `/shared-with-me/folder/${id}`"
+    :folder-to="id => mode === 'member' ? `/drive/folder/${id}` : `/shared-with-me/folder/${id}`"
   >
     <template #empty>
-      <UiEmptyState :icon="Clock" :title="t('views.recent.empty')" :description="t(mode === 'owner' ? 'views.recent.emptyOwner' : 'views.recent.emptyReader')" />
+      <UiEmptyState :icon="Clock" :title="t('views.recent.empty')" :description="t(mode === 'member' ? 'views.recent.emptyOwner' : 'views.recent.emptyReader')" />
     </template>
   </FilesDriveView>
 </template>

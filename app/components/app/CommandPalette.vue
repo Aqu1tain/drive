@@ -7,7 +7,8 @@ import { Activity, ArrowRight, Clock, FolderPlus, FolderUp, HardDrive, House, In
 import type { ResourceItem } from '#shared/types/api'
 import { searchKeyOf } from '#shared/utils/names'
 
-const props = defineProps<{ owner: boolean }>()
+const props = defineProps<{ member: boolean }>()
+const { isOwner } = useRole()
 const dialogs = useDialogs()
 const actions = useFileActions()
 const selection = useSelectionContext()
@@ -53,15 +54,19 @@ const selectionCommands = computed<Command[]>(() => {
 })
 
 const go = (path: string) => () => navigateTo(path)
-const navigation = computed<Command[]>(() => props.owner
+const navigation = computed<Command[]>(() => props.member
   ? [
       { id: 'nav-home', label: t('nav.home'), icon: House, run: go('/home') },
       { id: 'nav-drive', label: t('common.myDrive'), icon: HardDrive, run: go('/drive') },
       { id: 'nav-recent', label: t('nav.recent'), icon: Clock, run: go('/recent') },
       { id: 'nav-starred', label: t('nav.starred'), icon: Star, run: go('/starred') },
-      { id: 'nav-shared', label: t('nav.shared'), icon: Share2, run: go('/shared') },
-      { id: 'nav-activity', label: t('nav.activity'), icon: Activity, run: go('/activity') },
-      { id: 'nav-people', label: t('nav.people'), icon: Users, run: go('/people') },
+      ...(isOwner.value
+        ? [
+            { id: 'nav-shared', label: t('nav.shared'), icon: Share2, run: go('/shared') },
+            { id: 'nav-activity', label: t('nav.activity'), icon: Activity, run: go('/activity') },
+            { id: 'nav-people', label: t('nav.people'), icon: Users, run: go('/people') },
+          ]
+        : []),
       { id: 'nav-trash', label: t('nav.trash'), icon: Trash2, run: go('/trash') },
       { id: 'nav-settings', label: t('nav.settings'), icon: Settings, run: go('/settings') },
     ]
@@ -73,7 +78,7 @@ const navigation = computed<Command[]>(() => props.owner
     ])
 
 const general = computed<Command[]>(() => [
-  ...(props.owner
+  ...(isOwner.value || (props.member && selection.state.folder?.id)
     ? [
         { id: 'upload', label: t('nav.uploadFiles'), icon: Upload, run: () => document.dispatchEvent(new CustomEvent('drive:upload')) },
         { id: 'upload-folder', label: t('nav.uploadFolder'), icon: FolderUp, run: () => document.dispatchEvent(new CustomEvent('drive:upload-folder')) },

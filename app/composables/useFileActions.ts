@@ -5,7 +5,8 @@ import {
 } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
-export type BrowserMode = 'owner' | 'reader' | 'share'
+/** Members (owners included) work in the drive, readers and share visitors only look. */
+export type BrowserMode = 'member' | 'reader' | 'share'
 
 const named = (items: ResourceItem[], fallback = '') => ({ count: items.length, name: items[0]?.name ?? fallback })
 
@@ -233,11 +234,11 @@ export function useFileActions() {
     const downloadable = items.some(item => item.canDownload)
 
     if (context.trash) {
-      return [
+      return tidyMenu([
         { id: 'restore', label: t('actions.restore'), icon: ArchiveRestore, onSelect: () => restore(items) },
         { kind: 'separator' },
-        { id: 'delete', label: t('actions.deleteForever'), icon: Trash2, danger: true, onSelect: () => deleteForever(items) },
-      ]
+        items.every(item => item.canManage) && { id: 'delete', label: t('actions.deleteForever'), icon: Trash2, danger: true, onSelect: () => deleteForever(items) },
+      ])
     }
 
     const openEntries: MenuEntry[] = single
@@ -251,7 +252,7 @@ export function useFileActions() {
     const allStarred = items.every(item => item.starred)
     const starEntry = { id: 'star', label: t(allStarred ? 'actions.removeFavorite' : 'actions.addFavorite'), icon: allStarred ? StarOff : Star, shortcut: 'S', onSelect: () => star(items, !allStarred) }
 
-    if (context.mode !== 'owner') {
+    if (context.mode !== 'member') {
       return tidyMenu([
         ...openEntries,
         { kind: 'separator' },
@@ -261,26 +262,28 @@ export function useFileActions() {
       ])
     }
 
+    const editable = items.every(item => item.canEdit)
+    const manageable = !!single?.canManage
     return tidyMenu([
       ...openEntries,
       { kind: 'separator' },
-      single && { id: 'share', label: t('common.share'), icon: Share2, shortcut: 'Mod+Alt+A', onSelect: () => dialogs.share(single) },
+      manageable && { id: 'share', label: t('common.share'), icon: Share2, shortcut: 'Mod+Alt+A', onSelect: () => dialogs.share(single!) },
       single && { id: 'copy-link', label: t('actions.copyLink'), icon: Link, onSelect: () => copyLink(single) },
       { kind: 'separator' },
       starEntry,
-      { id: 'tags', label: t('actions.tags'), icon: Tag, shortcut: 'L', onSelect: () => dialogs.tags(items) },
+      editable && { id: 'tags', label: t('actions.tags'), icon: Tag, shortcut: 'L', onSelect: () => dialogs.tags(items) },
       { kind: 'separator' },
-      single && { id: 'rename', label: t('common.rename'), icon: Pencil, shortcut: 'F2', onSelect: () => dialogs.rename(single) },
-      { id: 'move', label: t('actions.move'), icon: FolderInput, onSelect: () => dialogs.move(items) },
+      editable && single && { id: 'rename', label: t('common.rename'), icon: Pencil, shortcut: 'F2', onSelect: () => dialogs.rename(single) },
+      editable && { id: 'move', label: t('actions.move'), icon: FolderInput, onSelect: () => dialogs.move(items) },
       downloadable && { id: 'download', label: t('common.download'), icon: Download, onSelect: () => download(items) },
-      single?.type === 'file' && { id: 'upload-version', label: t('versions.uploadNew'), icon: FileUp, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-version', { detail: single })) },
+      editable && single?.type === 'file' && { id: 'upload-version', label: t('versions.uploadNew'), icon: FileUp, onSelect: () => document.dispatchEvent(new CustomEvent('drive:upload-version', { detail: single })) },
       { kind: 'separator' },
       single && { id: 'details', label: t('common.details'), icon: Info, onSelect: () => showDetails(single, 'details') },
-      single && { id: 'activity', label: t('actions.activity'), icon: History, onSelect: () => showDetails(single, 'activity') },
-      single?.type === 'file' && { id: 'versions', label: t('versions.menu'), icon: FileClock, onSelect: () => showDetails(single, 'versions') },
+      manageable && { id: 'activity', label: t('actions.activity'), icon: History, onSelect: () => showDetails(single!, 'activity') },
+      editable && single?.type === 'file' && { id: 'versions', label: t('versions.menu'), icon: FileClock, onSelect: () => showDetails(single, 'versions') },
       single?.versioning !== undefined && { id: 'versioning', label: t('versions.folderSwitch'), icon: FileClock, checked: single.versioning, onSelect: () => setVersioning(single, !single.versioning) },
       { kind: 'separator' },
-      { id: 'trash', label: t('actions.trash'), icon: Trash2, shortcut: 'Delete', danger: true, onSelect: () => trash(items) },
+      editable && { id: 'trash', label: t('actions.trash'), icon: Trash2, shortcut: 'Delete', danger: true, onSelect: () => trash(items) },
     ])
   }
 

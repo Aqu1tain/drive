@@ -47,8 +47,8 @@ const focusSelf = () => content.value?.$el.focus()
           <DialogTitle class="min-w-0 flex-1 truncate text-base font-semibold">{{ current?.name ?? t('preview.title') }}</DialogTitle>
           <span v-if="siblings.length > 1 && index >= 0" class="mr-2 text-sm text-white/60 tabular max-sm:hidden">{{ index + 1 }} / {{ siblings.length }}</span>
           <UiIconButton v-if="info?.downloadUrl && current" :icon="Download" :label="t('common.download')" tone="inverse" @click="actions.download([current], apiBase)" />
-          <UiIconButton v-if="mode === 'owner' && current" :icon="Share2" :label="t('common.share')" tone="inverse" @click="dialogs.share(current)" />
-          <UiIconButton v-if="mode === 'owner' && current && breakpoints.lg" :icon="Info" :label="t('common.details')" tone="inverse" @click="actions.showDetails(current); emit('shrink')" />
+          <UiIconButton v-if="mode === 'member' && current?.canManage" :icon="Share2" :label="t('common.share')" tone="inverse" @click="dialogs.share(current)" />
+          <UiIconButton v-if="mode === 'member' && current && breakpoints.lg" :icon="Info" :label="t('common.details')" tone="inverse" @click="actions.showDetails(current); emit('shrink')" />
           <UiIconButton v-if="breakpoints.lg && mode !== 'share'" :icon="Minimize2" :label="t('preview.toPanel')" tone="inverse" @click="emit('shrink')" />
         </header>
 

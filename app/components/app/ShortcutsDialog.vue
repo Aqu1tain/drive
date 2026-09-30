@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const props = defineProps<{ owner: boolean }>()
+const props = defineProps<{ member: boolean }>()
 const dialogs = useDialogs()
 const { t } = useI18n()
 const open = computed({ get: () => dialogs.state.shortcuts, set: value => (dialogs.state.shortcuts = value) })
@@ -29,7 +29,7 @@ const groups = computed(() => [
   },
   {
     title: t('nav.shortcuts.actions'),
-    items: props.owner
+    items: props.member
       ? [
           ['F2', t('common.rename')],
           ['S', t('nav.shortcuts.star')],

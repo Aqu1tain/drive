@@ -20,7 +20,7 @@ const current = computed(() => info.value?.item ?? props.item)
       <h2 class="min-w-0 flex-1 truncate font-semibold text-ink">{{ current?.name ?? t('preview.title') }}</h2>
       <UiIconButton :icon="Maximize2" :label="t('preview.fullScreen')" size="sm" @click="$emit('expand')" />
       <UiIconButton v-if="info?.downloadUrl && current" :icon="Download" :label="t('common.download')" size="sm" @click="actions.download([current], apiBase)" />
-      <UiIconButton v-if="mode === 'owner' && current" :icon="Share2" :label="t('common.share')" size="sm" @click="dialogs.share(current)" />
+      <UiIconButton v-if="mode === 'member' && current?.canManage" :icon="Share2" :label="t('common.share')" size="sm" @click="dialogs.share(current)" />
       <UiIconButton :icon="X" :label="t('preview.close')" shortcut="Esc" size="sm" @click="$emit('close')" />
     </header>
     <div class="min-h-0 flex-1 bg-subtle">
