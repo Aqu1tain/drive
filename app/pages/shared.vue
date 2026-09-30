@@ -12,7 +12,7 @@ const { data, isPending } = useQuery({
 </script>
 
 <template>
-  <FilesDriveView :items="data?.items ?? []" :loading="isPending" mode="owner" :label="t('views.shared.label')" :title="t('views.shared.title')" show-location :folder-to="id => `/drive/folder/${id}`">
+  <FilesDriveView :items="data?.items ?? []" :loading="isPending" mode="member" :label="t('views.shared.label')" :title="t('views.shared.title')" show-location :folder-to="id => `/drive/folder/${id}`">
     <template #empty>
       <UiEmptyState :icon="Share2" :title="t('views.shared.empty')" :description="t('views.shared.emptyHint')" />
     </template>

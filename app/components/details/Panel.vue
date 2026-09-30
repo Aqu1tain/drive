@@ -12,7 +12,9 @@ const dialogs = useDialogs()
 const actions = useFileActions()
 const queryClient = useQueryClient()
 const { t } = useI18n()
-const isOwner = computed(() => props.mode === 'owner')
+const isMember = computed(() => props.mode === 'member')
+const canEdit = computed(() => isMember.value && !!props.item?.canEdit)
+const canManage = computed(() => isMember.value && !!props.item?.canManage)
 const id = computed(() => props.item?.id ?? '')
 
 const { data: details } = useQuery({
@@ -23,23 +25,22 @@ const { data: details } = useQuery({
 const { data: access } = useQuery({
   queryKey: computed(() => ['access', id.value]),
   queryFn: () => api<ResourceAccess>(`/api/resources/${id.value}/access`),
-  enabled: computed(() => !!id.value && isOwner.value && panel.state.tab !== 'activity'),
+  enabled: computed(() => !!id.value && canManage.value && panel.state.tab !== 'activity'),
 })
 const { data: activity } = useQuery({
   queryKey: computed(() => ['activity', id.value]),
   queryFn: () => api<{ stats: ActivityStats, events: ActivityEvent[] }>(`/api/resources/${id.value}/activity`),
-  enabled: computed(() => !!id.value && isOwner.value && panel.state.tab === 'activity'),
+  enabled: computed(() => !!id.value && canManage.value && panel.state.tab === 'activity'),
 })
 
 const current = computed(() => details.value?.item ?? props.item)
 const stats = computed(() => activity.value?.stats ?? details.value?.stats ?? null)
 const tabs = computed(() => [
   ['details', t('common.details')],
-  ['access', t('details.access')],
-  ['activity', t('details.activity')],
-  ...(current.value?.type === 'file' ? [['versions', t('versions.tab')] as const] : []),
+  ...(canManage.value ? [['access', t('details.access')] as const, ['activity', t('details.activity')] as const] : []),
+  ...(canEdit.value && current.value?.type === 'file' ? [['versions', t('versions.tab')] as const] : []),
 ] as const)
-watch(() => current.value?.type, type => type === 'folder' && panel.state.tab === 'versions' && (panel.state.tab = 'details'))
+watch(tabs, list => !list.some(([value]) => value === panel.state.tab) && (panel.state.tab = 'details'))
 
 const versioning = computed({ get: () => details.value?.versioning?.enabled ?? false, set: value => actions.setVersioning(current.value!, value) })
 const versioningHint = computed(() => {
@@ -78,7 +79,7 @@ function linkTerms(link: { allowDownload: boolean, expiresAt: string | null }) {
     </div>
 
     <TabsRoot v-else v-model="panel.state.tab" class="flex min-h-0 flex-1 flex-col">
-      <TabsList v-if="isOwner" class="relative flex shrink-0 gap-1 border-b border-line-weak px-3" :aria-label="t('details.sections')">
+      <TabsList v-if="tabs.length > 1" class="relative flex shrink-0 gap-1 border-b border-line-weak px-3" :aria-label="t('details.sections')">
         <TabsTrigger v-for="tab in tabs" :key="tab[0]" :value="tab[0]" class="h-10 px-2.5 text-base text-ink-weak transition-colors hover:text-ink data-[state=active]:font-semibold data-[state=active]:text-ink">
           {{ tab[1] }}
         </TabsTrigger>
@@ -123,12 +124,12 @@ function linkTerms(link: { allowDownload: boolean, expiresAt: string | null }) {
           <dd class="text-ink">{{ formatDateTime(current.createdAt) }}</dd>
           <dt class="text-ink-weak">{{ t('details.modified') }}</dt>
           <dd class="text-ink">{{ formatDateTime(current.updatedAt) }}</dd>
-          <template v-if="isOwner && stats?.lastViewAt">
+          <template v-if="canManage && stats?.lastViewAt">
             <dt class="text-ink-weak">{{ t('details.lastViewed') }}</dt>
             <dd class="text-ink">{{ stats.lastViewBy }}<br><span class="text-sm text-ink-weak">{{ formatDateTime(stats.lastViewAt) }}</span></dd>
           </template>
         </dl>
-        <section v-if="isOwner" class="mt-5" aria-labelledby="details-tags">
+        <section v-if="canEdit" class="mt-5" aria-labelledby="details-tags">
           <div class="mb-2 flex items-center justify-between gap-2">
             <h3 id="details-tags" class="text-base text-ink-weak">{{ t('details.tags') }}</h3>
             <UiButton size="sm" variant="ghost" :icon="Tag" @click="dialogs.tags([current])">{{ t('common.edit') }}</UiButton>
@@ -137,7 +138,7 @@ function linkTerms(link: { allowDownload: boolean, expiresAt: string | null }) {
           <p v-else class="text-base text-ink-weak">{{ t('common.none') }}</p>
         </section>
 
-        <template v-if="isOwner">
+        <template v-if="canManage">
           <div class="mt-5 border-t border-line-weak pt-4">
             <div class="mb-2 flex items-center gap-2 text-base">
               <component :is="current.access?.level === 'private' ? Lock : current.access?.hasLink ? Globe : Share2" class="size-4 text-ink-weak" aria-hidden="true" />

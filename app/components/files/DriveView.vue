@@ -36,7 +36,9 @@ const selectedItems = computed(() => {
   const ids = new Set(selection.value)
   return props.items.filter(item => ids.has(item.id))
 })
-const isOwner = computed(() => props.mode === 'owner')
+const isMember = computed(() => props.mode === 'member')
+const { isOwner } = useRole()
+const selectionEditable = computed(() => selectedItems.value.every(item => item.canEdit))
 
 const previewId = computed(() => typeof route.query.preview === 'string' ? route.query.preview : null)
 const fullPreview = computed(() => !!previewId.value && (route.query.full === '1' || !breakpoints.lg))
@@ -120,15 +122,16 @@ const createEntries = computed<MenuEntry[]>(() => acceptsFiles.value
     ]
   : [])
 /** The open folder's own actions, apart from opening it again or trashing it from inside. */
-const folderEntries = computed(() => isOwner.value && props.folderItem
-  ? actions.menuFor([props.folderItem], { mode: 'owner' }).filter(entry => !isAction(entry) || !['open', 'trash'].includes(entry.id))
+const folderEntries = computed(() => isMember.value && props.folderItem
+  ? actions.menuFor([props.folderItem], { mode: 'member' }).filter(entry => !isAction(entry) || !['open', 'trash'].includes(entry.id))
   : [])
 const crumbMenu = computed(() => tidyMenu([...createEntries.value, { kind: 'separator' }, ...folderEntries.value]))
 const backgroundMenu = computed(() => tidyMenu([...createEntries.value, { kind: 'separator' }, ...folderEntries.value.filter(entry => isAction(entry) && entry.id === 'versioning')]))
 
 const dragDepth = ref(0)
 const dropTarget = ref<{ id: string | null, name: string } | null>(null)
-const acceptsFiles = computed(() => isOwner.value && !props.trash && !!props.folder)
+/** Files go into folders the viewer can edit; only owners add at the top of the drive. */
+const acceptsFiles = computed(() => isMember.value && !props.trash && !!props.folder && (props.folder.id ? !!props.folderItem?.canEdit : isOwner.value))
 
 function hasFiles(event: DragEvent) {
   return !!event.dataTransfer?.types.includes('Files')
@@ -202,10 +205,10 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
               <UiButton size="sm" variant="ghost" :icon="Trash2" class="text-danger" @click="actions.deleteForever(selectedItems)">{{ t('actions.deleteForever') }}</UiButton>
             </template>
             <template v-else>
-              <UiIconButton v-if="isOwner && selectedItems.length === 1" :icon="Share2" :label="t('common.share')" shortcut="Mod+Alt+A" @click="dialogs.share(selectedItems[0]!)" />
+              <UiIconButton v-if="isMember && selectedItems.length === 1 && selectedItems[0]!.canManage" :icon="Share2" :label="t('common.share')" shortcut="Mod+Alt+A" @click="dialogs.share(selectedItems[0]!)" />
               <UiIconButton v-if="canDownloadSelection" :icon="Download" :label="t('common.download')" @click="actions.download(selectedItems, apiBase)" />
-              <UiIconButton v-if="isOwner" :icon="FolderInput" :label="t('actions.move')" class="max-sm:hidden" @click="dialogs.move(selectedItems)" />
-              <UiIconButton v-if="isOwner" :icon="Trash2" :label="t('actions.trash')" shortcut="Delete" @click="actions.trash(selectedItems)" />
+              <UiIconButton v-if="isMember && selectionEditable" :icon="FolderInput" :label="t('actions.move')" class="max-sm:hidden" @click="dialogs.move(selectedItems)" />
+              <UiIconButton v-if="isMember && selectionEditable" :icon="Trash2" :label="t('actions.trash')" shortcut="Delete" @click="actions.trash(selectedItems)" />
               <UiDropdownMenu :entries="selectionMenu" align="start">
                 <UiIconButton :icon="EllipsisVertical" :label="t('files.moreActions')" />
               </UiDropdownMenu>
@@ -214,8 +217,8 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
         </template>
         <template v-else>
           <div v-if="crumbs?.length" class="@container flex min-w-0 flex-1 items-center gap-2">
-            <FilesBreadcrumbs :crumbs="crumbs" :to="crumbTo ?? (() => '/drive')" :droppable="isOwner" :menu="crumbMenu" @drop="onMoveToCrumb" />
-            <UiTooltip v-if="isOwner && folderItem?.versioning" :label="t('versions.keptHint')">
+            <FilesBreadcrumbs :crumbs="crumbs" :to="crumbTo ?? (() => '/drive')" :droppable="isMember" :menu="crumbMenu" @drop="onMoveToCrumb" />
+            <UiTooltip v-if="isMember && folderItem?.versioning" :label="t('versions.keptHint')">
               <button type="button" class="flex h-6 shrink-0 items-center gap-1 rounded-full bg-accent-softer px-2 text-sm text-accent-ink hover:bg-accent-soft max-lg:hidden" @click="details.show(folderItem, 'details')">
                 <FileClock class="size-3.5" aria-hidden="true" />
                 <span class="@max-sm:sr-only">{{ t('versions.kept') }}</span>
@@ -241,7 +244,7 @@ const browser = useTemplateRef<{ focus: () => void }>('browser')
         :label="label"
         :mode="mode"
         :loading="loading"
-        :folder="folder"
+        :folder="acceptsFiles ? folder : null"
         :trash="trash"
         :show-location="showLocation"
         :sortable="sortable"

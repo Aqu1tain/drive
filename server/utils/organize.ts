@@ -1,11 +1,12 @@
-/** Owner operations on the tree, shared by the API and the MCP tools. Callers check that the viewer is the owner. */
+/** Operations on the tree, shared by the API and the MCP tools: each one checks what the viewer may do. */
 import type { H3Event } from 'h3'
 import { buffer } from 'node:stream/consumers'
 import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
 import { keepBothName } from '#shared/utils/names'
+import type { Resource } from '../database/schema'
 
 export async function createFolder(viewer: Viewer, parentId: string | null | undefined, name: string) {
-  const parent = await requireFolder(parentId)
+  const parent = await requireFolder(viewer, parentId)
   const fields = nameFields(name)
   if (await findSibling(parent?.id ?? null, fields.nameLower)) nameTaken(fields.name)
 
@@ -28,14 +29,15 @@ export async function createFolder(viewer: Viewer, parentId: string | null | und
 
 export interface ResourceChanges {
   name?: string
-  starred?: boolean
   inheritAccess?: boolean
   allowScripts?: boolean
   versioning?: boolean
 }
 
+/** Renaming is editing; sharing inheritance, scripts and version history are decided by those who manage the item. */
 export async function updateResource(event: H3Event, viewer: Viewer, id: string, changes: ResourceChanges) {
-  const resource = await requireOwned(id)
+  const settings = changes.inheritAccess !== undefined || changes.allowScripts !== undefined || changes.versioning !== undefined
+  const { resource } = await requireAccess(viewer, id, settings ? 'manage' : 'edit')
   const { resources } = tables
   const patch: Partial<typeof resources.$inferInsert> = {}
 
@@ -45,7 +47,6 @@ export async function updateResource(event: H3Event, viewer: Viewer, id: string,
     if (sibling && sibling.id !== resource.id) nameTaken(fields.name)
     Object.assign(patch, resource.type === 'folder' ? { ...fields, extension: null } : fields, { updatedAt: new Date() })
   }
-  if (changes.starred !== undefined) patch.starred = changes.starred
   if (changes.inheritAccess !== undefined) patch.inheritAccess = changes.inheritAccess
   if (changes.versioning !== undefined) {
     if (resource.type !== 'folder') throw createError({ statusCode: 400, statusMessage: tr('errors.foldersOnly') })
@@ -74,13 +75,10 @@ export async function updateResource(event: H3Event, viewer: Viewer, id: string,
   return toItem(updated, { viewer, summary: summaries.get(updated.id) })
 }
 
-export async function moveResources(ids: string[], targetId: string | null, conflict: 'fail' | 'keep') {
-  const target = await requireFolder(targetId)
+export async function moveResources(viewer: Viewer, ids: string[], targetId: string | null, conflict: 'fail' | 'keep') {
+  const target = await requireFolder(viewer, targetId)
   const destination = target?.id ?? null
-  const { resources } = tables
-
-  const items = (await useDB().select().from(resources).where(inArray(resources.id, ids)))
-    .filter(item => item.parentId !== destination)
+  const items = (await requireAll(viewer, ids, 'edit')).filter(item => item.parentId !== destination)
   if (items.some(item => target && (item.id === target.id || target.ancestorIds.includes(item.id)))) {
     throw createError({ statusCode: 400, statusMessage: tr('errors.moveIntoItself') })
   }
@@ -102,8 +100,9 @@ export async function moveResources(ids: string[], targetId: string | null, conf
   return { moved: items.map(item => item.id), target: target ? { id: target.id, name: target.name } : { id: null, name: rootCrumb().name } }
 }
 
-/** Recoverable: the items wait in the trash until the owner empties it. */
-export async function trashResources(ids: string[]) {
+/** Recoverable: the items wait in the trash until someone who manages them deletes them. */
+export async function trashResources(viewer: Viewer, ids: string[]) {
+  await requireAll(viewer, ids, 'edit')
   const { resources } = tables
   const trashed = await useDB().update(resources).set({ deletedAt: new Date() })
     .where(and(inArray(resources.id, ids), isNull(resources.deletedAt)))
@@ -112,15 +111,16 @@ export async function trashResources(ids: string[]) {
 }
 
 /** Restores in place; when the original folder is itself in the trash, the item comes back at the top of My Drive. */
-export async function restoreResources(ids: string[]) {
+export async function restoreResources(viewer: Viewer, ids: string[]) {
   const { resources } = tables
   const db = useDB()
-  const items = (await db.select().from(resources).where(inArray(resources.id, ids))).filter(item => item.deletedAt)
+  const items = (await requireAll(viewer, ids, 'edit', { trashed: true })).filter(item => item.deletedAt)
 
   const restored = []
   for (const item of items) {
     const chain = await loadChain(item)
     const movedToRoot = chain.slice(1).some(node => node.deletedAt)
+    if (movedToRoot && !viewer.ctx.isOwner) throw createError({ statusCode: 409, statusMessage: tr('errors.restoreFolderFirst') })
     const parentId = movedToRoot ? null : item.parentId
     const name = keepBothName(item.name, await siblingNames(parentId))
     const renamed = name !== item.name
@@ -136,7 +136,8 @@ export async function restoreResources(ids: string[]) {
 
 export async function listTrash(viewer: Viewer, limit = 2000) {
   const { resources } = tables
-  const items = await useDB().select().from(resources).where(isNotNull(resources.deletedAt)).orderBy(desc(resources.deletedAt)).limit(limit)
+  const trashed = await useDB().select().from(resources).where(isNotNull(resources.deletedAt)).orderBy(desc(resources.deletedAt)).limit(limit)
+  const items = viewer.ctx.isOwner ? trashed : await editableOf(viewer, trashed)
   const locations = await locationsOf(items)
   return items.map(item => toItem(item, { viewer, location: locations.get(item.id) }))
 }
@@ -146,9 +147,10 @@ export async function copyFiles(viewer: Viewer, ids: string[], targetId?: string
   const storage = useStorageProvider()
   const copies = []
   for (const id of ids) {
-    const file = await requireOwned(id)
+    const { resource: file, access } = await requireAccess(viewer, id)
+    if (!access.download) throw createError({ statusCode: 403, statusMessage: tr('errors.downloadDisabled') })
     if (file.type !== 'file' || !file.storageKey || !file.checksum) throw createError({ statusCode: 400, statusMessage: tr('errors.filesOnly') })
-    const plan = await planUpload({ parentId: targetId === undefined ? file.parentId : targetId, name: file.name, conflict: 'keep', size: file.size })
+    const plan = await planUpload(viewer, { parentId: targetId === undefined ? file.parentId : targetId, name: file.name, conflict: 'keep', size: file.size })
     const storageKey = newBlobKey()
     await storage.put(storageKey, await storage.get(file.storageKey), file.mimeType ?? undefined)
     const head = file.size ? await buffer(await storage.get(storageKey, { start: 0, end: Math.min(file.size, SNIFF_BYTES) - 1 })) : Buffer.alloc(0)
@@ -156,4 +158,12 @@ export async function copyFiles(viewer: Viewer, ids: string[], targetId?: string
     copies.push(item)
   }
   return copies
+}
+
+async function editableOf(viewer: Viewer, items: Resource[]) {
+  const editable = []
+  for (const item of items) {
+    if ((await accessOf(viewer, item, { trashed: true })).access.edit) editable.push(item)
+  }
+  return editable
 }

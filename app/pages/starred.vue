@@ -5,8 +5,8 @@ import type { ResourceItem } from '#shared/types/api'
 
 const { t } = useI18n()
 useHead({ title: t('views.starred.title') })
-const { data: me } = useMe()
-const mode = computed(() => me.value?.user?.role === 'owner' ? 'owner' as const : 'reader' as const)
+const { isMember } = useRole()
+const mode = computed(() => isMember.value ? 'member' as const : 'reader' as const)
 const { data, isPending } = useQuery({
   queryKey: ['list', 'starred'],
   queryFn: () => api<{ items: ResourceItem[] }>('/api/starred'),
@@ -21,7 +21,7 @@ const { data, isPending } = useQuery({
     :label="t('views.starred.title')"
     :title="t('views.starred.title')"
     show-location
-    :folder-to="id => mode === 'owner' ? `/drive/folder/${id}` : `/shared-with-me/folder/${id}`"
+    :folder-to="id => mode === 'member' ? `/drive/folder/${id}` : `/shared-with-me/folder/${id}`"
   >
     <template #empty>
       <UiEmptyState :icon="Star" :title="t('views.starred.empty')" :description="t('views.starred.emptyHint')" />

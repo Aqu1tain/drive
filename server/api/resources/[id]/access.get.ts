@@ -1,4 +1,4 @@
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
-  return resourceAccess(await requireOwned(getRouterParam(event, 'id')!))
+  const viewer = await requireViewer(event)
+  return resourceAccess((await requireAccess(viewer, getRouterParam(event, 'id')!, 'manage')).resource)
 })

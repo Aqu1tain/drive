@@ -26,6 +26,13 @@ export default {
   you: '(you)',
   owner: 'Owner',
   reader: 'Reader',
+  roles: {
+    viewer: 'Can view',
+    editor: 'Can edit',
+    manager: 'Can manage',
+  },
+  roleLabel: 'What this person can do',
+  roleFor: 'What {name} can do',
   expires: 'expires {date}',
   viewOnly: 'view only, no downloads',
   optionsFor: 'Options for {name}',

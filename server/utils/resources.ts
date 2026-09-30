@@ -11,6 +11,8 @@ export type RuleStatus = 'active' | 'pending' | 'disabled' | 'expired' | 'revoke
 export interface RuleRow {
   rule: AccessRule
   person: AccessPerson | null
+  /** The share goes to a member of the organization, who can be given more than reading. */
+  member: boolean
   active: boolean
   status: RuleStatus
   invitationMode: 'account' | 'link' | null
@@ -50,6 +52,7 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
       userName: user.name,
       userEmail: user.email,
       userStatus: user.status,
+      userRole: user.role,
       invitationEmail: invitations.email,
       invitationName: invitations.name,
       invitationStatus: invitations.status,
@@ -70,6 +73,7 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
       return {
         rule: row.rule,
         person: { kind: 'user', label: row.userName || row.userEmail!, email: row.userEmail! },
+        member: row.userRole === 'member',
         active: status === 'active',
         status,
         invitationMode: null,
@@ -83,13 +87,14 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
       return {
         rule: row.rule,
         person: { kind: 'invitation', label: row.invitationName || row.invitationEmail!, email: row.invitationEmail! },
+        member: false,
         active: status === 'active' || status === 'pending',
         status,
         invitationMode: row.invitationMode,
         invitationTokenSealed: row.invitationTokenSealed,
       }
     }
-    return { rule: row.rule, person: null, active: !expired, status: expired ? 'expired' : 'active', invitationMode: null, invitationTokenSealed: null }
+    return { rule: row.rule, person: null, member: false, active: !expired, status: expired ? 'expired' : 'active', invitationMode: null, invitationTokenSealed: null }
   })
 }
 
@@ -97,11 +102,11 @@ export function toAccessNode(resource: Resource): AccessNode {
   return { id: resource.id, inheritAccess: resource.inheritAccess, deletedAt: resource.deletedAt }
 }
 
-export async function accessOf(viewer: Viewer, resource: Resource): Promise<{ access: Access, chain: Resource[] }> {
+export async function accessOf(viewer: Viewer, resource: Resource, options: { trashed?: boolean } = {}): Promise<{ access: Access, chain: Resource[] }> {
   const chain = await loadChain(resource)
   if (viewer.ctx.isOwner) return { access: resolveAccess(viewer.ctx, chain.map(toAccessNode), []), chain }
   const rules = await loadRules(chain.map(r => r.id))
-  return { access: resolveAccess(viewer.ctx, chain.map(toAccessNode), rules), chain }
+  return { access: resolveAccess(viewer.ctx, chain.map(toAccessNode), rules, new Date(), options), chain }
 }
 
 /** Effective rule rows of a resource: own rules, then inherited ones until inheritance is broken. */
@@ -159,9 +164,12 @@ export function thumbnailPath(resource: Resource, base: string) {
 
 export const resourceKind = (resource: Resource) => isSite(resource) ? 'html' as const : kindOf(resource.type, resource.mimeType)
 
+/** What the viewer gets to see of a resource: those who can edit it also see its labels and state, those who manage it who has access. */
 export function toItem(resource: Resource, options: { viewer: Viewer, access?: Access, summary?: AccessSummary, location?: string }): ResourceItem {
   const { viewer } = options
   const isOwner = viewer.ctx.isOwner
+  const canEdit = isOwner || !!options.access?.edit
+  const canManage = isOwner || !!options.access?.manage
   const item: ResourceItem = {
     id: resource.id,
     parentId: resource.parentId,
@@ -175,19 +183,30 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
     updatedAt: resource.updatedAt.toISOString(),
     thumbnailUrl: thumbnailPath(resource, viewer.apiBase),
     canDownload: isOwner || (options.access?.download ?? false),
+    canEdit,
+    canManage,
     location: options.location,
   }
-  if (!isOwner) return item
+  if (!canEdit) return item
 
   return {
     ...item,
-    starred: resource.starred,
     tagIds: resource.tagIds,
     allowScripts: resource.allowScripts,
-    access: options.summary,
-    lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null,
-    ownerOpenedAt: resource.ownerOpenedAt?.toISOString() ?? null,
     deletedAt: resource.deletedAt?.toISOString() ?? null,
+    ...(canManage ? { access: options.summary && viewer.user ? othersIn(options.summary, viewer.user.email) : options.summary, lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null } : {}),
+  }
+}
+
+/** A member's own access is not news to them: their folder reads as private until they share it. */
+function othersIn(summary: AccessSummary, email: string): AccessSummary {
+  const people = summary.people.filter(person => person.email !== email)
+  if (people.length === summary.people.length) return summary
+  return {
+    ...summary,
+    people,
+    level: summary.hasLink ? 'public' : people.length ? 'shared' : 'private',
+    userCount: people.filter(person => person.kind === 'user').length,
   }
 }
 
@@ -208,16 +227,24 @@ export const notInTrash = sql`${resources.deletedAt} is null and not exists (
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const isUuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value)
 
-export async function requireReadable(viewer: Viewer, id: string) {
+export type Need = 'read' | 'edit' | 'manage'
+
+const REFUSALS = { read: 'errors.noAccessItem', edit: 'errors.cannotEdit', manage: 'errors.cannotManage' } as const
+
+/** Every read or change of a resource goes through here: `trashed` also reaches what sits in the trash, for those who can edit it. */
+export async function requireAccess(viewer: Viewer, id: string, need: Need = 'read', options: { trashed?: boolean } = {}) {
   const resource = await findResource(id)
   if (!resource) throw createError({ statusCode: 404, statusMessage: tr('errors.itemNotFound') })
-  const { access, chain } = await accessOf(viewer, resource)
+  const { access, chain } = await accessOf(viewer, resource, options)
   if (!access.read) throw createError({ statusCode: 403, statusMessage: tr('errors.noAccessItem') })
+  if (!access[need]) throw createError({ statusCode: 403, statusMessage: tr(REFUSALS[need]) })
   return { resource, access, chain }
 }
 
-export async function requireOwned(id: string) {
-  const resource = await findResource(id)
-  if (!resource) throw createError({ statusCode: 404, statusMessage: tr('errors.itemNotFound') })
-  return resource
+export const requireReadable = (viewer: Viewer, id: string) => requireAccess(viewer, id, 'read')
+
+export async function requireAll(viewer: Viewer, ids: string[], need: Need, options: { trashed?: boolean } = {}) {
+  const found = []
+  for (const id of new Set(ids)) found.push((await requireAccess(viewer, id, need, options)).resource)
+  return found
 }

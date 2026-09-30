@@ -18,13 +18,17 @@ export function nameFields(raw: string) {
 
 export const childAncestors = (parent: Resource | null) => parent ? [...parent.ancestorIds, parent.id] : []
 
-/** Returns the target folder (null for the root), refusing anything that is not a live folder. */
-export async function requireFolder(parentId: string | null | undefined) {
-  if (!parentId || parentId === 'root') return null
+/** Where items go: a live folder the viewer can edit, or the top of the drive (null), which only owners organize. */
+export async function requireFolder(viewer: Viewer, parentId: string | null | undefined) {
+  if (!parentId || parentId === 'root') {
+    if (!viewer.ctx.isOwner) throw createError({ statusCode: 403, statusMessage: tr('errors.topLevelOwnerOnly') })
+    return null
+  }
   const folder = await findResource(parentId)
   if (!folder || folder.type !== 'folder') throw createError({ statusCode: 404, statusMessage: tr('errors.folderNotFound') })
   const chain = await loadChain(folder)
   if (chain.some(node => node.deletedAt)) throw createError({ statusCode: 409, statusMessage: tr('errors.folderInTrash') })
+  await requireAccess(viewer, folder.id, 'edit')
   return folder
 }
 

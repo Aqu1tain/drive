@@ -6,8 +6,9 @@ const bodySchema = z.object({ ids: ids.min(1), add: ids.default([]), remove: ids
 
 /** Adds and removes labels on a selection in one statement, leaving every other label in place. */
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
+  const viewer = await requireViewer(event)
   const body = await readValidatedBody(event, bodySchema.parse)
+  await requireAll(viewer, body.ids, 'edit')
   const { tags, resources } = tables
   const db = useDB()
   const known = body.add.length ? await db.select({ id: tags.id }).from(tags).where(inArray(tags.id, body.add)) : []

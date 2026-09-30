@@ -1,6 +1,25 @@
 export default {
   title: 'People',
   intro: 'Everyone here is a reader: they can view, never edit.',
+  introOrganization: 'Owners run the drive, members work in the folders shared with them, readers only view.',
+  role: 'Role',
+  roles: {
+    reader: 'Reader',
+    member: 'Member',
+    owner: 'Owner',
+  },
+  roleHints: {
+    reader: 'Views what you share with them, never edits.',
+    member: 'Works in their own folder and in the folders shared with them.',
+    owner: 'Sees and manages everything, including people and settings.',
+  },
+  makeRole: {
+    reader: 'Make reader',
+    member: 'Make member',
+    owner: 'Make owner',
+  },
+  roleChanged: '{name} is now {role}',
+  seats: '{used} of {seats} seats used.',
   create: 'Create an account',
   empty: {
     title: 'No one yet',
@@ -50,6 +69,7 @@ export default {
   },
   createDialog: {
     title: 'Create a reader account',
+    titleAny: 'Create an account',
     description: 'So you can share with this person afterwards. Send them their sign-in details through a secure channel.',
     email: 'Email address',
     password: 'Temporary password',

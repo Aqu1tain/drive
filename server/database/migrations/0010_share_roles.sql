@@ -1,0 +1,1 @@
+ALTER TABLE "access_rules" ADD COLUMN "role" text DEFAULT 'viewer' NOT NULL;

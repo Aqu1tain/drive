@@ -16,7 +16,7 @@ Drive is source-available, not open source. The code is public so that you can c
 
 ## Getting a commercial license
 
-Write to [contact@corentinrenard.com](mailto:contact@corentinrenard.com) with your organization, the intended use and the number of users. Drive for Organisations, for teams with several members, will be sold with a license key.
+Write to [contact@corentinrenard.com](mailto:contact@corentinrenard.com) with your organization, the intended use and the number of users. Drive for Organizations, for teams where several people manage files, comes with a license key: see [docs/organizations.md](docs/organizations.md). Features that need a key may only be used with a valid one.
 
 ## Earlier versions
 

@@ -81,10 +81,10 @@ export async function searchResources(viewer: Viewer, query: SearchQuery, limit 
   if (!isOwner) return readableItems(viewer, candidates, limit)
 
   const [summaries, locations] = await Promise.all([summarizeMany(candidates), locationsOf(candidates)])
-  return candidates
+  return withFavorites(viewer, candidates
     .map(item => toItem(item, { viewer, summary: summaries.get(item.id), location: locations.get(item.id) }))
     .filter(item => matchesAccess(item, query))
-    .slice(0, limit)
+    .slice(0, limit))
 }
 
 function matchesAccess(item: ResourceItem, query: SearchQuery) {

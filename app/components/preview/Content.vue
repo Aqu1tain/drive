@@ -6,17 +6,16 @@ const props = defineProps<{ info: PreviewInfo, dark?: boolean }>()
 const failed = ref(false)
 watch(() => props.info.contentUrl, () => (failed.value = false))
 
-const { data: me } = useMe()
 const queryClient = useQueryClient()
 
-/** Videos uploaded before thumbnails existed get one the first time their owner opens them. */
+/** Videos uploaded before thumbnails existed get one the first time someone who can edit them opens them. */
 async function addMissingThumbnail() {
   const { item, contentUrl } = props.info
-  if (item.kind !== 'video' || item.thumbnailUrl || me.value?.user?.role !== 'owner') return
+  if (item.kind !== 'video' || item.thumbnailUrl || !item.canEdit) return
   if (!await uploadVideoThumbnail(item.id, contentUrl).catch(() => false)) return
   for (const key of ['folder', 'list', 'search', 'resource']) queryClient.invalidateQueries({ queryKey: [key] })
 }
-watch(() => [props.info.item.id, me.value?.user?.role], addMissingThumbnail, { immediate: true })
+watch(() => props.info.item.id, addMissingThumbnail, { immediate: true })
 
 const isMarkdown = computed(() => props.info.item.mimeType === 'text/markdown' || /\.(md|markdown)$/i.test(props.info.item.name))
 const viewer = computed(() => {

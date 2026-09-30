@@ -18,13 +18,13 @@ export interface UploadPlan {
 }
 
 /** Every check that can refuse an upload runs before a single byte is stored. */
-export async function planUpload(input: { parentId?: string | null, name: string, conflict: ConflictStrategy, size: number }): Promise<UploadPlan> {
+export async function planUpload(viewer: Viewer, input: { parentId?: string | null, name: string, conflict: ConflictStrategy, size: number }): Promise<UploadPlan> {
   const { uploadMaxBytes, storageQuotaBytes } = useRuntimeConfig()
   if (!Number.isFinite(input.size) || input.size < 0) throw createError({ statusCode: 411, statusMessage: tr('errors.unknownSize') })
   if (input.size > uploadMaxBytes) throw createError({ statusCode: 413, statusMessage: tr('errors.fileTooLarge') })
   if ((await usedBytes()) + input.size > storageQuotaBytes) throw createError({ statusCode: 507, statusMessage: tr('errors.storageFull') })
 
-  const parent = await requireFolder(input.parentId)
+  const parent = await requireFolder(viewer, input.parentId)
   const parentId = parent?.id ?? null
   let fields = nameFields(input.name)
   const existing = await findSibling(parentId, fields.nameLower)
@@ -34,6 +34,7 @@ export async function planUpload(input: { parentId?: string | null, name: string
   if (existing && input.conflict === 'replace' && existing.type === 'folder') {
     throw createError({ statusCode: 409, statusMessage: tr('errors.folderNotReplaceable') })
   }
+  if (existing && input.conflict === 'replace') await requireAccess(viewer, existing.id, 'edit')
   if (existing && input.conflict === 'keep') fields = nameFields(keepBothName(fields.name, await siblingNames(parentId)))
   return { parent, fields, existing, conflict: input.conflict, size: input.size }
 }
@@ -94,7 +95,7 @@ export async function commitUpload(viewer: Viewer, plan: UploadPlan, blob: { sto
 
 /** Stores content already in memory (a small text written by an AI app), with the same checks as an upload. */
 export async function uploadBuffer(viewer: Viewer, input: { parentId?: string | null, name: string, conflict: ConflictStrategy }, data: Buffer) {
-  const plan = await planUpload({ ...input, size: data.length })
+  const plan = await planUpload(viewer, { ...input, size: data.length })
   const storageKey = newBlobKey()
   await useStorageProvider().put(storageKey, Readable.from(data))
   const checksum = createHash('sha256').update(data).digest('hex')

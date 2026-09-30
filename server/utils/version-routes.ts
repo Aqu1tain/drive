@@ -1,14 +1,14 @@
 import type { H3Event } from 'h3'
 
-/** Versions belong to the owner: readers and links only ever see the current content. */
-export async function ownedFile(event: H3Event) {
-  const viewer = await requireOwner(event)
-  const file = await requireOwned(getRouterParam(event, 'id')!)
+/** Versions are for those who can edit the file: readers and links only ever see the current content. */
+export async function versionedFile(event: H3Event, need: Need = 'edit') {
+  const viewer = await requireViewer(event)
+  const { resource: file } = await requireAccess(viewer, getRouterParam(event, 'id')!, need)
   if (file.type !== 'file') throw createError({ statusCode: 400, statusMessage: tr('errors.itemNotFound') })
   return { viewer, file }
 }
 
-export async function ownedVersion(event: H3Event) {
-  const { viewer, file } = await ownedFile(event)
+export async function fileVersion(event: H3Event, need: Need = 'edit') {
+  const { viewer, file } = await versionedFile(event, need)
   return { viewer, file, version: await requireVersion(file, getRouterParam(event, 'versionId')!) }
 }

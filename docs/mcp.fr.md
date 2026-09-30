@@ -74,7 +74,7 @@ L'assistant agit au nom de la personne qui l'a autorisé, et chaque règle de l'
 | `restore_version` | oui | non | Rend une version précédente de nouveau actuelle, en gardant l'actuelle comme version. |
 | `list_activity` | oui | non | Le journal d'activité, pour tout l'espace ou pour un élément. |
 
-L'assistant d'un lecteur ne voit même pas les outils du propriétaire, et en appeler un échoue.
+Avec Drive pour les Organisations, l'assistant d'un membre a lui aussi ces outils, et chaque appel est vérifié comme dans l'application : il ne range que là où le membre peut modifier, et le journal complet reste aux propriétaires. L'assistant d'un lecteur ne voit même pas ces outils, et en appeler un échoue.
 
 Chaque élément a un `type`, `file` ou `folder`, et un `kind` qui dit ce qu'il est (`pdf`, `image`, `spreadsheet`…). Les longues listes arrivent par pages : une réponse avec `nextCursor` en a d'autres, à redemander en le passant comme `cursor`.
 

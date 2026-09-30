@@ -76,6 +76,18 @@ export default {
     list: 'Liste',
     grid: 'Grille',
   },
+  organization: {
+    title: 'Drive pour les Organisations',
+    description: 'Plusieurs personnes qui gèrent des fichiers ensemble, chacune avec son rôle.',
+    name: 'Licence au nom de',
+    seats: 'Places',
+    seatsUsed: '{used} sur {seats} utilisées par les propriétaires et les membres',
+    expires: 'Valable jusqu’au',
+    none: 'Ce Drive a un seul propriétaire. Avec une licence Drive pour les Organisations, vous pouvez ajouter des membres qui travaillent dans les dossiers que vous partagez avec eux, et d’autres propriétaires.',
+    expired: 'Votre licence a expiré. Chacun garde ses accès, mais ajouter des membres ou donner plus que la consultation attend un renouvellement.',
+    invalid: 'La clé de licence configurée sur le serveur n’est pas valide. Vérifiez qu’elle a été copiée en entier.',
+    howTo: 'Écrivez à contact@corentinrenard.com pour obtenir une clé, puis configurez-la sur le serveur avec {command}.',
+  },
   data: {
     title: 'Données et confidentialité',
     description: 'Réglés par la configuration du serveur.',

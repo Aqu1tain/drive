@@ -35,7 +35,8 @@ const actions = useFileActions()
 const dialogs = useDialogs()
 const { t } = useI18n()
 
-const isOwner = computed(() => props.mode === 'owner')
+const isMember = computed(() => props.mode === 'member')
+const editable = computed(() => selectedItems.value.every(item => item.canEdit))
 const isGrid = computed(() => preferences.view === 'grid')
 const width = ref(0)
 
@@ -101,9 +102,9 @@ onMounted(() => {
 
 const show = computed(() => ({
   location: props.showLocation && room.value.location,
-  access: isOwner.value && !props.trash && room.value.access,
+  access: isMember.value && !props.trash && room.value.access && props.items.some(item => item.access),
   size: room.value.size,
-  viewed: isOwner.value && !props.trash && !props.showLocation && room.value.viewed,
+  viewed: isMember.value && !props.trash && !props.showLocation && room.value.viewed && props.items.some(item => item.lastExternalViewAt !== undefined),
 }))
 
 const gridTemplate = computed(() => {
@@ -408,12 +409,13 @@ function onKeydown(event: KeyboardEvent) {
       break
     case 'Delete':
     case 'Backspace':
-      if (!isOwner.value || !selectedItems.value.length) return
+      if (!isMember.value || !selectedItems.value.length) return
+      if (props.trash ? !selectedItems.value.every(item => item.canManage) : !editable.value) return
       if (props.trash) actions.deleteForever(selectedItems.value)
       else actions.trash(selectedItems.value)
       break
     case 'F2':
-      if (!isOwner.value || props.trash || selectedItems.value.length !== 1) return
+      if (!isMember.value || props.trash || selectedItems.value.length !== 1 || !editable.value) return
       dialogs.rename(selectedItems.value[0]!)
       break
     case 's':
@@ -423,7 +425,7 @@ function onKeydown(event: KeyboardEvent) {
       break
     case 'l':
     case 'L':
-      if (mod || !isOwner.value || props.trash || !selectedItems.value.length) return
+      if (mod || !isMember.value || props.trash || !selectedItems.value.length || !editable.value) return
       dialogs.tags(selectedItems.value)
       break
     case 'F10':
@@ -468,7 +470,7 @@ const dropTargetId = ref<string | null>(null)
 const draggingIds = ref<string[]>([])
 
 function onDragStart(event: DragEvent, item: ResourceItem, index: number) {
-  if (!isOwner.value || props.trash || !event.dataTransfer) return
+  if (!isMember.value || props.trash || !item.canEdit || !event.dataTransfer) return
   if (!selectedSet.value.has(item.id)) {
     setSelection([item.id])
     anchorIndex.value = index
@@ -500,7 +502,7 @@ function onDragOver(event: DragEvent) {
     if (valid) event.preventDefault()
     return
   }
-  if (types.includes('Files') && isOwner.value && !props.trash && (target || props.folder)) {
+  if (types.includes('Files') && isMember.value && !props.trash && (target || props.folder)) {
     event.preventDefault()
     dropTargetId.value = target?.id ?? null
     emit('fileDrag', target ?? props.folder)
@@ -519,7 +521,7 @@ function onDrop(event: DragEvent) {
     draggingIds.value = []
     return
   }
-  if (types.includes('Files') && isOwner.value && !props.trash && (target || props.folder)) {
+  if (types.includes('Files') && isMember.value && !props.trash && (target || props.folder)) {
     event.preventDefault()
     emit('dropFiles', target ?? props.folder!, event.dataTransfer!)
   }
@@ -604,11 +606,11 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
               :aria-rowindex="row.index + 2"
               :aria-selected="selectedSet.has(sorted[row.index]!.id)"
               :data-index="row.index"
-              :data-folder-id="sorted[row.index]!.type === 'folder' && !trash ? sorted[row.index]!.id : undefined"
+              :data-folder-id="sorted[row.index]!.type === 'folder' && sorted[row.index]!.canEdit && !trash ? sorted[row.index]!.id : undefined"
               :data-folder-name="sorted[row.index]!.type === 'folder' ? sorted[row.index]!.name : undefined"
-              :draggable="isOwner && !trash"
+              :draggable="isMember && !trash && sorted[row.index]!.canEdit"
               class="group absolute inset-x-0 top-0 grid cursor-pointer items-center gap-x-4 border-b border-line-weak pr-2 pl-4 select-none transition-colors duration-100"
-              :data-draggable="isOwner && !trash || undefined"
+              :data-draggable="isMember && !trash && sorted[row.index]!.canEdit || undefined"
               :class="[
                 selectedSet.has(sorted[row.index]!.id) ? 'bg-selected hover:bg-selected-hover' : 'hover:bg-hover',
                 dropTargetId === sorted[row.index]!.id && 'bg-selected! ring-2 ring-inset ring-accent',
@@ -626,7 +628,7 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
                   <div class="flex min-w-0 items-center gap-1.5">
                     <span class="truncate text-ink" :title="sorted[row.index]!.name">{{ sorted[row.index]!.name }}</span>
                     <Star v-if="sorted[row.index]!.starred" class="size-3.5 shrink-0 fill-current text-[#f0a500]" :aria-label="t('files.favorite')" />
-                    <TagsPills v-if="isOwner" :ids="sorted[row.index]!.tagIds" />
+                    <TagsPills v-if="isMember" :ids="sorted[row.index]!.tagIds" />
                   </div>
                   <div v-if="!room.wide" class="truncate text-sm text-ink-weak">
                     {{ formatShortDate(dateOf(sorted[row.index]!)) }}<template v-if="sorted[row.index]!.type === 'file'"> · {{ formatSize(sorted[row.index]!.size) }}</template>
@@ -683,10 +685,10 @@ defineExpose({ focus: () => scroller.value?.focus(), selectAll: () => setSelecti
                 :focused="keyboardFocus && focusIndex === row.index * columns + offset"
                 :drop-target="dropTargetId === item.id"
                 :dragging="draggingIds.includes(item.id)"
-                :draggable="isOwner && !trash"
+                :draggable="isMember && !trash && item.canEdit"
                 :trash="trash"
                 :menu="rowMenu(item)"
-                :show-access="isOwner && !trash"
+                :show-access="isMember && !trash && !!item.access"
                 @click.stop="onClick($event, row.index * columns + offset)"
                 @dblclick="emit('open', item)"
                 @dragstart="onDragStart($event, item, row.index * columns + offset)"

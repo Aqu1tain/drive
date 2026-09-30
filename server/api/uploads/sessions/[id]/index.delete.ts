@@ -1,5 +1,5 @@
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
-  await dropSession(requireSession(getRouterParam(event, 'id')!))
+  const viewer = await requireViewer(event)
+  await dropSession(requireSession(viewer, getRouterParam(event, 'id')!))
   return { aborted: true }
 })

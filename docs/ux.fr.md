@@ -84,9 +84,16 @@ Garde-fou de cohérence. Toute nouvelle interface doit s'y conformer ou le faire
 
 ## Partage
 
-- Un seul panneau : personnes (sans sélecteur de rôle : tout le monde est lecteur), accès hérités affichés avec leur origine, lien public (désactivé / toute personne disposant du lien), téléchargement autorisé, expiration, Copier le lien.
+- Un seul panneau : personnes (un sélecteur de rôle, Peut consulter / Peut modifier / Peut gérer, seulement à côté des membres de l'organisation : tous les autres sont lecteurs), accès hérités affichés avec leur origine, lien public (désactivé / toute personne disposant du lien), téléchargement autorisé, expiration, Copier le lien.
 - Ajouter quelqu'un = une adresse email. Sans compte : invitation « compte » par défaut ; « lien personnel » en option, avec la mention honnête qu'il peut être transféré.
 - Les liens public/personnels ne présentent jamais le visiteur comme identifié (« Lien public », « Paul (lien personnel) »).
+
+## Organisations
+
+- Une seule interface pour tout le monde, filtrée par ce que chaque personne peut faire sur chaque élément (`canEdit`, `canManage`) : une action impossible est absente, pas désactivée. Le serveur vérifie de toute façon.
+- Les membres voient Accueil, Mon Drive, Récents, Favoris et Corbeille. Leur Mon Drive liste leur propre dossier et les dossiers partagés avec eux ; « Nouveau » n'apparaît que dans un dossier. Personnes, Partagés et le journal complet restent aux propriétaires.
+- Le panneau de détails montre les onglets Accès et Activité à ceux qui gèrent l'élément, Versions à ceux qui peuvent le modifier.
+- Personnes : un badge de rôle (Membre, Propriétaire) et « Passer en lecteur / membre / propriétaire » dans le menu de chacun ; créer un compte demande le rôle et indique les places utilisées. Les Paramètres montrent la licence (organisation, places, expiration) et comment configurer une clé.
 
 ## Feedback
 

@@ -5,7 +5,8 @@ import { parseSearchQuery } from '#shared/utils/search'
 import type { TagInfo } from '#shared/types/api'
 import type { Component } from 'vue'
 
-const props = defineProps<{ owner: boolean, collapsed?: boolean }>()
+const props = defineProps<{ member: boolean, collapsed?: boolean }>()
+const { isOwner } = useRole()
 const emit = defineEmits<{ navigate: [] }>()
 const { public: config } = useRuntimeConfig()
 const dialogs = useDialogs()
@@ -32,12 +33,19 @@ const ownerNav: NavItem[] = [
   { to: '/people', label: t('nav.people'), icon: Users },
   { to: '/trash', label: t('nav.trash'), icon: Trash2 },
 ]
+const memberNav: NavItem[] = [
+  { to: '/home', label: t('nav.home'), icon: House },
+  { to: '/drive', label: t('common.myDrive'), icon: HardDrive, match: /^\/drive/ },
+  { to: '/recent', label: t('nav.recent'), icon: Clock },
+  { to: '/starred', label: t('nav.starred'), icon: Star },
+  { to: '/trash', label: t('nav.trash'), icon: Trash2 },
+]
 const readerNav: NavItem[] = [
   { to: '/shared-with-me', label: t('nav.sharedWithMe'), icon: Inbox, match: /^\/shared-with-me/ },
   { to: '/recent', label: t('nav.recent'), icon: Clock },
   { to: '/starred', label: t('nav.starred'), icon: Star },
 ]
-const nav = computed(() => props.owner ? ownerNav : readerNav)
+const nav = computed(() => isOwner.value ? ownerNav : props.member ? memberNav : readerNav)
 const isActive = (item: { to: string, match?: RegExp }) => item.match ? item.match.test(route.path) : route.path === item.to
 
 const currentFolder = computed(() => route.path.startsWith('/drive/folder/') ? String(route.params.id) : null)
@@ -53,11 +61,11 @@ const newEntries = computed<MenuEntry[]>(() => [
 const { data: storage } = useQuery({
   queryKey: ['storage'],
   queryFn: () => api<{ used: number, quota: number }>('/api/storage'),
-  enabled: computed(() => props.owner),
+  enabled: isOwner,
 })
 const usage = computed(() => storage.value ? Math.min(1, storage.value.used / storage.value.quota) : 0)
 
-const { tags } = useTags(computed(() => props.owner))
+const { tags } = useTags(computed(() => props.member))
 const queryClient = useQueryClient()
 const activeTag = computed(() => route.path === '/search' ? parseSearchQuery(String(route.query.q ?? '')).tag : undefined)
 
@@ -74,6 +82,7 @@ async function deleteTag(tag: TagInfo) {
   actions.refresh()
 }
 
+/** Tags are shared by the whole organization: only owners rename or delete them. */
 const tagEntries = (tag: TagInfo): MenuEntry[] => [
   { id: 'edit', label: t('common.edit'), icon: Pencil, onSelect: () => dialogs.tagEdit(tag) },
   { id: 'delete', label: t('common.delete'), icon: Trash2, danger: true, onSelect: () => deleteTag(tag) },
@@ -107,7 +116,7 @@ async function onDrop(event: DragEvent) {
       <span v-if="!collapsed" class="text-md font-semibold tracking-tight">{{ config.appName }}</span>
     </div>
 
-    <div v-if="owner" class="pt-1 pb-4" :class="collapsed ? 'px-3' : 'px-4'">
+    <div v-if="isOwner || (member && currentFolder)" class="pt-1 pb-4" :class="collapsed ? 'px-3' : 'px-4'">
       <UiDropdownMenu :entries="newEntries">
         <UiButton v-if="collapsed" variant="primary" size="lg" :icon="Plus" :aria-label="t('nav.new')" class="w-full px-0! shadow-none" />
         <UiButton v-else variant="primary" size="lg" :icon="Plus" block class="justify-start! shadow-none">{{ t('nav.new') }}</UiButton>
@@ -130,7 +139,7 @@ async function onDrop(event: DragEvent) {
               dropTarget === item.to && 'ring-2 ring-accent',
             ]"
             @click="emit('navigate')"
-            @dragover="item.drop && owner && acceptsDrop($event) && ($event.preventDefault(), dropTarget = item.to)"
+            @dragover="item.drop && isOwner && acceptsDrop($event) && ($event.preventDefault(), dropTarget = item.to)"
             @dragleave="dropTarget = null"
             @drop="item.drop && onDrop($event)"
           >
@@ -140,7 +149,7 @@ async function onDrop(event: DragEvent) {
         </li>
       </ul>
 
-      <section v-if="owner && !collapsed && tags.length" class="mt-5" aria-labelledby="sidebar-tags">
+      <section v-if="member && !collapsed && tags.length" class="mt-5" aria-labelledby="sidebar-tags">
         <h2 id="sidebar-tags" class="mb-1 px-3 text-xs font-semibold tracking-wide text-nav-ink-weak uppercase">{{ t('nav.tags') }}</h2>
         <ul class="flex flex-col gap-0.5">
           <li v-for="tag in tags" :key="tag.id" class="group relative">
@@ -156,7 +165,7 @@ async function onDrop(event: DragEvent) {
               </span>
               <span class="min-w-0 flex-1 truncate">{{ tag.name }}</span>
             </NuxtLink>
-            <UiDropdownMenu :entries="tagEntries(tag)" align="start" side="right">
+            <UiDropdownMenu v-if="isOwner" :entries="tagEntries(tag)" align="start" side="right">
               <button
                 type="button"
                 :aria-label="t('nav.tagActions', { name: tag.name })"
@@ -170,7 +179,7 @@ async function onDrop(event: DragEvent) {
       </section>
     </nav>
 
-    <div v-if="owner && storage && !collapsed" class="border-t border-nav-line px-5 py-4">
+    <div v-if="isOwner && storage && !collapsed" class="border-t border-nav-line px-5 py-4">
       <div class="mb-2 flex items-baseline justify-between text-sm">
         <span class="text-nav-ink-weak">{{ t('nav.storage') }}</span>
         <span class="tabular text-nav-ink">{{ formatSize(storage.used) }}</span>

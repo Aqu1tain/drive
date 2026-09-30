@@ -20,7 +20,7 @@ Decision: Better Auth 1.7: email and password (scrypt), passkeys, TOTP, sign-in 
 Why: revocable sessions stored in the database, rate limiting, origin checks, maintained plugins. No cryptographic primitive is reimplemented.
 
 Notes:
-- `role` (`owner` | `reader`) and `status` (`active` | `disabled`) are server fields (`input: false`); a partial unique index guarantees a single owner;
+- `role` (`owner` | `member` | `reader`) and `status` (`active` | `disabled`) are server fields (`input: false`); several owners and members need a Drive for Organizations license (see below);
 - the client IP is computed by the application (internal header `x-drive-client-ip`) and never taken from a header supplied by the client, except with `NUXT_TRUST_PROXY=true` behind a proxy;
 - `NUXT_SETUP_TOKEN` optionally protects the initial setup.
 
@@ -33,14 +33,14 @@ Notes:
 
 ## Permissions
 
-Decision: a pure resolver (`server/domain/access.ts`), unit tested and used by every endpoint. Three primitives: `read`, `download`, `manage`.
+Decision: a pure resolver (`server/domain/access.ts`), unit tested and used by every endpoint. Four capabilities: `read`, `download`, `edit`, `manage`.
 
-- `OWNER` → everything. `READER` → read/download if a valid rule applies. Anonymous → only through a valid public link.
-- Favorites: the owner's remain a column of `resources`; each reader has their own in `favorites`, which never touches the file. A reader can only add favorites on what they can read, and the list of their favorites re-resolves access: a share that is removed also disappears from their favorites.
+- Owner → everything. Member → what their shares allow, by role (below). Reader → read/download if a valid rule applies. Anonymous → only through a valid public link.
+- Favorites and recent opens are per person (`favorites`, `resource_opens`) and never touch the file. Someone can only add favorites on what they can read, and the list of their favorites re-resolves access: a share that is removed also disappears from their favorites.
 - Additive inheritance: a resource combines its own rules with those of its ancestors, up to the first node that breaks inheritance (`inherit_access = false`).
-- A resource (or an ancestor) in the trash is no longer accessible to anyone else.
-- Rules: `user`, `invitation`, `link`. No Editor role: there is no write rule at all.
-- Write endpoints require `requireOwner`, regardless of the UI.
+- A resource (or an ancestor) in the trash is no longer accessible to anyone else, except to those who can edit it, and only for restoring or deleting it (`trashed` option).
+- Rules: `user`, `invitation`, `link`, each with a role: `viewer`, `editor` (adds `edit`) or `manager` (adds `manage`). The resolver only honors `editor` and `manager` on a `user` rule of a member of the organization (`isMember` in the context): a reader, an invitation or a link only ever reads, whatever the rule says. The highest role along the chain wins.
+- Every endpoint asks the resolver through `requireAccess(viewer, id, 'read' | 'edit' | 'manage')`, and targets go through `requireFolder`, which requires `edit` on the folder; the top of the drive belongs to owners. Organization-wide actions (people, settings, the whole activity log) use `requireOwner`, and tags or the people picker use `requireMember`.
 
 ## Invitations and links
 
@@ -78,7 +78,7 @@ Alternatives: PostgreSQL BLOBs (huge database, slow backups), S3 only (heavier l
 
 `pg_trgm` on a normalized key (lowercase, no accents): name, enclosing folders, people with access (owner). The `type:`, `access:`, `shared:`, `after:`, `before:` and `in:` filters are also exposed as chips.
 
-Tags: the owner can put as many as they like on their files and folders. They live in `tags` (name unique regardless of case, color from a palette of eight), and each resource carries `tag_ids uuid[]` with a GIN index: every existing list returns the tags without an extra query, and `tag:"follow up"` filters the search. Deleting a tag removes it from the files without touching anything else. Tags stay private: no reader can see or guess them, and a `tag:` in a reader's search returns nothing.
+Tags: owners and members put as many as they like on what they can edit, and they are shared by the whole organization (only owners rename or delete them). They live in `tags` (name unique regardless of case, color from a palette of eight), and each resource carries `tag_ids uuid[]` with a GIN index: every existing list returns the tags without an extra query, and `tag:"follow up"` filters the search. Deleting a tag removes it from the files without touching anything else. Tags stay private: no reader can see or guess them, and a `tag:` in a reader's search returns nothing.
 
 The text of files is searched too: PDF (first 100 pages), Word, Excel, PowerPoint, HTML and text files. It is normalized like names, then stored as a `tsvector` (`simple` configuration, no stemming, so it works for every language) in a separate table, `resource_texts`, so that lists never load it. Each search word must match the start of a word in the file: "invoic" finds "invoices". A reader only finds what they can open, and the text never leaves the database.
 
@@ -118,7 +118,7 @@ The interface, server messages, emails and shared pages exist in English and Fre
 
 Decision: an MCP server at `/mcp` (Streamable HTTP, stateless, JSON responses), with Better Auth as the OAuth 2.1 authorization server through `@better-auth/mcp`: discovery (RFC 8414, RFC 9728), dynamic client registration, authorization code with PKCE, tokens bound to the `/mcp` resource (RFC 8707). Guide: [docs/mcp.md](mcp.md).
 
-- Each request rebuilds the same `Viewer` as the app for the person who authorized the app, and requires an active account. Tools call the existing services (`listFolder`, `searchResources`, `requireReadable`...): MCP has no access rule of its own. Organizing tools are registered for the owner only: a reader neither sees nor can call them.
+- Each request rebuilds the same `Viewer` as the app for the person who authorized the app, and requires an active account. Tools call the existing services (`listFolder`, `searchResources`, `requireReadable`...): MCP has no access rule of its own. Organizing tools are registered for owners and members, and each call is checked by the resolver: a member's assistant can only organize where the member is editor or manager. A reader neither sees nor can call them.
 - Opaque access tokens (1 h), stored hashed like our other tokens, rather than JWTs: a JWT would stay valid until it expires and would make the server fetch its own keys over HTTP. Every call checks the token, its audience, the app, the account and the consent in the database, so a revocation applies on the next request, whatever path removed the consent. Refresh tokens (30 days) are hashed and rotated.
 - Clients belong to no one (creating clients from a session is refused); consents and tokens belong to a person. Disabling or deleting a reader, or changing their password, also removes their apps.
 - Sign-in through the usual `/login` page, then a consent page. Never automatic approval (no `skip_consent`); a consent holds for that app until it is revoked. The app declares its own name, so the page also shows the address it returns to.
@@ -128,6 +128,18 @@ Decision: an MCP server at `/mcp` (Streamable HTTP, stateless, JSON responses), 
 - CSRF: `/mcp` is not under `/api/` and uses no cookie, only the token. Only `/api/auth/oauth2/token` and `/api/auth/oauth2/register` skip the `Origin` check: they rely on no cookie (PKCE verifier, client credentials, anonymous registration). `/mcp` and discovery answer on the app origin only.
 - HTTPS is required, except on `localhost` in development: over HTTP on an IP address, `/mcp` and discovery answer 404.
 - MCP clients do not declare `application_type`; treated as web apps, their local return addresses (`http://127.0.0.1:...`) would be refused. A registration without a type is therefore a native app's.
+
+## Organizations
+
+Decision: one organization per installation. The personal edition is simply an organization with a single owner: there is one code path, and a license only unlocks more seats.
+
+- Members work through shares with a role, and nothing else: no separate "space" object. A member starts with a folder of their own at the top of the drive (a `manager` share), which owners see like everything else. A member's "My Drive" lists the top-level items shared with them.
+- Owners are administrators: they see every file, manage people, roles and seats. Nobody changes their own role, so a drive always keeps an owner.
+- Items carry `canEdit` and `canManage`: menus, shortcuts, drag and drop and the details panel follow them, and the server checks again anyway. Access summaries and activity only show on items the viewer manages.
+- Views by owners and members are not logged as consultations and do not move "Viewed": the journal stays about people outside the organization. They only feed each person's "Recent".
+- License keys: `payload.signature` in base64url, an Ed25519 signature over `{ v, id, org, seats, exp }`. The public key is in `server/lib/license.ts` and the key is checked offline, without any network call; the private key stays with the licensor (`scripts/issue-license.mjs`). The key is set with `NUXT_LICENSE_KEY` (`./install.sh license KEY`).
+- Seats count active owners and members; readers are free. Without a valid license, there is one seat. Adding an owner or a member, reactivating one, or giving an `editor` or `manager` role requires an active license with a seat left.
+- Expiry never takes anything away: during 14 days of grace everything works, then only adding people and roles waits for a renewal. Existing roles keep working, since the resolver does not look at the license.
 
 ## Migrations
 

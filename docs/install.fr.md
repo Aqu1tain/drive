@@ -127,6 +127,16 @@ Renseignez `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECR
 
 Les migrations de base de données s'appliquent automatiquement au démarrage.
 
+## Drive pour les Organisations
+
+Avec une clé de licence, plusieurs propriétaires et membres peuvent gérer les fichiers ([guide](organizations.fr.md)). Configurez-la sur le serveur, ce qui redémarre Drive :
+
+```bash
+~/drive/install.sh license CLÉ
+```
+
+Vérification : les Paramètres affichent l'organisation, les places et la date d'expiration.
+
 ## Sauvegarder et restaurer
 
 ```bash

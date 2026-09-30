@@ -7,16 +7,16 @@ const bodySchema = z.object({
 
 /** Creates the missing folders of a dropped directory tree, reusing the ones that already exist (merge). */
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
+  const viewer = await requireViewer(event)
   const body = await readValidatedBody(event, bodySchema.parse)
-  let parent = await requireFolder(body.parentId)
+  let parent = await requireFolder(viewer, body.parentId)
 
   for (const segment of body.path) {
     const fields = nameFields(segment)
     const existing = await findSibling(parent?.id ?? null, fields.nameLower)
     if (existing?.type === 'file') throw createError({ statusCode: 409, statusMessage: tr('errors.fileBlocksFolder', { name: existing.name }) })
     if (existing) {
-      parent = existing
+      parent = (await requireAccess(viewer, existing.id, 'edit')).resource
       continue
     }
     const [created] = await useDB().insert(tables.resources).values({

@@ -9,9 +9,9 @@ const bodySchema = z.object({
 
 /** Starts a multipart upload: every check runs now, before any byte is sent. */
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
+  const viewer = await requireViewer(event)
   const body = await readValidatedBody(event, bodySchema.parse)
-  const session = await openSession(await planUpload(body))
+  const session = await openSession(viewer, await planUpload(viewer, body))
   setResponseStatus(event, 201)
   return { id: session.id, partSize: PART_SIZE, name: session.plan.fields.name }
 })

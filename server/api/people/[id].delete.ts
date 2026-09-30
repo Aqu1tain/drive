@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm'
 
+/** Their shares go with them; what they created stays in the drive. */
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
-  const reader = await requireReader(getRouterParam(event, 'id')!)
-  await revokeSessions(reader.id)
-  await useDB().delete(tables.user).where(eq(tables.user.id, reader.id))
-  return { deleted: reader.id }
+  const viewer = await requireOwner(event)
+  const person = await requirePerson(viewer, getRouterParam(event, 'id')!)
+  await revokeSessions(person.id)
+  await useDB().delete(tables.user).where(eq(tables.user.id, person.id))
+  return { deleted: person.id }
 })

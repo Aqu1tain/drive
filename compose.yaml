@@ -20,6 +20,7 @@ services:
       NUXT_DATABASE_URL: postgres://drive:${POSTGRES_PASSWORD:?run ./install.sh or set POSTGRES_PASSWORD}@db:5432/drive
       NUXT_AUTH_SECRET: ${AUTH_SECRET:?run ./install.sh or set AUTH_SECRET}
       NUXT_SETUP_TOKEN: ${SETUP_TOKEN:-}
+      NUXT_LICENSE_KEY: ${LICENSE_KEY:-}
       NUXT_TRUST_PROXY: ${TRUST_PROXY:-false}
       NUXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:3000}
       NUXT_PUBLIC_USERCONTENT_URL: ${USERCONTENT_URL:-http://localhost:3001}

@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
-import { Ban, CircleCheck, Copy, EllipsisVertical, KeyRound, Trash2, UserPlus, Users } from '@lucide/vue'
-import type { Person } from '#shared/types/api'
+import { Ban, BookOpen, CircleCheck, Copy, Crown, EllipsisVertical, KeyRound, Trash2, UserPen, UserPlus, Users } from '@lucide/vue'
+import type { Person, Role } from '#shared/types/api'
 
 const { t } = useI18n()
 useHead({ title: t('people.title') })
 const queryClient = useQueryClient()
 const dialogs = useDialogs()
+const organization = useOrganization()
 const { data, isPending } = useQuery({ queryKey: ['people'], queryFn: () => api<{ people: Person[] }>('/api/people') })
 
 const accounts = computed(() => data.value?.people.filter(p => p.kind === 'user') ?? [])
 const invitations = computed(() => data.value?.people.filter(p => p.kind === 'invitation' && p.status === 'pending') ?? [])
 const refresh = () => {
   queryClient.invalidateQueries({ queryKey: ['people'] })
+  queryClient.invalidateQueries({ queryKey: ['settings'] })
   queryClient.invalidateQueries({ queryKey: ['access'] })
   queryClient.invalidateQueries({ queryKey: ['folder'] })
 }
@@ -34,15 +36,30 @@ async function attempt(task: () => Promise<unknown>, success: string) {
 const passwordFor = ref<Person | null>(null)
 const creating = ref(false)
 
+const ROLE_ICONS = { reader: BookOpen, member: UserPen, owner: Crown }
+
+/** Readers are free; making someone a member or an owner takes a seat of the license. */
+function roleEntries(person: Person): MenuEntry[] {
+  const roles: Role[] = organization.value?.active || person.role !== 'reader' ? ['reader', 'member', 'owner'] : []
+  return roles.filter(role => role !== person.role).map(role => ({
+    id: `role-${role}`,
+    label: t(`people.makeRole.${role}`),
+    icon: ROLE_ICONS[role],
+    onSelect: () => attempt(() => api(`/api/people/${person.id}`, { method: 'PATCH', body: { role } }), t('people.roleChanged', { name: person.name || person.email, role: t(`people.roles.${role}`).toLowerCase() })),
+  }))
+}
+
 function accountMenu(person: Person): MenuEntry[] {
-  return [
+  return tidyMenu([
+    ...roleEntries(person),
+    { kind: 'separator' },
     { id: 'password', label: t('people.setPassword'), icon: KeyRound, onSelect: () => (passwordFor.value = person) },
     person.status === 'active'
       ? { id: 'disable', label: t('people.disableAccount'), icon: Ban, onSelect: () => disable(person) }
       : { id: 'enable', label: t('people.enableAccount'), icon: CircleCheck, onSelect: () => attempt(() => api(`/api/people/${person.id}`, { method: 'PATCH', body: { status: 'active' } }), t('people.enabled')) },
     { kind: 'separator' },
     { id: 'delete', label: t('people.deleteAccount'), icon: Trash2, danger: true, onSelect: () => remove(person) },
-  ]
+  ])
 }
 
 async function disable(person: Person) {
@@ -101,7 +118,8 @@ async function revoke(person: Person) {
       <div class="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 class="text-xl font-semibold text-ink">{{ t('people.title') }}</h1>
-          <p class="mt-1 text-base text-ink-weak">{{ t('people.intro') }}</p>
+          <p class="mt-1 text-base text-ink-weak">{{ t(organization?.active ? 'people.introOrganization' : 'people.intro') }}</p>
+          <p v-if="organization?.active" class="mt-1 text-sm text-ink-weak">{{ t('people.seats', { used: organization.used, seats: organization.seats }) }}</p>
         </div>
         <UiButton variant="primary" :icon="UserPlus" @click="creating = true">{{ t('people.create') }}</UiButton>
       </div>
@@ -118,6 +136,7 @@ async function revoke(person: Person) {
               <div class="min-w-0 flex-1">
                 <p class="flex items-center gap-2">
                   <span class="truncate text-base font-medium text-ink">{{ person.name || person.email }}</span>
+                  <UiBadge v-if="person.role !== 'reader'" tone="accent">{{ t(`people.roles.${person.role}`) }}</UiBadge>
                   <UiBadge v-if="person.status === 'disabled'" tone="danger">{{ t('people.disabled') }}</UiBadge>
                 </p>
                 <p class="truncate text-sm text-ink-weak">{{ person.email }}</p>

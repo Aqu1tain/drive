@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 import { LayoutGrid, List, Monitor, Moon, Rows3, Rows4, Sun } from '@lucide/vue'
 import { LOCALES, isLocale } from '#shared/i18n'
+import type { OrganizationStatus } from '#shared/types/api'
 
 const { t, locale, setLocale } = useI18n()
 useHead({ title: t('settings.title') })
@@ -13,7 +14,7 @@ const colorMode = useColorMode()
 
 const { data: settings } = useQuery({
   queryKey: ['settings'],
-  queryFn: () => api<{ retentionDays: number, ipMode: 'hash' | 'none', emailEnabled: boolean, usercontentUrl: string, quota: number, uploadMax: number, storageDriver: string }>('/api/settings'),
+  queryFn: () => api<{ retentionDays: number, ipMode: 'hash' | 'none', emailEnabled: boolean, usercontentUrl: string, quota: number, uploadMax: number, storageDriver: string, organization: OrganizationStatus }>('/api/settings'),
   enabled: isOwner,
 })
 
@@ -155,6 +156,25 @@ const views = [
           <span class="text-base text-ink">{{ t('settings.appearance.view') }}</span>
           <UiSegmented v-model="preferences.view" :options="views" :label="t('settings.appearance.viewLabel')" />
         </div>
+      </SettingsSection>
+
+      <SettingsSection v-if="isOwner && settings" :title="t('settings.organization.title')" :description="t('settings.organization.description')">
+        <dl v-if="settings.organization.active" class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 text-base">
+          <dt class="text-ink-weak">{{ t('settings.organization.name') }}</dt>
+          <dd class="text-ink">{{ settings.organization.name }}</dd>
+          <dt class="text-ink-weak">{{ t('settings.organization.seats') }}</dt>
+          <dd class="text-ink tabular">{{ t('settings.organization.seatsUsed', { used: settings.organization.used, seats: settings.organization.seats }) }}</dd>
+          <dt class="text-ink-weak">{{ t('settings.organization.expires') }}</dt>
+          <dd class="text-ink">{{ formatLongDate(settings.organization.expiresAt!) }}</dd>
+        </dl>
+        <p v-else class="text-base text-ink-weak text-pretty">
+          {{ t(settings.organization.invalidKey ? 'settings.organization.invalid' : settings.organization.expiresAt ? 'settings.organization.expired' : 'settings.organization.none') }}
+        </p>
+        <p class="mt-3 text-sm text-ink-weak">
+          <UiTranslate message="settings.organization.howTo">
+            <template #command><code class="rounded bg-subtle px-1.5 py-0.5 font-mono text-sm text-ink">./install.sh license KEY</code></template>
+          </UiTranslate>
+        </p>
       </SettingsSection>
 
       <SettingsSection v-if="isOwner && settings" :title="t('settings.data.title')" :description="t('settings.data.description')">

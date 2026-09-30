@@ -1,6 +1,18 @@
 import type { FileKind } from '../utils/search'
 
-export type Role = 'owner' | 'reader'
+/** Owners run the organization, members work in what is shared with them, readers only read. */
+export type Role = 'owner' | 'member' | 'reader'
+
+/** The Drive for Organizations license as the owners see it. */
+export interface OrganizationStatus {
+  active: boolean
+  name: string | null
+  seats: number
+  used: number
+  expiresAt: string | null
+  /** A key is set but was not signed by the licensor, or is damaged. */
+  invalidKey: boolean
+}
 
 export interface SessionUser {
   id: string
@@ -9,6 +21,9 @@ export interface SessionUser {
   role: Role
   twoFactorEnabled?: boolean
 }
+
+/** What a share lets someone do: only members of the organization can edit or manage. */
+export type ShareRole = 'viewer' | 'editor' | 'manager'
 
 export interface AccessPerson {
   kind: 'user' | 'invitation'
@@ -41,14 +56,19 @@ export interface ResourceItem {
   previews?: string[]
   starred?: boolean
   tagIds?: string[]
-  /** Folders listed for the owner: whether files replaced inside keep their earlier versions. */
+  /** Folders listed for those who manage them: whether files replaced inside keep their earlier versions. */
   versioning?: boolean
   allowScripts?: boolean
   access?: AccessSummary
   lastExternalViewAt?: string | null
-  ownerOpenedAt?: string | null
+  /** When the viewer last opened it, on their home page. */
+  openedAt?: string | null
   deletedAt?: string | null
   canDownload: boolean
+  /** Upload into, rename, move, tag, trash. */
+  canEdit: boolean
+  /** Share, and change settings such as version history. */
+  canManage: boolean
   location?: string
 }
 
@@ -77,6 +97,9 @@ export interface AccessEntry {
   email: string | null
   status: 'active' | 'pending' | 'disabled' | 'expired' | 'revoked'
   invitationMode: 'account' | 'link' | null
+  role: ShareRole
+  /** A member of the organization, who can be given more than reading. */
+  member: boolean
   allowDownload: boolean
   expiresAt: string | null
   inheritedFrom: Crumb | null
@@ -167,6 +190,7 @@ export interface PreviewInfo {
 export interface Person {
   id: string
   kind: 'user' | 'invitation'
+  role: Role
   name: string | null
   email: string
   status: 'active' | 'disabled' | 'pending' | 'accepted' | 'revoked'

@@ -21,8 +21,9 @@ export async function requireInvitation(id: string) {
   return invitation
 }
 
-export async function requireReader(id: string) {
-  const [reader] = await useDB().select().from(tables.user).where(eq(tables.user.id, id)).limit(1)
-  if (!reader || reader.role !== 'reader') throw createError({ statusCode: 404, statusMessage: tr('errors.personNotFound') })
-  return reader
+/** Anyone the owners manage, except themselves: nobody changes their own role or locks themselves out. */
+export async function requirePerson(viewer: Viewer, id: string) {
+  const [person] = await useDB().select().from(tables.user).where(eq(tables.user.id, id)).limit(1)
+  if (!person || person.id === viewer.user?.id) throw createError({ statusCode: 404, statusMessage: tr('errors.personNotFound') })
+  return person
 }
