@@ -9,5 +9,6 @@ export default defineEventHandler(async (event) => {
     quota: Number(config.storageQuotaBytes),
     uploadMax: Number(config.uploadMaxBytes),
     storageDriver: config.storage.driver,
+    organization: await organizationStatus(),
   }
 })

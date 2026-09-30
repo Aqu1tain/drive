@@ -1,4 +1,4 @@
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
+  await requireMember(event)
   return { tags: await listTags() }
 })

@@ -2,7 +2,7 @@ import { unzipSync } from 'fflate'
 import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { docx, pack, pdf } from '../fixtures'
-import { Client, USERCONTENT_URL, ownerClient, readerClient, unique } from './client'
+import { Client, USERCONTENT_URL, memberClient, ownerClient, readerClient, unique } from './client'
 
 let owner: Client
 let root: string
@@ -14,11 +14,15 @@ beforeAll(async () => {
   root = folder.body.id
 })
 
+const personalFolders: string[] = []
+
 afterAll(async () => {
-  await owner.post('/api/resources/trash', { ids: [root] })
-  await owner.delete(`/api/resources/${root}`)
+  for (const id of [root, ...personalFolders]) {
+    await owner.post('/api/resources/trash', { ids: [id] })
+    await owner.delete(`/api/resources/${id}`)
+  }
   const { people } = (await owner.get('/api/people')).body as { people: Array<{ id: string, kind: string, email: string }> }
-  for (const person of people.filter(p => /^(reader|invitee|guest)-/.test(p.email))) {
+  for (const person of people.filter(p => /^(reader|invitee|guest|member)-/.test(p.email))) {
     await (person.kind === 'user' ? owner.delete(`/api/people/${person.id}`) : owner.delete(`/api/invitations/${person.id}`))
   }
 })
@@ -282,7 +286,7 @@ describe('file processing', () => {
 
   it('never lets readers find text in files they cannot open', async () => {
     const { client: reader, email } = await readerClient(owner)
-    const shared = await folderIn(root, 'Lecture')
+    const shared = await folderIn(root)
     const secret = word()
     const visible = await fileIn(shared, `${unique('visible')}.txt`, `note ${secret}`)
     const hidden = await fileIn(root, `${unique('cache')}.txt`, `note ${secret}`)
@@ -485,6 +489,104 @@ describe('folder previews', () => {
 
     const seen = await previewsOf(reader, parent, camp)
     expect(seen.map(url => url.split('/')[3])).toEqual([direct.id, deep.id])
+  })
+})
+
+describe('members of the organization', () => {
+  async function member(name = 'Member') {
+    const created = await memberClient(owner, name)
+    personalFolders.push(created.folder)
+    return created
+  }
+
+  async function shareWith(folder: string, email: string, role: 'viewer' | 'editor' | 'manager') {
+    const response = await owner.post(`/api/resources/${folder}/access`, { email, role, notify: false })
+    expect(response.status).toBe(201)
+  }
+
+  it('each start with a folder of their own, and take a seat', async () => {
+    const before = (await owner.get('/api/settings')).body.organization
+    const { client, folder } = await member('Alice')
+    expect((await owner.get('/api/settings')).body.organization.used).toBe(before.used + 1)
+
+    const drive = (await client.get('/api/folders/root')).body
+    expect(drive.items).toEqual([expect.objectContaining({ id: folder, name: expect.stringMatching(/^Alice/), canEdit: true, canManage: true })])
+    expect((await client.post('/api/folders', { name: 'Brouillons', parentId: folder })).status).toBe(201)
+    expect((await client.post('/api/folders', { name: 'Ailleurs', parentId: null })).status).toBe(403)
+  })
+
+  it('edit inside a folder shared with them as editors, without sharing it or changing its settings', async () => {
+    const { client, email } = await member()
+    const folder = await folderIn(root)
+    const sub = await folderIn(folder, 'Archives')
+    const file = await fileIn(folder, 'plan.txt')
+    await shareWith(folder, email, 'editor')
+
+    const listing = (await client.get(`/api/folders/${folder}`)).body
+    expect(listing.folder).toMatchObject({ canEdit: true, canManage: false })
+    expect(listing.folder.access).toBeUndefined()
+    expect(listing.folder.versioning).toBeUndefined()
+    expect((await client.patch(`/api/resources/${file.id}`, { name: 'plan v2.txt' })).status).toBe(200)
+    expect((await client.upload(folder, 'notes.txt', 'des notes')).status).toBe(201)
+    expect((await client.post('/api/resources/move', { ids: [file.id], targetId: sub })).status).toBe(200)
+    expect((await client.post('/api/resources/trash', { ids: [file.id] })).status).toBe(200)
+    expect((await client.get('/api/trash')).body.items.map((item: { id: string }) => item.id)).toContain(file.id)
+    expect((await client.post('/api/resources/restore', { ids: [file.id] })).status).toBe(200)
+
+    expect((await client.get(`/api/resources/${folder}/access`)).status).toBe(403)
+    expect((await client.put(`/api/resources/${folder}/link`, { enabled: true })).status).toBe(403)
+    expect((await client.patch(`/api/resources/${folder}`, { versioning: true })).status).toBe(403)
+    expect((await client.post('/api/resources/move', { ids: [file.id], targetId: null })).status).toBe(403)
+    await client.post('/api/resources/trash', { ids: [file.id] })
+    expect((await client.delete(`/api/resources/${file.id}`)).status).toBe(403)
+    expect((await owner.get(`/api/folders/${folder}`)).body.items.find((item: { name: string }) => item.name === 'notes.txt')).toBeTruthy()
+  })
+
+  it('only read what is shared with them as viewers', async () => {
+    const { client, email } = await member()
+    const folder = await folderIn(root)
+    const file = await fileIn(folder)
+    await shareWith(folder, email, 'viewer')
+
+    expect((await client.get(`/api/folders/${folder}`)).body.folder).toMatchObject({ canEdit: false, canManage: false })
+    expect((await client.patch(`/api/resources/${file.id}`, { name: 'autre.txt' })).status).toBe(403)
+    expect((await client.upload(folder, 'ajout.txt', 'x')).status).toBe(403)
+    expect((await client.post('/api/resources/trash', { ids: [file.id] })).status).toBe(403)
+    expect((await client.get(`/api/resources/${file.id}/versions`)).status).toBe(403)
+  })
+
+  it('manage what is shared with them as managers, and readers never get more than reading', async () => {
+    const { client, email } = await member()
+    const reader = await readerClient(owner)
+    const folder = await folderIn(root)
+    await shareWith(folder, email, 'manager')
+
+    expect((await client.post(`/api/resources/${folder}/access`, { email: reader.email, notify: false })).status).toBe(201)
+    expect((await client.get(`/api/resources/${folder}/access`)).body.entries.map((entry: { email: string }) => entry.email)).toContain(reader.email)
+    expect((await client.patch(`/api/resources/${folder}`, { versioning: true })).status).toBe(200)
+    expect((await client.post(`/api/resources/${folder}/access`, { email: reader.email, role: 'editor', notify: false })).status).toBe(400)
+    expect((await owner.post(`/api/resources/${folder}/access`, { email: reader.email, role: 'manager', notify: false })).status).toBe(400)
+    expect((await reader.client.patch(`/api/resources/${folder}`, { name: 'Renommé' })).status).toBe(403)
+  })
+
+  it('lose what their role gave them as soon as they become readers', async () => {
+    const alice = await member()
+    const folder = await folderIn(root)
+    await shareWith(folder, alice.email, 'editor')
+    expect((await owner.patch(`/api/people/${alice.id}`, { role: 'reader' })).status).toBe(200)
+
+    const again = await new Client().signIn(alice.email, alice.password)
+    expect((await again.get(`/api/folders/${folder}`)).body.folder.canEdit).toBe(false)
+    expect((await again.upload(folder, 'x.txt', 'x')).status).toBe(403)
+  })
+
+  it('never continue an upload someone else started', async () => {
+    const alice = await member()
+    const bob = await member()
+    const started = await alice.client.post('/api/uploads/sessions', { parentId: alice.folder, name: 'gros.bin', size: 10 })
+    expect(started.status).toBe(201)
+    expect((await bob.client.get(`/api/uploads/sessions/${started.body.id}`)).status).toBe(404)
+    await alice.client.delete(`/api/uploads/sessions/${started.body.id}`)
   })
 })
 

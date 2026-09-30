@@ -11,6 +11,11 @@ export async function ownerExists() {
   return (row?.count ?? 0) > 0
 }
 
+export async function findUserById(id: string) {
+  const [row] = await useDB().select().from(tables.user).where(eq(tables.user.id, id)).limit(1)
+  return row ?? null
+}
+
 export async function findUserByEmail(email: string) {
   const [row] = await useDB().select().from(tables.user).where(eq(tables.user.email, email.toLowerCase())).limit(1)
   return row ?? null

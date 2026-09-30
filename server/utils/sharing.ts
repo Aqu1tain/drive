@@ -50,6 +50,8 @@ export async function resourceAccess(resource: Resource): Promise<ResourceAccess
       email: row.person!.email,
       status: row.status,
       invitationMode: row.invitationMode,
+      role: row.member ? row.rule.role : 'viewer',
+      member: row.member,
       allowDownload: row.rule.allowDownload,
       expiresAt: row.rule.expiresAt?.toISOString() ?? null,
       inheritedFrom: crumb(row.inheritedFrom),

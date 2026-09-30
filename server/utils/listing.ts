@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import type { Crumb, FolderListing, ResourceDetails } from '#shared/types/api'
+import type { Crumb, FolderListing, ResourceDetails, ResourceItem } from '#shared/types/api'
 import { resolveAccess, resolveChildAccess, type AccessContext } from '../domain/access'
 import type { AccessRule, Resource } from '../database/schema'
 
@@ -18,6 +18,7 @@ export function crumbsFor(viewer: Viewer, chain: Resource[], rules: AccessRule[]
   if (viewer.ctx.isOwner) return [rootCrumb(), ...chain.toReversed().map(toCrumb)]
 
   const visible = chain.slice(0, topReadableIndex(viewer.ctx, chain, rules) + 1).toReversed().map(toCrumb)
+  if (viewer.ctx.isMember) return [rootCrumb(), ...visible]
   if (viewer.user) return [{ id: null, name: tr('labels.sharedWithMe') }, ...visible]
   if (viewer.invitation) return [{ id: null, name: tr('labels.sharedWithYou') }, ...visible]
   return visible
@@ -38,44 +39,41 @@ async function readableFolder(viewer: Viewer, folderId: string) {
 
 export async function listFolder(viewer: Viewer, folderId: string | null, options: { foldersOnly?: boolean } = {}): Promise<FolderListing> {
   if (!folderId) {
+    if (viewer.ctx.isMember && !viewer.ctx.isOwner) return { folder: null, breadcrumbs: [rootCrumb()], items: await listSharedWithMe(viewer) }
     if (!viewer.ctx.isOwner) throw createError({ statusCode: 403, statusMessage: tr('errors.accessDenied') })
     const [children, rows] = await Promise.all([childrenOf(null, options), loadRuleRows(rulesOnChildrenOf(null))])
     const byChild = Map.groupBy(rows, row => row.rule.resourceId)
-    return {
-      folder: null,
-      breadcrumbs: [rootCrumb()],
-      items: await withFolderPreviews(viewer, await withFavorites(viewer, withVersioning(children, false, children.map(child => toItem(child, { viewer, summary: summarizeAccess(byChild.get(child.id) ?? [], []) }))))),
-    }
+    const items = children.map((child) => {
+      const item = toItem(child, { viewer, summary: summarizeAccess(byChild.get(child.id) ?? [], []) })
+      return child.type === 'folder' ? { ...item, versioning: child.versioning ?? false } : item
+    })
+    return { folder: null, breadcrumbs: [rootCrumb()], items: await withFolderPreviews(viewer, await withFavorites(viewer, items)) }
   }
 
   const { folder, chain, rows, access } = await readableFolder(viewer, folderId)
   const [children, childRows] = await Promise.all([childrenOf(folder.id, options), loadRuleRows(rulesOnChildrenOf(folder.id))])
   const byChild = Map.groupBy(childRows, row => row.rule.resourceId)
-  const breadcrumbs = crumbsFor(viewer, chain, rows.map(r => r.rule))
+  const effective = effectiveRuleRows(chain, rows)
+  const { enabled } = await versioningOf(folder)
+  const withSettings = <T extends ResourceItem>(item: T, resource: Resource, manage: boolean): T =>
+    manage && resource.type === 'folder' ? { ...item, versioning: resource.id === folder.id ? enabled : resource.versioning ?? enabled } : item
 
-  if (viewer.ctx.isOwner) {
-    const effective = effectiveRuleRows(chain, rows)
-    const own = effective.filter(row => !row.inheritedFrom)
-    const { enabled } = await versioningOf(folder)
-    const [marked, ...items] = await withFavorites(viewer, [
-      { ...toItem(folder, { viewer, access, summary: summarizeAccess(own, effective.filter(row => row.inheritedFrom)) }), versioning: enabled },
-      ...withVersioning(children, enabled, children.map(child => toItem(child, {
-        viewer,
-        summary: summarizeAccess(byChild.get(child.id) ?? [], child.inheritAccess ? effective : []),
-      }))),
-    ])
-    return { folder: marked!, breadcrumbs, items: await withFolderPreviews(viewer, items) }
-  }
-
+  const folderItem = withSettings(toItem(folder, {
+    viewer,
+    access,
+    summary: access.manage ? summarizeAccess(effective.filter(row => !row.inheritedFrom), effective.filter(row => row.inheritedFrom)) : undefined,
+  }), folder, access.manage)
   const items = children.flatMap((child) => {
     const childAccess = resolveChildAccess(viewer.ctx, access, toAccessNode(child), (byChild.get(child.id) ?? []).map(row => row.rule))
-    return childAccess.read ? [toItem(child, { viewer, access: childAccess })] : []
+    if (!childAccess.read) return []
+    const summary = childAccess.manage ? summarizeAccess(byChild.get(child.id) ?? [], child.inheritAccess ? effective : []) : undefined
+    return [withSettings(toItem(child, { viewer, access: childAccess, summary }), child, childAccess.manage)]
   })
-  const [marked, ...markedItems] = await withFavorites(viewer, [toItem(folder, { viewer, access }), ...items])
-  return { folder: marked!, breadcrumbs, items: await withFolderPreviews(viewer, markedItems) }
+  const [marked, ...markedItems] = await withFavorites(viewer, [folderItem, ...items])
+  return { folder: marked!, breadcrumbs: crumbsFor(viewer, chain, rows.map(r => r.rule)), items: await withFolderPreviews(viewer, markedItems) }
 }
 
-/** Top-level resources shared with a reader; items already reachable through a shared parent are folded into it. */
+/** Top-level resources shared with someone; items already reachable through a shared parent are folded into it. For members, this is their drive. */
 export async function listSharedWithMe(viewer: Viewer) {
   const { accessRules, resources } = tables
   const rows = await useDB().select({ resource: resources }).from(accessRules)
@@ -88,9 +86,9 @@ export async function listSharedWithMe(viewer: Viewer) {
     if (access.read) readable.push({ resource, access })
   }
   const ids = new Set(readable.map(r => r.resource.id))
-  const items = readable
-    .filter(({ resource }) => !resource.ancestorIds.some(id => ids.has(id)))
-    .map(({ resource, access }) => toItem(resource, { viewer, access }))
+  const top = readable.filter(({ resource }) => !resource.ancestorIds.some(id => ids.has(id)))
+  const summaries = await summarizeMany(top.filter(({ access }) => access.manage).map(({ resource }) => resource))
+  const items = top.map(({ resource, access }) => toItem(resource, { viewer, access, summary: summaries.get(resource.id) }))
   return withFolderPreviews(viewer, await withFavorites(viewer, items))
 }
 
@@ -99,7 +97,7 @@ export async function resourceDetails(viewer: Viewer, id: string): Promise<Resou
   const rules = viewer.ctx.isOwner ? [] : await loadRules(chain.map(r => r.id))
   const path = crumbsFor(viewer, chain.slice(1), rules)
 
-  if (!viewer.ctx.isOwner) {
+  if (!access.manage) {
     const [item] = await withFolderPreviews(viewer, await withFavorites(viewer, [toItem(resource, { viewer, access })]))
     return { item: item!, path, stats: null }
   }
@@ -111,9 +109,4 @@ export async function resourceDetails(viewer: Viewer, id: string): Promise<Resou
     stats: await activityStats(resource),
     versioning: await versioningOf(resource),
   }
-}
-
-/** For the owner's menus: whether each child folder keeps versions, its own choice or the one it inherits. */
-function withVersioning(children: Resource[], inherited: boolean, items: ResourceItem[]) {
-  return items.map((item, index) => item.type === 'folder' ? { ...item, versioning: children[index]!.versioning ?? inherited } : item)
 }

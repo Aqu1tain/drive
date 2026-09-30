@@ -6,6 +6,7 @@ const bodySchema = z.object({
   name: personNameSchema.optional(),
   mode: z.enum(['account', 'link']).default('account'),
   allowDownload: z.boolean().default(true),
+  role: z.enum(['viewer', 'editor', 'manager']).default('viewer'),
   expiresAt: z.string().datetime().nullable().optional(),
   notify: z.boolean().default(true),
 })
@@ -19,9 +20,10 @@ export default defineEventHandler(async (event) => {
 
   const { accessRules } = tables
   const db = useDB()
-  const settings = { allowDownload: body.allowDownload, expiresAt: body.expiresAt ? new Date(body.expiresAt) : null }
+  const settings = { allowDownload: body.allowDownload, expiresAt: body.expiresAt ? new Date(body.expiresAt) : null, role: body.role }
   const existingUser = await findUserByEmail(body.email)
   if (existingUser?.role === 'owner') throw createError({ statusCode: 400, statusMessage: tr('errors.ownerAddress') })
+  if (body.role !== 'viewer') await requireRoleFor(existingUser)
 
   let ruleId: string
   let url: string
