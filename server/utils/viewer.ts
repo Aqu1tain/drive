@@ -1,10 +1,10 @@
 import type { H3Event } from 'h3'
-import type { SessionUser } from '#shared/types/api'
+import type { Role, SessionUser } from '#shared/types/api'
 import { ANONYMOUS, type AccessContext } from '../domain/access'
 import type { AccessRule, Invitation } from '../database/schema'
 
 export interface Viewer {
-  kind: 'owner' | 'reader' | 'share'
+  kind: 'owner' | 'member' | 'reader' | 'share'
   ctx: AccessContext
   apiBase: string
   user?: SessionUser
@@ -28,16 +28,17 @@ export async function getSessionUser(event: H3Event): Promise<SessionUser | null
   const session = await useAuth().api.getSession({ headers: event.headers })
   const raw = session?.user as { id: string, name: string, email: string, role?: string, status?: string, twoFactorEnabled?: boolean | null } | undefined
   const user = raw && raw.status === 'active'
-    ? { id: raw.id, name: raw.name, email: raw.email, role: raw.role === 'owner' ? 'owner' as const : 'reader' as const, twoFactorEnabled: !!raw.twoFactorEnabled }
+    ? { id: raw.id, name: raw.name, email: raw.email, role: userRole(raw.role), twoFactorEnabled: !!raw.twoFactorEnabled }
     : null
   event.context.auth = { user }
   return user
 }
 
+/** Anything unknown reads as the least privileged role. */
+export const userRole = (role: string | undefined): Role => role === 'owner' || role === 'member' ? role : 'reader'
+
 export function viewerFor(user: SessionUser): Viewer {
-  return user.role === 'owner'
-    ? { kind: 'owner', user, apiBase: '/api', ctx: { isOwner: true, userId: user.id } }
-    : { kind: 'reader', user, apiBase: '/api', ctx: { isOwner: false, userId: user.id } }
+  return { kind: user.role, user, apiBase: '/api', ctx: { isOwner: user.role === 'owner', isMember: user.role !== 'reader', userId: user.id } }
 }
 
 export async function getSessionViewer(event: H3Event): Promise<Viewer | null> {

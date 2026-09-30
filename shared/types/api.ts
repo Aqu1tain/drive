@@ -1,6 +1,7 @@
 import type { FileKind } from '../utils/search'
 
-export type Role = 'owner' | 'reader'
+/** Owners run the organization, members work in what is shared with them, readers only read. */
+export type Role = 'owner' | 'member' | 'reader'
 
 export interface SessionUser {
   id: string

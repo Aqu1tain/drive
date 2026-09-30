@@ -23,6 +23,7 @@ const rule = (resourceId: string, patch: Partial<AccessRuleLike>): AccessRuleLik
   kind: 'user',
   userId: null,
   invitationId: null,
+  role: 'viewer',
   allowDownload: true,
   expiresAt: null,
   ...patch,
@@ -199,6 +200,52 @@ describe('personal invitation links', () => {
   it('does not match another invitation', () => {
     const other = { ...invitation, id: 'inv-2' }
     expect(resolveAccess({ isOwner: false, invitation: other }, chain, [grant], now).read).toBe(false)
+  })
+})
+
+describe('members', () => {
+  const alice: AccessContext = { isOwner: false, isMember: true, userId: 'alice' }
+
+  it('edit what is shared with them as editors, without managing it', () => {
+    const access = resolveAccess(alice, chain, [rule('dupont', { userId: 'alice', role: 'editor', allowDownload: false })], now)
+    expect(access).toMatchObject({ read: true, download: true, edit: true, manage: false })
+  })
+
+  it('manage what is shared with them as managers', () => {
+    expect(resolveAccess(alice, chain, [rule('clients', { userId: 'alice', role: 'manager' })], now)).toMatchObject({ edit: true, manage: true })
+  })
+
+  it('keep the highest role they were given along the way', () => {
+    const rules = [rule('clients', { userId: 'alice', role: 'manager' }), rule('devis', { userId: 'alice', role: 'viewer' })]
+    expect(resolveAccess(alice, chain, rules, now).manage).toBe(true)
+  })
+
+  it('only read with a viewer share', () => {
+    expect(resolveAccess(alice, chain, [rule('dupont', { userId: 'alice' })], now)).toMatchObject({ read: true, edit: false, manage: false })
+  })
+
+  it('reach trashed items they can edit only when asked to', () => {
+    const trashedChain = [node('devis', { deletedAt: past }), folder, root]
+    const rules = [rule('dupont', { userId: 'alice', role: 'editor' })]
+    expect(resolveAccess(alice, trashedChain, rules, now).read).toBe(false)
+    expect(resolveAccess(alice, trashedChain, rules, now, { trashed: true }).edit).toBe(true)
+  })
+
+  it('never let viewers reach the trash', () => {
+    const trashedChain = [node('devis', { deletedAt: past }), folder, root]
+    expect(resolveAccess(alice, trashedChain, [rule('dupont', { userId: 'alice' })], now, { trashed: true }).read).toBe(false)
+  })
+})
+
+describe('roles beyond reading', () => {
+  it('are ignored for readers, even if a rule says otherwise', () => {
+    const access = resolveAccess(paul, chain, [rule('dupont', { userId: 'paul', role: 'manager', allowDownload: false })], now)
+    expect(access).toMatchObject({ read: true, download: false, edit: false, manage: false })
+  })
+
+  it('are ignored for links and invitations', () => {
+    const link = rule('dupont', { kind: 'link', role: 'editor' })
+    expect(resolveAccess({ isOwner: false, isMember: true, linkRuleId: link.id }, chain, [link], now).edit).toBe(false)
   })
 })
 

@@ -134,6 +134,8 @@ export const accessRules = pgTable('access_rules', {
   kind: text('kind', { enum: ['user', 'invitation', 'link'] }).notNull(),
   userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
   invitationId: uuid('invitation_id').references(() => invitations.id, { onDelete: 'cascade' }),
+  /** Editors and managers must be members of the organization: anyone else only ever reads. */
+  role: text('role', { enum: ['viewer', 'editor', 'manager'] }).notNull().default('viewer'),
   tokenHash: text('token_hash').unique(),
   tokenSealed: text('token_sealed'),
   allowDownload: boolean('allow_download').notNull().default(true),

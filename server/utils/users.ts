@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import type { Role } from '#shared/types/api'
 
 export const passwordSchema = z.string().min(10, { error: () => tr('errors.passwordTooShort') }).max(256)
 export const emailSchema = z.string().trim().toLowerCase().email('Adresse email invalide').max(254)
@@ -16,7 +17,7 @@ export async function findUserByEmail(email: string) {
 }
 
 /** Accounts are only ever created by the server (setup, invitation acceptance, owner action): public sign-up is disabled. */
-export async function createUser(input: { email: string, name: string, role: 'owner' | 'reader', password?: string, emailVerified: boolean }) {
+export async function createUser(input: { email: string, name: string, role: Role, password?: string, emailVerified: boolean }) {
   const ctx = await useAuth().$context
   const created = await ctx.internalAdapter.createUser({
     email: input.email.toLowerCase(),
