@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const viewer = await requireViewer(event)
+  if (viewer.ctx.isMember && !viewer.ctx.isOwner) return { items: await memberRecent(viewer) }
   if (!viewer.ctx.isOwner) return { items: await readerRecent(viewer) }
 
   const { resources, resourceOpens } = tables
@@ -24,6 +25,21 @@ async function readerRecent(viewer: Viewer) {
     .where(and(eq(accessEvents.userId, viewer.user!.id), eq(resources.type, 'file')))
     .groupBy(resources.id)
     .orderBy(desc(sql`max(${accessEvents.createdAt})`))
+    .limit(50)
+  const items = []
+  for (const { resource } of rows) {
+    const { access } = await accessOf(viewer, resource)
+    if (access.read) items.push(toItem(resource, { viewer, access }))
+  }
+  return withFavorites(viewer, items)
+}
+
+async function memberRecent(viewer: Viewer) {
+  const { resourceOpens, resources } = tables
+  const rows = await useDB().select({ resource: resources }).from(resourceOpens)
+    .innerJoin(resources, eq(resourceOpens.resourceId, resources.id))
+    .where(and(eq(resourceOpens.userId, viewer.user!.id), eq(resources.type, 'file'), notInTrash))
+    .orderBy(desc(resourceOpens.openedAt))
     .limit(50)
   const items = []
   for (const { resource } of rows) {

@@ -3,12 +3,13 @@ import { useQuery } from '@tanstack/vue-query'
 import { FolderOpen, FolderPlus, HardDrive, RotateCcw, Upload } from '@lucide/vue'
 import type { Crumb, FolderListing } from '#shared/types/api'
 
-const props = defineProps<{ folderId: string | null, mode: 'owner' | 'reader' }>()
+const props = defineProps<{ folderId: string | null, mode: 'member' | 'reader' }>()
 const dialogs = useDialogs()
+const { isOwner } = useRole()
 const actions = useFileActions()
 const { t } = useI18n()
 
-const base = computed(() => props.mode === 'owner' ? '/drive' : '/shared-with-me')
+const base = computed(() => props.mode === 'member' ? '/drive' : '/shared-with-me')
 const folderTo = (id: string) => `${base.value}/folder/${id}`
 const crumbTo = (crumb: Crumb) => crumb.id ? folderTo(crumb.id) : base.value
 
@@ -22,7 +23,7 @@ const name = computed(() => data.value?.folder?.name ?? (props.folderId ? '' : t
 useHead({ title: name })
 
 watch(() => props.folderId, (id) => {
-  if (id && props.mode === 'owner') api(`/api/resources/${id}/open`, { method: 'POST' }).catch(() => {})
+  if (id && props.mode === 'member') api(`/api/resources/${id}/open`, { method: 'POST' }).catch(() => {})
 }, { immediate: true })
 
 const status = computed(() => errorStatus(error.value))
@@ -41,7 +42,7 @@ const failure = computed(() => {
       :description="failure.description"
     >
       <UiButton v-if="status === 409 && folderId" variant="primary" :icon="RotateCcw" @click="actions.restore([{ id: folderId } as never])">{{ t('actions.restore') }}</UiButton>
-      <UiButton :variant="status === 409 ? 'secondary' : 'primary'" @click="navigateTo(base)">{{ t(mode === 'owner' ? 'views.folder.backToDrive' : 'views.folder.backToShared') }}</UiButton>
+      <UiButton :variant="status === 409 ? 'secondary' : 'primary'" @click="navigateTo(base)">{{ t(mode === 'member' ? 'views.folder.backToDrive' : 'views.folder.backToShared') }}</UiButton>
     </UiEmptyState>
   </div>
   <FilesDriveView
@@ -52,19 +53,21 @@ const failure = computed(() => {
     :label="t('views.folder.contents', { name: name || t('views.folder.unnamed') })"
     :folder="{ id: folderId, name: name || t('views.folder.this') }"
     :folder-item="data?.folder ?? null"
-    :crumbs="data?.breadcrumbs ?? [{ id: null, name: t(mode === 'owner' ? 'common.myDrive' : 'labels.sharedWithMe') }]"
+    :crumbs="data?.breadcrumbs ?? [{ id: null, name: t(mode === 'member' ? 'common.myDrive' : 'labels.sharedWithMe') }]"
     :crumb-to="crumbTo"
     :folder-to="folderTo"
   >
     <template #empty="{ pickFiles }">
       <UiEmptyState
-        v-if="mode === 'owner'"
+        v-if="mode === 'member'"
         :icon="folderId ? FolderOpen : HardDrive"
         :title="t(folderId ? 'views.folder.empty' : 'views.folder.emptyDrive')"
         :description="t('views.folder.emptyHint')"
       >
-        <UiButton variant="primary" :icon="Upload" @click="pickFiles">{{ t('files.upload') }}</UiButton>
-        <UiButton :icon="FolderPlus" @click="dialogs.newFolder(folderId)">{{ t('files.newFolder') }}</UiButton>
+        <template v-if="folderId ? data?.folder?.canEdit : isOwner">
+          <UiButton variant="primary" :icon="Upload" @click="pickFiles">{{ t('files.upload') }}</UiButton>
+          <UiButton :icon="FolderPlus" @click="dialogs.newFolder(folderId)">{{ t('files.newFolder') }}</UiButton>
+        </template>
       </UiEmptyState>
       <UiEmptyState v-else :icon="FolderOpen" :title="t('views.folder.empty')" :description="t('views.folder.emptyShared')" />
     </template>

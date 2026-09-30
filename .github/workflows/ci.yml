@@ -30,6 +30,7 @@ jobs:
       NUXT_PUBLIC_USERCONTENT_URL: http://127.0.0.1:3000
       NUXT_STORAGE_DRIVER: local
       NUXT_STORAGE_LOCAL_DIR: /tmp/drive-storage
+      NUXT_LICENSE_KEY: ${{ secrets.NUXT_LICENSE_KEY }}
       NITRO_HOST: 127.0.0.1
       NITRO_PORT: "3000"
     steps:

@@ -74,7 +74,7 @@ The assistant acts as the person who allowed it, and every rule of the app appli
 | `restore_version` | yes | no | Makes an earlier version current again, keeping the current one as a version. |
 | `list_activity` | yes | no | The activity journal, for the whole drive or one item. |
 
-A reader's assistant does not even see the owner's tools, and calling one fails.
+With Drive for Organizations, a member's assistant gets the owner's tools too, and every call is checked like in the app: it only organizes where the member can edit, and the whole activity journal stays with owners. A reader's assistant does not even see these tools, and calling one fails.
 
 Every item has a `type`, `file` or `folder`, and a `kind` that says what it is (`pdf`, `image`, `spreadsheet`...). Long lists come in pages: a response with `nextCursor` has more, pass it back as `cursor`.
 

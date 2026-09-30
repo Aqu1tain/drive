@@ -6,11 +6,11 @@ import { parseSearchQuery, stringifySearchQuery, type SearchQuery } from '#share
 
 const route = useRoute()
 const { t } = useI18n()
-const { data: me } = useMe()
-const mode = computed(() => me.value?.user?.role === 'owner' ? 'owner' as const : 'reader' as const)
+const { isOwner, isMember } = useRole()
+const mode = computed(() => isMember.value ? 'member' as const : 'reader' as const)
 const q = computed(() => String(route.query.q ?? ''))
 const parsed = computed(() => parseSearchQuery(q.value))
-const { tags } = useTags(computed(() => mode.value === 'owner'))
+const { tags } = useTags(isMember)
 const tagName = computed(() => parsed.value.tag && (tags.value.find(tag => tag.name.toLowerCase() === parsed.value.tag)?.name ?? parsed.value.tag))
 useHead({ title: computed(() => q.value ? t('search.quoted', { query: parsed.value.terms.join(' ') || tagName.value || q.value }) : t('search.title')) })
 
@@ -39,10 +39,10 @@ const title = computed(() => {
     :title="title"
     show-location
     :sortable="false"
-    :folder-to="id => mode === 'owner' ? `/drive/folder/${id}` : `/shared-with-me/folder/${id}`"
+    :folder-to="id => mode === 'member' ? `/drive/folder/${id}` : `/shared-with-me/folder/${id}`"
   >
     <template #above>
-      <SearchChips :query="parsed" :owner="mode === 'owner'" class="px-4 pb-2" @update="update" />
+      <SearchChips :query="parsed" :owner="isOwner" class="px-4 pb-2" @update="update" />
     </template>
     <template #empty>
       <UiEmptyState

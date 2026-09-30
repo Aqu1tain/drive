@@ -20,7 +20,7 @@ Décision : Better Auth 1.7 : email + mot de passe (scrypt), passkeys, TOTP, cod
 Pourquoi : sessions en base révocables, rate limiting, contrôle d'origine, plugins maintenus. Aucune primitive cryptographique réimplémentée.
 
 Notes :
-- `role` (`owner` | `reader`) et `status` (`active` | `disabled`) sont des champs serveur (`input: false`) ; un index unique partiel garantit un seul propriétaire ;
+- `role` (`owner` | `member` | `reader`) et `status` (`active` | `disabled`) sont des champs serveur (`input: false`) ; plusieurs propriétaires et des membres demandent une licence Drive pour les Organisations (voir plus bas) ;
 - l'IP client est calculée par l'application (en-tête interne `x-drive-client-ip`) et jamais reprise d'un en-tête fourni par le client, sauf `NUXT_TRUST_PROXY=true` derrière un proxy ;
 - `NUXT_SETUP_TOKEN` protège optionnellement l'installation initiale.
 
@@ -33,14 +33,14 @@ Notes :
 
 ## Permissions
 
-Décision : un résolveur pur (`server/domain/access.ts`) testé unitairement, utilisé par tous les endpoints. Trois primitives : `read`, `download`, `manage`.
+Décision : un résolveur pur (`server/domain/access.ts`) testé unitairement, utilisé par tous les endpoints. Quatre capacités : `read`, `download`, `edit`, `manage`.
 
-- `OWNER` → tout. `READER` → lecture/téléchargement si une règle valide s'applique. Anonyme → uniquement via un lien public valide.
-- Favoris : ceux du propriétaire restent une colonne de `resources` ; chaque lecteur a les siens dans `favorites`, qui ne touche pas au fichier. Il ne peut en poser que sur ce qu'il peut lire, et la liste de ses favoris re-résout l'accès : un partage retiré disparaît aussi de ses favoris.
+- Propriétaire → tout. Membre → ce que ses partages permettent, selon le rôle (ci-dessous). Lecteur → lecture/téléchargement si une règle valide s'applique. Anonyme → uniquement via un lien public valide.
+- Favoris et ouvertures récentes sont propres à chaque personne (`favorites`, `resource_opens`) et ne touchent jamais au fichier. On ne peut poser un favori que sur ce qu'on peut lire, et la liste des favoris re-résout l'accès : un partage retiré disparaît aussi des favoris.
 - Héritage additif : une ressource cumule ses règles et celles de ses ancêtres, jusqu'au premier nœud qui coupe l'héritage (`inherit_access = false`).
-- Une ressource (ou un ancêtre) dans la corbeille n'est plus accessible aux tiers.
-- Règles : `user`, `invitation`, `link`. Pas de rôle Editor : il n'existe aucune règle d'écriture.
-- Les endpoints d'écriture exigent `requireOwner`, indépendamment de l'UI.
+- Une ressource (ou un ancêtre) dans la corbeille n'est plus accessible aux tiers, sauf à ceux qui peuvent la modifier, et seulement pour la restaurer ou la supprimer (option `trashed`).
+- Règles : `user`, `invitation`, `link`, chacune avec un rôle : `viewer`, `editor` (ajoute `edit`) ou `manager` (ajoute `manage`). Le résolveur n'accorde `editor` et `manager` que sur une règle `user` d'un membre de l'organisation (`isMember` dans le contexte) : un lecteur, une invitation ou un lien ne font jamais que lire, quoi que dise la règle. Le rôle le plus élevé le long de la chaîne l'emporte.
+- Chaque endpoint interroge le résolveur via `requireAccess(viewer, id, 'read' | 'edit' | 'manage')`, et les destinations passent par `requireFolder`, qui exige `edit` sur le dossier ; la racine du Drive appartient aux propriétaires. Les actions à l'échelle de l'organisation (personnes, paramètres, journal complet) utilisent `requireOwner`, les étiquettes et le sélecteur de personnes `requireMember`.
 
 ## Invitations et liens
 
@@ -78,7 +78,7 @@ Alternatives : BLOB PostgreSQL (base énorme, sauvegardes lentes), S3 seul (dév
 
 `pg_trgm` sur une clé normalisée (minuscules, sans accents) : nom, dossiers englobants, personnes ayant accès (propriétaire). Filtres `type:`, `access:`, `shared:`, `after:`, `before:`, `in:` exposés aussi en chips.
 
-Étiquettes : le propriétaire en pose autant qu'il veut sur ses fichiers et dossiers. Elles vivent dans `tags` (nom unique sans tenir compte de la casse, couleur d'une palette de huit) et chaque ressource porte `tag_ids uuid[]` avec un index GIN : toutes les listes existantes renvoient les étiquettes sans requête de plus, et `tag:"à relancer"` filtre la recherche. Supprimer une étiquette la retire des fichiers, sans rien toucher d'autre. Elles restent privées : aucun lecteur ne les voit ni ne peut les deviner, un `tag:` dans sa recherche ne renvoie rien.
+Étiquettes : propriétaires et membres en posent autant qu'ils veulent sur ce qu'ils peuvent modifier, et elles sont communes à toute l'organisation (seuls les propriétaires les renomment ou les suppriment). Elles vivent dans `tags` (nom unique sans tenir compte de la casse, couleur d'une palette de huit) et chaque ressource porte `tag_ids uuid[]` avec un index GIN : toutes les listes existantes renvoient les étiquettes sans requête de plus, et `tag:"à relancer"` filtre la recherche. Supprimer une étiquette la retire des fichiers, sans rien toucher d'autre. Elles restent privées : aucun lecteur ne les voit ni ne peut les deviner, un `tag:` dans sa recherche ne renvoie rien.
 
 Le texte des fichiers est aussi cherché : PDF (100 premières pages), Word, Excel, PowerPoint, HTML et fichiers texte. Il est normalisé comme les noms puis stocké en `tsvector` (configuration `simple`, sans racinisation, donc valable pour toutes les langues) dans une table à part, `resource_texts`, pour que les listes ne le chargent jamais. Chaque mot cherché doit commencer un mot du fichier : « factur » trouve « factures ». Un lecteur ne trouve que ce qu'il peut ouvrir, le texte ne sort jamais de la base.
 
@@ -118,7 +118,7 @@ L'interface, les messages du serveur, les emails et les pages partagées existen
 
 Décision : un serveur MCP sur `/mcp` (Streamable HTTP, sans état, réponses JSON), et Better Auth comme serveur d'autorisation OAuth 2.1 grâce à `@better-auth/mcp` : découverte (RFC 8414, RFC 9728), enregistrement dynamique des clients, code d'autorisation avec PKCE, jetons liés à la ressource `/mcp` (RFC 8707). Guide : [docs/mcp.md](mcp.md).
 
-- Chaque requête reconstruit le même `Viewer` que l'application pour la personne qui a autorisé l'app, compte actif exigé. Les outils appellent les services existants (`listFolder`, `searchResources`, `requireReadable`…) : le MCP n'a aucune règle d'accès à lui. Les outils d'organisation ne sont enregistrés que pour le propriétaire : un lecteur ne les voit pas et ne peut pas les appeler.
+- Chaque requête reconstruit le même `Viewer` que l'application pour la personne qui a autorisé l'app, compte actif exigé. Les outils appellent les services existants (`listFolder`, `searchResources`, `requireReadable`…) : le MCP n'a aucune règle d'accès à lui. Les outils d'organisation sont enregistrés pour les propriétaires et les membres, et chaque appel est vérifié par le résolveur : l'assistant d'un membre ne range que là où le membre peut modifier ou gérer. Un lecteur ne les voit pas et ne peut pas les appeler.
 - Jetons d'accès opaques (1 h), stockés hachés comme nos autres jetons, plutôt que des JWT : un JWT resterait valable jusqu'à son expiration et obligerait le serveur à relire ses propres clés par HTTP. Chaque appel vérifie en base le jeton, son audience, l'app, le compte et le consentement : une révocation prend effet à la requête suivante, quel que soit le chemin qui retire le consentement. Les jetons de rafraîchissement (30 jours) sont hachés et tournants.
 - Les clients n'appartiennent à personne (la création de clients depuis une session est refusée) ; consentements et jetons appartiennent à une personne. Désactiver ou supprimer un lecteur, ou changer son mot de passe, retire aussi ses apps.
 - Connexion par la page `/login` habituelle, puis page de consentement. Jamais d'approbation automatique (pas de `skip_consent`) ; un consentement vaut pour cette app jusqu'à sa révocation. Le nom de l'app est déclaré par l'app elle-même : la page montre aussi l'adresse où elle renvoie.
@@ -128,6 +128,18 @@ Décision : un serveur MCP sur `/mcp` (Streamable HTTP, sans état, réponses JS
 - CSRF : `/mcp` n'est pas sous `/api/` et n'utilise aucun cookie, seulement le jeton. Seuls `/api/auth/oauth2/token` et `/api/auth/oauth2/register` échappent au contrôle d'`Origin` : ils ne s'appuient sur aucun cookie (vérificateur PKCE, identifiants du client, enregistrement anonyme). `/mcp` et la découverte ne répondent que sur l'origine de l'application.
 - HTTPS obligatoire, sauf sur `localhost` en développement : en HTTP sur une IP, `/mcp` et la découverte répondent 404.
 - Les clients MCP ne déclarent pas `application_type` ; traités en apps web, leurs adresses de retour locales (`http://127.0.0.1:…`) seraient refusées. Un enregistrement sans type est donc celui d'une app native.
+
+## Organisations
+
+Décision : une organisation par installation. L'édition personnelle est simplement une organisation avec un seul propriétaire : il n'y a qu'un chemin de code, et une licence ne fait qu'ouvrir des places.
+
+- Les membres travaillent par des partages avec un rôle, et rien d'autre : pas d'objet « espace » à part. Un membre commence avec son propre dossier à la racine du Drive (un partage `manager`), que les propriétaires voient comme le reste. Le « Mon Drive » d'un membre liste les éléments de plus haut niveau partagés avec lui.
+- Les propriétaires administrent : ils voient chaque fichier, gèrent les personnes, les rôles et les places. Personne ne change son propre rôle, donc un Drive garde toujours un propriétaire.
+- Les éléments portent `canEdit` et `canManage` : menus, raccourcis, glisser-déposer et panneau de détails les suivent, et le serveur vérifie de toute façon. Les résumés d'accès et l'activité n'apparaissent que sur ce que la personne gère.
+- Les consultations des propriétaires et des membres ne sont pas journalisées et ne font pas bouger « Consulté » : le journal reste celui des personnes extérieures à l'organisation. Elles alimentent seulement les « Récents » de chacun.
+- Clés de licence : `payload.signature` en base64url, une signature Ed25519 de `{ v, id, org, seats, exp }`. La clé publique est dans `server/lib/license.ts` et la vérification se fait hors ligne, sans aucun appel réseau ; la clé privée reste chez le concédant (`scripts/issue-license.mjs`). La clé se configure avec `NUXT_LICENSE_KEY` (`./install.sh license CLÉ`).
+- Les places comptent les propriétaires et membres actifs ; les lecteurs sont gratuits. Sans licence valide, il y a une place. Ajouter un propriétaire ou un membre, le réactiver, ou donner un rôle `editor` ou `manager` exige une licence active avec une place libre.
+- L'expiration ne retire jamais rien : pendant 14 jours de grâce tout fonctionne, ensuite seuls l'ajout de personnes et de rôles attendent un renouvellement. Les rôles existants continuent de fonctionner, car le résolveur ne regarde pas la licence.
 
 ## Migrations
 

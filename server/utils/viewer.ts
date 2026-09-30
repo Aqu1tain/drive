@@ -52,6 +52,13 @@ export async function requireViewer(event: H3Event) {
   return viewer
 }
 
+/** Owners and members: the people who work in the drive, as opposed to readers. */
+export async function requireMember(event: H3Event) {
+  const viewer = await requireViewer(event)
+  if (!viewer.ctx.isMember) throw createError({ statusCode: 403, statusMessage: tr('errors.membersOnly') })
+  return viewer
+}
+
 export async function requireOwner(event: H3Event) {
   const viewer = await requireViewer(event)
   if (viewer.kind !== 'owner') throw createError({ statusCode: 403, statusMessage: tr('errors.ownerOnly') })

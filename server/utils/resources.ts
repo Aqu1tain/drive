@@ -11,6 +11,8 @@ export type RuleStatus = 'active' | 'pending' | 'disabled' | 'expired' | 'revoke
 export interface RuleRow {
   rule: AccessRule
   person: AccessPerson | null
+  /** The share goes to a member of the organization, who can be given more than reading. */
+  member: boolean
   active: boolean
   status: RuleStatus
   invitationMode: 'account' | 'link' | null
@@ -50,6 +52,7 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
       userName: user.name,
       userEmail: user.email,
       userStatus: user.status,
+      userRole: user.role,
       invitationEmail: invitations.email,
       invitationName: invitations.name,
       invitationStatus: invitations.status,
@@ -70,6 +73,7 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
       return {
         rule: row.rule,
         person: { kind: 'user', label: row.userName || row.userEmail!, email: row.userEmail! },
+        member: row.userRole === 'member',
         active: status === 'active',
         status,
         invitationMode: null,
@@ -83,13 +87,14 @@ export async function loadRuleRows(where: SQL): Promise<RuleRow[]> {
       return {
         rule: row.rule,
         person: { kind: 'invitation', label: row.invitationName || row.invitationEmail!, email: row.invitationEmail! },
+        member: false,
         active: status === 'active' || status === 'pending',
         status,
         invitationMode: row.invitationMode,
         invitationTokenSealed: row.invitationTokenSealed,
       }
     }
-    return { rule: row.rule, person: null, active: !expired, status: expired ? 'expired' : 'active', invitationMode: null, invitationTokenSealed: null }
+    return { rule: row.rule, person: null, member: false, active: !expired, status: expired ? 'expired' : 'active', invitationMode: null, invitationTokenSealed: null }
   })
 }
 
@@ -159,9 +164,12 @@ export function thumbnailPath(resource: Resource, base: string) {
 
 export const resourceKind = (resource: Resource) => isSite(resource) ? 'html' as const : kindOf(resource.type, resource.mimeType)
 
+/** What the viewer gets to see of a resource: those who can edit it also see its labels and state, those who manage it who has access. */
 export function toItem(resource: Resource, options: { viewer: Viewer, access?: Access, summary?: AccessSummary, location?: string }): ResourceItem {
   const { viewer } = options
   const isOwner = viewer.ctx.isOwner
+  const canEdit = isOwner || !!options.access?.edit
+  const canManage = isOwner || !!options.access?.manage
   const item: ResourceItem = {
     id: resource.id,
     parentId: resource.parentId,
@@ -175,17 +183,30 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
     updatedAt: resource.updatedAt.toISOString(),
     thumbnailUrl: thumbnailPath(resource, viewer.apiBase),
     canDownload: isOwner || (options.access?.download ?? false),
+    canEdit,
+    canManage,
     location: options.location,
   }
-  if (!isOwner) return item
+  if (!canEdit) return item
 
   return {
     ...item,
     tagIds: resource.tagIds,
     allowScripts: resource.allowScripts,
-    access: options.summary,
-    lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null,
     deletedAt: resource.deletedAt?.toISOString() ?? null,
+    ...(canManage ? { access: options.summary && viewer.user ? othersIn(options.summary, viewer.user.email) : options.summary, lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null } : {}),
+  }
+}
+
+/** A member's own access is not news to them: their folder reads as private until they share it. */
+function othersIn(summary: AccessSummary, email: string): AccessSummary {
+  const people = summary.people.filter(person => person.email !== email)
+  if (people.length === summary.people.length) return summary
+  return {
+    ...summary,
+    people,
+    level: summary.hasLink ? 'public' : people.length ? 'shared' : 'private',
+    userCount: people.filter(person => person.kind === 'user').length,
   }
 }
 

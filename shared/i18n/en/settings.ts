@@ -73,6 +73,18 @@ export default {
     list: 'List',
     grid: 'Grid',
   },
+  organization: {
+    title: 'Drive for Organizations',
+    description: 'Several people managing files together, each with their role.',
+    name: 'Licensed to',
+    seats: 'Seats',
+    seatsUsed: '{used} of {seats} used by owners and members',
+    expires: 'Valid until',
+    none: 'This drive has a single owner. With a Drive for Organizations license, you can add members who work in the folders you share with them, and other owners.',
+    expired: 'Your license has expired. Everyone keeps their access, but adding members or giving someone more than viewing waits for a renewal.',
+    invalid: 'The license key set on the server is not valid. Check that it was copied whole.',
+    howTo: 'Write to contact@corentinrenard.com to get a key, then set it on the server with {command}.',
+  },
   data: {
     title: 'Data and privacy',
     description: 'Set by the server configuration.',

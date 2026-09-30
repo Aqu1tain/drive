@@ -91,3 +91,14 @@ export async function readerClient(owner: Client, name = 'Reader') {
   const client = await new Client().signIn(email, password)
   return { client, email, password, id: created.body.id as string }
 }
+
+/** A member of the organization, who starts with a folder of their own. Needs a license with a free seat. */
+export async function memberClient(owner: Client, name = 'Member') {
+  const email = `${unique('member')}@example.com`
+  const password = 'member-password-123'
+  const created = await owner.post('/api/people', { email, name, password, role: 'member' })
+  if (created.status !== 201) throw new Error(`Member creation failed: ${JSON.stringify(created.body)}`)
+  const client = await new Client().signIn(email, password)
+  const own = (await client.get('/api/folders/root')).body.items[0] as { id: string, name: string }
+  return { client, email, password, id: created.body.id as string, folder: own.id }
+}

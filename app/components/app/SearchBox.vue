@@ -5,7 +5,7 @@ import { refDebounced } from '@vueuse/core'
 import { ArrowRight, Search, X } from '@lucide/vue'
 import type { ResourceItem } from '#shared/types/api'
 
-const props = defineProps<{ owner: boolean }>()
+const props = defineProps<{ member: boolean }>()
 const route = useRoute()
 const query = ref(route.path === '/search' ? String(route.query.q ?? '') : '')
 const debounced = refDebounced(query, 120)
@@ -67,7 +67,7 @@ onBeforeUnmount(() => document.removeEventListener('drive:focus-search', onFocus
       <ComboboxInput
         ref="input"
         v-model="query"
-        :placeholder="t(props.owner ? 'nav.search.owner' : 'nav.search.reader')"
+        :placeholder="t(props.member ? 'nav.search.owner' : 'nav.search.reader')"
         :aria-label="t('common.search')"
         class="h-full min-w-0 flex-1 bg-transparent text-base text-ink placeholder:text-ink-weak focus:outline-none"
         @keydown.enter.exact="!results.length && query.trim() && select('__all')"

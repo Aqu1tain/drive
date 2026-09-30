@@ -42,6 +42,8 @@ export default defineNuxtConfig({
     databaseUrl: '',
     authSecret: '',
     setupToken: '',
+    /** A Drive for Organizations key: without one, the drive has a single owner. */
+    licenseKey: '',
     trustProxy: false,
     storage: {
       driver: 'local',

@@ -3,7 +3,8 @@ import type { ActivityEvent } from '#shared/types/api'
 
 /** "Get back to what I was working on": recent folders, recent files, what others just looked at. */
 export default defineEventHandler(async (event) => {
-  const viewer = await requireOwner(event)
+  const viewer = await requireMember(event)
+  if (!viewer.ctx.isOwner) return memberHome(viewer)
   const { resources, resourceOpens, accessEvents } = tables
   const db = useDB()
   const opened = openedBy(viewer.user!.id)
@@ -26,3 +27,19 @@ export default defineEventHandler(async (event) => {
   })))
   return { folders: await present(folders), files: await present(files), activity: activity satisfies ActivityEvent[] }
 })
+
+/** A member's home: what they opened lately among what they can still read. Where it sits is left out, as they may not see the folders above. */
+async function memberHome(viewer: Viewer) {
+  const { resources, resourceOpens } = tables
+  const rows = await useDB().select({ resource: resources, openedAt: resourceOpens.openedAt }).from(resourceOpens)
+    .innerJoin(resources, eq(resourceOpens.resourceId, resources.id))
+    .where(and(eq(resourceOpens.userId, viewer.user!.id), notInTrash))
+    .orderBy(desc(resourceOpens.openedAt)).limit(60)
+  const items = []
+  for (const { resource, openedAt } of rows) {
+    const { access } = await accessOf(viewer, resource)
+    if (access.read) items.push({ ...toItem(resource, { viewer, access }), openedAt: openedAt.toISOString() })
+  }
+  const marked = await withFavorites(viewer, items)
+  return { folders: marked.filter(item => item.type === 'folder').slice(0, 8), files: marked.filter(item => item.type === 'file').slice(0, 12), activity: [] as ActivityEvent[] }
+}

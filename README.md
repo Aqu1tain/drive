@@ -6,9 +6,9 @@
 
 # Drive
 
-**Your personal file space. Upload and organize your files, decide exactly who sees what, and know who opened them.**
+**Share your files, keep control. Decide exactly who sees what, and know who opened them.**
 
-Self-hosted, one command to install it on any server with Docker.
+Self-hosted, one command to install it on any server with Docker. Free for yourself, ready for your team with Drive for Organizations.
 
 <img src="docs/presentation.avif" alt="Drive presentation" width="100%">
 
@@ -16,7 +16,7 @@ Self-hosted, one command to install it on any server with Docker.
 
 ## The idea
 
-Drive is not a collaborative drive. There is **a single owner**: you. Everyone else is a **reader** and can never change anything: neither the interface nor the API allows it.
+Drive separates the people who manage files from the people who read them. On your own, you are **the owner**. In an organization, **owners and members** manage files together, each with a role on the folders they work in. Everyone you share with is a **reader** and can never change anything: neither the interface nor the API allows it.
 
 - **Organize** your files and folders as in a modern file manager: drag and drop, multiple selection, right click, keyboard shortcuts, command palette (⌘K).
 - **Share** a file or a folder with a person (reader account), an invitation, a personal link or a public link. Downloads allowed or not, expiry, instant revocation.
@@ -25,6 +25,7 @@ Drive is not a collaborative drive. There is **a single owner**: you. Everyone e
 - **Find** a file by its name, its tags or its content: text from PDFs, Word documents, Excel spreadsheets and PowerPoint presentations. These documents also open in a preview, with nothing to install.
 - **Go back in time**: turn on version history for a folder, and every file replaced in it keeps its earlier versions, to preview, name or restore without losing anything.
 - **Let your AI assistant in**: Claude, Cursor or any MCP client can browse, search, read and, for you, organize your Drive after you sign in and allow it. It acts with your rights, never more, and you can disconnect it at any time ([guide](docs/mcp.md)).
+- **Work as a team** with Drive for Organizations: each member gets a folder of their own and a role on every folder shared with them (view, edit or manage), while owners see everything and manage people and seats ([guide](docs/organizations.md)).
 - **In English or French**, for you and for the people you share with.
 
 <table>
@@ -47,6 +48,17 @@ Drive is not a collaborative drive. There is **a single owner**: you. Everyone e
 </table>
 
 <p align="center"><img src="docs/screenshots/public-mobile.webp" alt="Shared link opened on a phone" width="280"><br><sub>What the person who receives a link sees</sub></p>
+
+## Editions
+
+| | Personal | Organizations |
+|---|---|---|
+| People who manage files | One owner | Owners and members, one seat each |
+| Readers, links, activity, previews, versions, AI assistants | Included | Included |
+| Roles per folder: view, edit, manage | No | Yes |
+| Price | Free for noncommercial use | License key, see [COMMERCIAL.md](COMMERCIAL.md) |
+
+Readers never take a seat. A license key is checked on your server, without any network call.
 
 ## Installation
 

@@ -25,7 +25,7 @@ const failed = ref(false)
     role="gridcell"
     :aria-selected="selected"
     :data-index="index"
-    :data-folder-id="item.type === 'folder' && !trash ? item.id : undefined"
+    :data-folder-id="item.type === 'folder' && item.canEdit && !trash ? item.id : undefined"
     :data-folder-name="item.type === 'folder' ? item.name : undefined"
     :draggable="draggable"
     class="group flex cursor-pointer flex-col overflow-hidden rounded-lg border p-1.5 select-none transition-colors duration-100"

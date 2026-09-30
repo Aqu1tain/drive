@@ -33,7 +33,7 @@ export function createMcpServer(event: H3Event, viewer: Viewer) {
   const { appName } = useRuntimeConfig().public
   const server = new McpServer({ name: appName, version: '1.0.0' }, { instructions: instructionsFor(viewer, appName) })
   registerReadTools(server, event, viewer)
-  if (viewer.kind === 'owner') registerOwnerTools(server, event, viewer)
+  if (viewer.ctx.isMember) registerWriteTools(server, event, viewer)
   return server
 }
 
@@ -42,10 +42,13 @@ const ITEMS = 'Every item has a type, file or folder, and a kind that says what 
 
 function instructionsFor(viewer: Viewer, appName: string) {
   const name = viewer.user!.name || viewer.user!.email
-  if (viewer.kind !== 'owner') {
-    return `${appName} is a personal drive. You act for ${name}, who can read what the owner shared with them; nothing can be changed from here. Find items with search or list_folder, then read them with read_file. ${ITEMS}`
+  if (!viewer.ctx.isMember) {
+    return `${appName} is a drive run by its owners. You act for ${name}, who can read what was shared with them; nothing can be changed from here. Find items with search or list_folder, then read them with read_file. ${ITEMS}`
   }
-  return `${appName} is the personal drive of ${name}, and you act as its owner. Find items with search or list_folder, read them with read_file, and organize them. ${ITEMS} `
+  const role = viewer.ctx.isOwner
+    ? `${appName} is the drive of ${name}, and you act as one of its owners. Find items with search or list_folder, read them with read_file, and organize them. `
+    : `You act for ${name}, a member of the organization that runs ${appName}. They see what was shared with them, and organize where they were made editor or manager; anything else is refused. Find items with search or list_folder, read them with read_file, and organize them. `
+  return `${role}${ITEMS} `
     + 'You cannot share, change sharing settings or delete anything permanently: move_to_trash is reversible with restore_from_trash (list_trash shows what is there). '
     + 'Replacing a file in a folder with version history keeps the previous content: list_versions and restore_version go back to it. '
     + 'Moving an item into a shared folder makes it visible to the people that folder is shared with.'
@@ -66,7 +69,7 @@ function registerReadTools(server: McpServer, event: H3Event, viewer: Viewer) {
     },
     annotations: READ,
   }, ({ folderId, cursor, limit }) => respond(async () => {
-    if (!folderId && !owner) return json(listing([{ id: null, name: tr('labels.sharedWithMe') }], await listSharedWithMe(viewer), cursor, limit))
+    if (!folderId && !viewer.ctx.isMember) return json(listing([{ id: null, name: tr('labels.sharedWithMe') }], await listSharedWithMe(viewer), cursor, limit))
     const { folder, breadcrumbs, items } = await listFolder(viewer, folderId ?? null)
     return json({ folder: folder && describe(folder), ...listing(breadcrumbs, items, cursor, limit) })
   }))
@@ -119,7 +122,7 @@ function registerReadTools(server: McpServer, event: H3Event, viewer: Viewer) {
   }, ({ id, offset, maxCharacters }) => respond(() => readFile(event, viewer, id, offset, maxCharacters)))
 }
 
-function registerOwnerTools(server: McpServer, event: H3Event, viewer: Viewer) {
+function registerWriteTools(server: McpServer, event: H3Event, viewer: Viewer) {
   const folderId = uuid.optional().describe('Id of the destination folder; omit it for the top of My Drive.')
 
   server.registerTool('create_folder', {

@@ -4,7 +4,7 @@ import { refDebounced } from '@vueuse/core'
 import { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxPortal, ComboboxRoot, ComboboxViewport, RadioGroupIndicator, RadioGroupItem, RadioGroupRoot } from 'reka-ui'
 import { toast } from 'vue-sonner'
 import { Ban, CalendarClock, Check, Copy, Download, EllipsisVertical, ExternalLink, Globe, Link, Lock, Mail, UserMinus } from '@lucide/vue'
-import type { AccessEntry, ResourceAccess } from '#shared/types/api'
+import type { AccessEntry, ResourceAccess, ShareRole } from '#shared/types/api'
 import type { MessageKey } from '#shared/i18n'
 
 const props = defineProps<{ item: { id: string, name: string, type: 'file' | 'folder' } }>()
@@ -37,6 +37,8 @@ const email = ref('')
 const debouncedEmail = refDebounced(email, 150)
 const suggestOpen = ref(false)
 const mode = ref<'account' | 'link'>('account')
+const ROLES: ShareRole[] = ['viewer', 'editor', 'manager']
+const role = ref<ShareRole>('editor')
 const notify = ref(true)
 const adding = ref(false)
 const addError = ref<string | null>(null)
@@ -44,7 +46,7 @@ const lastInvite = ref<{ email: string, url: string, emailed: boolean } | null>(
 
 const { data: suggestions } = useQuery({
   queryKey: computed(() => ['people', 'suggest', debouncedEmail.value]),
-  queryFn: () => api<{ people: Array<{ name: string | null, email: string, kind: 'user' | 'invitation' }> }>('/api/people/suggest', { query: { q: debouncedEmail.value } }),
+  queryFn: () => api<{ people: Array<{ name: string | null, email: string, kind: 'user' | 'invitation', member: boolean }> }>('/api/people/suggest', { query: { q: debouncedEmail.value } }),
   enabled: computed(() => debouncedEmail.value.trim().length > 0),
 })
 const suggested = computed(() => {
@@ -53,6 +55,9 @@ const suggested = computed(() => {
 })
 const isValidEmail = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()))
 const knownReader = computed(() => suggested.value.some(p => p.kind === 'user' && p.email === email.value.trim().toLowerCase()))
+/** Members of the organization can be let edit or manage; everyone else only reads. */
+const isMemberEmail = (address: string) => suggested.value.some(p => p.member && p.email === address.trim().toLowerCase())
+const knownMember = computed(() => isMemberEmail(email.value))
 
 async function add(value = email.value) {
   const address = value.trim().toLowerCase()
@@ -65,7 +70,7 @@ async function add(value = email.value) {
   try {
     const result = await api<{ inviteUrl: string | null, emailed: boolean }>(`/api/resources/${props.item.id}/access`, {
       method: 'POST',
-      body: { email: address, mode: mode.value, notify: notify.value && emailEnabled.value },
+      body: { email: address, mode: mode.value, notify: notify.value && emailEnabled.value, ...(isMemberEmail(address) ? { role: role.value } : {}) },
     })
     email.value = ''
     suggestOpen.value = false
@@ -96,9 +101,11 @@ async function copy(text: string, message = t('share.linkCopied')) {
   }
 }
 
+const ROLE_SELECT = 'h-10 rounded-md border border-field bg-canvas px-2 text-sm text-ink focus:border-accent focus:outline-none focus:ring-3 focus:ring-focus-ring'
+
 const inDays = (days: number | null) => days === null ? null : new Date(Date.now() + days * 86_400_000).toISOString()
 
-async function updateRule(entry: { ruleId: string }, patch: { allowDownload?: boolean, expiresAt?: string | null }) {
+async function updateRule(entry: { ruleId: string }, patch: { allowDownload?: boolean, expiresAt?: string | null, role?: ShareRole }) {
   try {
     setAccess(await api<ResourceAccess>(`/api/access/${entry.ruleId}`, { method: 'PATCH', body: patch }))
   }
@@ -233,6 +240,9 @@ function openParentSharing(crumb: { id: string | null, name: string }) {
             </ComboboxContent>
           </ComboboxPortal>
         </ComboboxRoot>
+        <select v-if="knownMember" v-model="role" :aria-label="t('share.roleLabel')" :class="ROLE_SELECT">
+          <option v-for="value in ROLES" :key="value" :value="value">{{ t(`share.roles.${value}`) }}</option>
+        </select>
         <UiButton type="submit" variant="primary" :loading="adding" :disabled="!email.trim()">{{ t('common.share') }}</UiButton>
       </div>
       <p v-if="addError" class="text-sm text-danger" role="alert">{{ addError }}</p>
@@ -285,7 +295,7 @@ function openParentSharing(crumb: { id: string | null, name: string }) {
             <p class="truncate text-base text-ink">{{ me?.user?.name }} <span class="text-ink-weak">{{ t('share.you') }}</span></p>
             <p class="truncate text-sm text-ink-weak">{{ me?.user?.email }}</p>
           </div>
-          <span class="text-sm text-ink-weak">{{ t('share.owner') }}</span>
+          <span class="text-sm text-ink-weak">{{ t(me?.user?.role === 'owner' ? 'share.owner' : 'share.roles.manager') }}</span>
         </li>
         <li v-for="entry in own" :key="entry.ruleId" class="flex items-center gap-3 py-2">
           <UiAvatar :name="entry.label" :kind="entry.kind === 'invitation' ? 'invitation' : 'user'" />
@@ -301,7 +311,16 @@ function openParentSharing(crumb: { id: string | null, name: string }) {
               <template v-if="!entry.allowDownload"> · {{ t('share.viewOnly') }}</template>
             </p>
           </div>
-          <span class="text-sm text-ink-weak max-sm:hidden">{{ t('share.reader') }}</span>
+          <select
+            v-if="entry.member"
+            :value="entry.role"
+            :aria-label="t('share.roleFor', { name: entry.label })"
+            :class="ROLE_SELECT"
+            @change="updateRule(entry, { role: ($event.target as HTMLSelectElement).value as ShareRole })"
+          >
+            <option v-for="value in ROLES" :key="value" :value="value">{{ t(`share.roles.${value}`) }}</option>
+          </select>
+          <span v-else class="text-sm text-ink-weak max-sm:hidden">{{ t('share.reader') }}</span>
           <UiDropdownMenu :entries="entryMenu(entry)" align="end">
             <UiIconButton :icon="EllipsisVertical" :label="t('share.optionsFor', { name: entry.label })" size="sm" />
           </UiDropdownMenu>

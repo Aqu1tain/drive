@@ -1,8 +1,8 @@
-import { desc, eq, ne, sql } from 'drizzle-orm'
+import { desc, ne, sql } from 'drizzle-orm'
 import type { Person } from '#shared/types/api'
 
 export default defineEventHandler(async (event): Promise<{ people: Person[] }> => {
-  await requireOwner(event)
+  const viewer = await requireOwner(event)
   const { user, invitations, accessRules, accessEvents } = tables
   const db = useDB()
   const [users, pending] = await Promise.all([
@@ -10,7 +10,7 @@ export default defineEventHandler(async (event): Promise<{ people: Person[] }> =
       user,
       shareCount: sql<number>`(select count(*)::int from ${accessRules} as rule where rule.user_id = "user".id)`,
       lastEventAt: sql<string | null>`(select max(event.created_at) from ${accessEvents} as event where event.user_id = "user".id)`,
-    }).from(user).where(eq(user.role, 'reader')).orderBy(desc(user.createdAt)),
+    }).from(user).where(ne(user.id, viewer.user!.id)).orderBy(desc(user.createdAt)),
     db.select({
       invitation: invitations,
       shareCount: sql<number>`(select count(*)::int from ${accessRules} as rule where rule.invitation_id = "invitations".id)`,
@@ -27,6 +27,7 @@ export default defineEventHandler(async (event): Promise<{ people: Person[] }> =
       ...users.map(({ user: u, shareCount, lastEventAt }): Person => ({
         id: u.id,
         kind: 'user',
+        role: userRole(u.role),
         name: u.name,
         email: u.email,
         status: u.status === 'active' ? 'active' : 'disabled',
@@ -37,6 +38,7 @@ export default defineEventHandler(async (event): Promise<{ people: Person[] }> =
       ...pending.map(({ invitation: i, shareCount }): Person => ({
         id: i.id,
         kind: 'invitation',
+        role: 'reader',
         name: i.name,
         email: i.email,
         status: invitationState(i) === 'pending' ? 'pending' : 'revoked',

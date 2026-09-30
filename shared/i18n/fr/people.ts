@@ -4,6 +4,25 @@ import type en from '../en/people'
 export default {
   title: 'Personnes',
   intro: 'Tous sont lecteurs : ils consultent, ne modifient jamais.',
+  introOrganization: 'Les propriétaires gèrent le Drive, les membres travaillent dans les dossiers partagés avec eux, les lecteurs consultent seulement.',
+  role: 'Rôle',
+  roles: {
+    reader: 'Lecteur',
+    member: 'Membre',
+    owner: 'Propriétaire',
+  },
+  roleHints: {
+    reader: 'Consulte ce que vous partagez avec lui, sans jamais rien modifier.',
+    member: 'Travaille dans son propre dossier et dans les dossiers partagés avec lui.',
+    owner: 'Voit et gère tout, y compris les personnes et les paramètres.',
+  },
+  makeRole: {
+    reader: 'Passer en lecteur',
+    member: 'Passer en membre',
+    owner: 'Passer en propriétaire',
+  },
+  roleChanged: '{name} est maintenant {role}',
+  seats: '{used} places utilisées sur {seats}.',
   create: 'Créer un compte',
   empty: {
     title: 'Personne pour l’instant',
@@ -53,6 +72,7 @@ export default {
   },
   createDialog: {
     title: 'Créer un compte lecteur',
+    titleAny: 'Créer un compte',
     description: 'Pour partager ensuite avec cette personne. Transmettez-lui ses identifiants par un canal sûr.',
     email: 'Adresse email',
     password: 'Mot de passe provisoire',

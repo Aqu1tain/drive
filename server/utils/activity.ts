@@ -66,11 +66,11 @@ function networkTraits(event: H3Event) {
 /** One logical event per consultation: repeated views by the same actor within a short window are merged. */
 export async function logAccess(event: H3Event, viewer: Viewer, resource: Resource, type: 'view' | 'download') {
   const db = useDB()
-  if (viewer.kind === 'owner') {
+  if (viewer.ctx.isMember) {
     if (type === 'view') await markOpened(viewer, resource.id)
     return
   }
-  if (viewer.kind === 'share' && (await getSessionUser(event))?.role === 'owner') return
+  if (viewer.kind === 'share' && ['owner', 'member'].includes((await getSessionUser(event))?.role ?? '')) return
 
   const actor = actorOf(viewer)
   const traits = networkTraits(event)
@@ -124,6 +124,7 @@ export type ActivityFilter = keyof typeof ACTIVITY_FILTERS
 
 /** The journal, newest first, for the whole drive or a single item; `next` continues the page. */
 export async function listActivity(viewer: Viewer, query: { resourceId?: string, filter: ActivityFilter, before?: number, limit: number }) {
+  if (!query.resourceId && !viewer.ctx.isOwner) throw createError({ statusCode: 403, statusMessage: tr('errors.ownerOnly') })
   const types = ACTIVITY_FILTERS[query.filter]
   const scope = query.resourceId ? activityScope((await requireAccess(viewer, query.resourceId, 'manage')).resource) : undefined
   const events = await useDB().select().from(accessEvents).where(and(

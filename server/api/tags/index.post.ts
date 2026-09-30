@@ -5,7 +5,7 @@ import { TAG_COLORS } from '#shared/utils/tags'
 const bodySchema = z.object({ name: tagNameSchema, color: tagColorSchema.optional() })
 
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
+  await requireMember(event)
   const { name, color } = await readValidatedBody(event, bodySchema.parse)
   const { tags } = tables
   const db = useDB()

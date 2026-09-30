@@ -6,9 +6,9 @@
 
 # Drive
 
-**Votre espace de fichiers personnel. Vous déposez, vous rangez, vous décidez précisément qui voit quoi, et vous savez qui a consulté.**
+**Partagez vos fichiers, gardez le contrôle. Vous décidez précisément qui voit quoi, et vous savez qui a consulté.**
 
-Auto-hébergé, une commande pour l'installer sur n'importe quel serveur avec Docker.
+Auto-hébergé, une commande pour l'installer sur n'importe quel serveur avec Docker. Gratuit pour vous, prêt pour votre équipe avec Drive pour les Organisations.
 
 <img src="docs/presentation.fr.avif" alt="Présentation de Drive" width="100%">
 
@@ -16,7 +16,7 @@ Auto-hébergé, une commande pour l'installer sur n'importe quel serveur avec Do
 
 ## Le principe
 
-Drive n'est pas un Drive collaboratif. Il y a **un seul propriétaire** : vous. Tous les autres sont **lecteurs** et ne peuvent jamais rien modifier, ni l'interface ni l'API ne le permettent.
+Drive sépare les personnes qui gèrent les fichiers de celles qui les consultent. Seul, vous êtes **le propriétaire**. Dans une organisation, **propriétaires et membres** gèrent les fichiers ensemble, chacun avec un rôle sur les dossiers où il travaille. Toutes les personnes avec qui vous partagez sont **lecteurs** et ne peuvent jamais rien modifier, ni l'interface ni l'API ne le permettent.
 
 - **Rangez** vos fichiers et dossiers comme dans un gestionnaire moderne : glisser-déposer, sélection multiple, clic droit, raccourcis clavier, palette de commandes (⌘K).
 - **Partagez** un fichier ou un dossier avec une personne (compte lecteur), une invitation, un lien personnel ou un lien public. Téléchargement autorisé ou non, expiration, révocation immédiate.
@@ -25,6 +25,7 @@ Drive n'est pas un Drive collaboratif. Il y a **un seul propriétaire** : vous. 
 - **Retrouvez** un fichier par son nom, ses étiquettes ou ce qu'il contient : texte des PDF, documents Word, classeurs Excel, présentations PowerPoint. Ces documents s'ouvrent aussi en aperçu, sans rien installer.
 - **Revenez en arrière** : activez l'historique des versions sur un dossier, et chaque fichier remplacé y garde ses versions précédentes, à prévisualiser, nommer ou restaurer sans rien perdre.
 - **Ouvrez la porte à votre assistant IA** : Claude, Cursor ou tout client MCP peut parcourir, chercher, lire et, pour vous, ranger votre Drive une fois que vous vous êtes connecté et l'avez autorisé. Il agit avec vos droits, jamais plus, et vous pouvez le déconnecter à tout moment ([guide](docs/mcp.fr.md)).
+- **Travaillez en équipe** avec Drive pour les Organisations : chaque membre a son propre dossier et un rôle sur chaque dossier partagé avec lui (consulter, modifier ou gérer), et les propriétaires voient tout et gèrent les personnes et les places ([guide](docs/organizations.fr.md)).
 - **En français ou en anglais**, pour vous comme pour les personnes avec qui vous partagez.
 
 <table>
@@ -47,6 +48,17 @@ Drive n'est pas un Drive collaboratif. Il y a **un seul propriétaire** : vous. 
 </table>
 
 <p align="center"><img src="docs/screenshots/public-mobile.webp" alt="Lien partagé ouvert sur un téléphone" width="280"><br><sub>Ce que voit la personne qui reçoit un lien</sub></p>
+
+## Éditions
+
+| | Personnel | Organisations |
+|---|---|---|
+| Personnes qui gèrent les fichiers | Un propriétaire | Propriétaires et membres, une place chacun |
+| Lecteurs, liens, activité, aperçus, versions, assistants IA | Inclus | Inclus |
+| Rôles par dossier : consulter, modifier, gérer | Non | Oui |
+| Prix | Gratuit pour un usage non commercial | Clé de licence, voir [COMMERCIAL.fr.md](COMMERCIAL.fr.md) |
+
+Les lecteurs ne prennent jamais de place. La clé de licence est vérifiée sur votre serveur, sans aucun appel réseau.
 
 ## Installation
 

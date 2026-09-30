@@ -133,6 +133,16 @@ Fill in `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_
 
 Database migrations are applied automatically at startup.
 
+## Drive for Organizations
+
+With a license key, several owners and members can manage files ([guide](organizations.md)). Set it on the server, which restarts Drive:
+
+```bash
+~/drive/install.sh license KEY
+```
+
+Check: Settings shows the organization, the seats and the expiry date.
+
 ## Back up and restore
 
 ```bash
