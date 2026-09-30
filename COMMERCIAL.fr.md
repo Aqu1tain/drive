@@ -16,7 +16,7 @@ Drive est un logiciel au code consultable, pas un logiciel libre. Le code est pu
 
 ## Obtenir une licence commerciale
 
-Écrivez à [contact@corentinrenard.com](mailto:contact@corentinrenard.com) en précisant l'organisation, l'usage prévu et le nombre d'utilisateurs. Drive pour les Organisations, pour les équipes de plusieurs membres, sera vendu avec une clé de licence.
+Écrivez à [contact@corentinrenard.com](mailto:contact@corentinrenard.com) en précisant l'organisation, l'usage prévu et le nombre d'utilisateurs. Drive pour les Organisations, pour les équipes où plusieurs personnes gèrent des fichiers, fonctionne avec une clé de licence : voir [docs/organizations.fr.md](docs/organizations.fr.md). Les fonctionnalités qui demandent une clé ne peuvent être utilisées qu'avec une clé valide.
 
 ## Versions précédentes
 

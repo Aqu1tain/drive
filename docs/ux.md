@@ -84,9 +84,16 @@ A consistency guardrail. Every new interface must follow it, or update it.
 
 ## Sharing
 
-- A single panel: people (no role picker: everyone is a reader), inherited access shown with where it comes from, public link (off / anyone with the link), download allowed, expiry, Copy link.
+- A single panel: people (a role picker, Can view / Can edit / Can manage, only next to members of the organization: everyone else is a reader), inherited access shown with where it comes from, public link (off / anyone with the link), download allowed, expiry, Copy link.
 - Adding someone = an email address. Without an account: an "account" invitation by default; "personal link" as an option, with the honest note that it can be forwarded.
 - Public and personal links never present the visitor as identified ("Public link", "Paul (personal link)").
+
+## Organizations
+
+- One interface for everyone, filtered by what each person may do on each item (`canEdit`, `canManage`): an action someone cannot perform is absent, not disabled. The server checks again anyway.
+- Members see Home, My Drive, Recent, Favorites and Trash. Their My Drive lists their own folder and the folders shared with them; "New" only shows inside a folder. People, Shared and the whole activity log stay with owners.
+- The details panel shows the Access and Activity tabs to those who manage the item, Versions to those who can edit it.
+- People: a role badge (Member, Owner) and "Make reader / member / owner" in each person's menu; creating an account asks for the role and says how many seats are used. Settings shows the license (organization, seats, expiry) and how to set a key.
 
 ## Feedback
 
