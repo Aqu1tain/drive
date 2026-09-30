@@ -194,7 +194,19 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
     tagIds: resource.tagIds,
     allowScripts: resource.allowScripts,
     deletedAt: resource.deletedAt?.toISOString() ?? null,
-    ...(canManage ? { access: options.summary, lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null } : {}),
+    ...(canManage ? { access: options.summary && viewer.user ? othersIn(options.summary, viewer.user.email) : options.summary, lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null } : {}),
+  }
+}
+
+/** A member's own access is not news to them: their folder reads as private until they share it. */
+function othersIn(summary: AccessSummary, email: string): AccessSummary {
+  const people = summary.people.filter(person => person.email !== email)
+  if (people.length === summary.people.length) return summary
+  return {
+    ...summary,
+    people,
+    level: summary.hasLink ? 'public' : people.length ? 'shared' : 'private',
+    userCount: people.filter(person => person.kind === 'user').length,
   }
 }
 
