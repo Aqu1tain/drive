@@ -8,6 +8,6 @@ const querySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
-  return listActivity(await getValidatedQuery(event, querySchema.parse))
+  const viewer = await requireOwner(event)
+  return listActivity(viewer, await getValidatedQuery(event, querySchema.parse))
 })

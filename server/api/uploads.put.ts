@@ -10,10 +10,10 @@ const querySchema = z.object({
 
 /** Single-request upload for small files. Large files go through upload sessions, in parts. */
 export default defineEventHandler(async (event) => {
-  const viewer = await requireOwner(event)
+  const viewer = await requireViewer(event)
   const query = await getValidatedQuery(event, querySchema.parse)
   const declared = Number(getRequestHeader(event, 'content-length'))
-  const plan = await planUpload({ ...query, size: declared })
+  const plan = await planUpload(viewer, { ...query, size: declared })
 
   const hash = createHash('sha256')
   const head: Buffer[] = []

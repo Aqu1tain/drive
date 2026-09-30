@@ -123,9 +123,9 @@ const ACTIVITY_FILTERS = {
 export type ActivityFilter = keyof typeof ACTIVITY_FILTERS
 
 /** The journal, newest first, for the whole drive or a single item; `next` continues the page. */
-export async function listActivity(query: { resourceId?: string, filter: ActivityFilter, before?: number, limit: number }) {
+export async function listActivity(viewer: Viewer, query: { resourceId?: string, filter: ActivityFilter, before?: number, limit: number }) {
   const types = ACTIVITY_FILTERS[query.filter]
-  const scope = query.resourceId ? activityScope(await requireOwned(query.resourceId)) : undefined
+  const scope = query.resourceId ? activityScope((await requireAccess(viewer, query.resourceId, 'manage')).resource) : undefined
   const events = await useDB().select().from(accessEvents).where(and(
     scope,
     types ? inArray(accessEvents.type, [...types]) : undefined,

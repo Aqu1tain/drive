@@ -6,6 +6,8 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000
 
 export interface UploadSession {
   id: string
+  /** Only the person who started an upload can continue it. */
+  userId: string
   plan: UploadPlan
   storageKey: string
   uploadId: string
@@ -22,11 +24,12 @@ export interface UploadSession {
  */
 const sessions = new Map<string, UploadSession>()
 
-export async function openSession(plan: UploadPlan) {
+export async function openSession(viewer: Viewer, plan: UploadPlan) {
   const storageKey = newBlobKey()
   const uploadId = await useStorageProvider().createMultipart(storageKey)
   const session: UploadSession = {
     id: randomUUID(),
+    userId: viewer.user!.id,
     plan,
     storageKey,
     uploadId,
@@ -40,9 +43,9 @@ export async function openSession(plan: UploadPlan) {
   return session
 }
 
-export function requireSession(id: string) {
+export function requireSession(viewer: Viewer, id: string) {
   const session = sessions.get(id)
-  if (!session) throw createError({ statusCode: 404, statusMessage: tr('errors.uploadExpired'), data: { reason: 'session_gone' } })
+  if (!session || session.userId !== viewer.user?.id) throw createError({ statusCode: 404, statusMessage: tr('errors.uploadExpired'), data: { reason: 'session_gone' } })
   session.touchedAt = Date.now()
   return session
 }

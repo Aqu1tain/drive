@@ -7,14 +7,15 @@ const bodySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const viewer = await requireOwner(event)
+  const viewer = await requireViewer(event)
   const body = await readValidatedBody(event, bodySchema.parse)
   const rule = await requireRule(getRouterParam(event, 'ruleId')!)
+  const { resource } = await requireAccess(viewer, rule.resourceId, 'manage')
   const patch = {
     ...(body.allowDownload !== undefined ? { allowDownload: body.allowDownload } : {}),
     ...(body.expiresAt !== undefined ? { expiresAt: body.expiresAt ? new Date(body.expiresAt) : null } : {}),
   }
   if (Object.keys(patch).length) await useDB().update(tables.accessRules).set(patch).where(eq(tables.accessRules.id, rule.id))
   await logOwnerAction(event, viewer, rule.resourceId, rule.kind === 'link' ? 'link_updated' : 'share_updated', await ruleLabel(rule))
-  return resourceAccess(await requireOwned(rule.resourceId))
+  return resourceAccess(resource)
 })

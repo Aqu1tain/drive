@@ -2,9 +2,8 @@ import { eq } from 'drizzle-orm'
 
 /** Permanent deletion is only possible from the trash. */
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
-  const resource = await requireOwned(getRouterParam(event, 'id')!)
-  const chain = await loadChain(resource)
+  const viewer = await requireViewer(event)
+  const { resource, chain } = await requireAccess(viewer, getRouterParam(event, 'id')!, 'manage', { trashed: true })
   if (!chain.some(node => node.deletedAt)) {
     throw createError({ statusCode: 409, statusMessage: tr('errors.trashFirst') })
   }

@@ -8,9 +8,9 @@ const bodySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const viewer = await requireOwner(event)
+  const viewer = await requireViewer(event)
   const body = await readValidatedBody(event, bodySchema.parse)
-  const resource = await requireOwned(getRouterParam(event, 'id')!)
+  const { resource } = await requireAccess(viewer, getRouterParam(event, 'id')!, 'manage')
   const { accessRules } = tables
   const db = useDB()
   const [existing] = await db.select().from(accessRules).where(and(eq(accessRules.resourceId, resource.id), eq(accessRules.kind, 'link'))).limit(1)

@@ -18,7 +18,7 @@ export function crumbsFor(viewer: Viewer, chain: Resource[], rules: AccessRule[]
   if (viewer.ctx.isOwner) return [rootCrumb(), ...chain.toReversed().map(toCrumb)]
 
   const visible = chain.slice(0, topReadableIndex(viewer.ctx, chain, rules) + 1).toReversed().map(toCrumb)
-  if (viewer.kind === 'reader') return [{ id: null, name: tr('labels.sharedWithMe') }, ...visible]
+  if (viewer.user) return [{ id: null, name: tr('labels.sharedWithMe') }, ...visible]
   if (viewer.invitation) return [{ id: null, name: tr('labels.sharedWithYou') }, ...visible]
   return visible
 }

@@ -11,10 +11,10 @@ const bodySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const viewer = await requireOwner(event)
+  const viewer = await requireViewer(event)
   const body = await readValidatedBody(event, bodySchema.parse)
-  const resource = await requireOwned(getRouterParam(event, 'id')!)
-  if (resource.deletedAt) throw createError({ statusCode: 409, statusMessage: tr('errors.itemInTrash') })
+  const { resource, chain } = await requireAccess(viewer, getRouterParam(event, 'id')!, 'manage')
+  if (chain.some(node => node.deletedAt)) throw createError({ statusCode: 409, statusMessage: tr('errors.itemInTrash') })
   if (body.email === viewer.user!.email.toLowerCase()) throw createError({ statusCode: 400, statusMessage: tr('errors.alreadyFullAccess') })
 
   const { accessRules } = tables
