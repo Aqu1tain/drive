@@ -164,14 +164,14 @@ function registerOwnerTools(server: McpServer, event: H3Event, viewer: Viewer) {
       conflict: z.enum(['fail', 'keep']).default('fail').describe('"fail" refuses when a name is taken at the destination, "keep" gives the moved item a new name.'),
     },
     annotations: { ...WRITE, destructiveHint: false, idempotentHint: true },
-  }, ({ ids, folderId, conflict }) => respond(async () => json(await moveResources(ids, folderId ?? null, conflict))))
+  }, ({ ids, folderId, conflict }) => respond(async () => json(await moveResources(viewer, ids, folderId ?? null, conflict))))
 
   server.registerTool('move_to_trash', {
     title: 'Move to trash',
     description: 'Moves files and folders to the trash: they disappear from the drive and from everyone they were shared with, until they are restored with restore_from_trash or from the trash in the app. Nothing is deleted permanently.',
     inputSchema: { ids: z.array(uuid).min(1).max(100).describe('Ids of the files and folders to move to the trash.') },
     annotations: { ...WRITE, destructiveHint: true, idempotentHint: true },
-  }, ({ ids }) => respond(async () => json(await trashResources(ids))))
+  }, ({ ids }) => respond(async () => json(await trashResources(viewer, ids))))
 
   server.registerTool('update_text_file', {
     title: 'Update a text file',
@@ -182,7 +182,7 @@ function registerOwnerTools(server: McpServer, event: H3Event, viewer: Viewer) {
   }, ({ id, content }) => respond(async () => {
     const data = Buffer.from(content, 'utf8')
     if (data.length > TEXT_UPLOAD_MAX_BYTES) throw createError({ statusCode: 413, statusMessage: 'Text files are limited to 1 MB.' })
-    const file = await requireOwned(id)
+    const { resource: file } = await requireAccess(viewer, id, 'edit')
     if (file.type !== 'file') throw createError({ statusCode: 400, statusMessage: 'This is a folder.' })
     const { enabled } = await versioningOf(file)
     const { item } = await uploadBuffer(viewer, { parentId: file.parentId, name: file.name, conflict: 'replace' }, data)
@@ -228,7 +228,7 @@ function registerOwnerTools(server: McpServer, event: H3Event, viewer: Viewer) {
     description: 'Brings trashed files and folders back where they were, with their content and shares. If their folder is itself in the trash they come back at the top of My Drive, and a taken name gets a suffix.',
     inputSchema: { ids: z.array(uuid).min(1).max(100).describe('Ids of the trashed files and folders.') },
     annotations: { ...WRITE, destructiveHint: false, idempotentHint: true },
-  }, ({ ids }) => respond(async () => json(await restoreResources(ids))))
+  }, ({ ids }) => respond(async () => json(await restoreResources(viewer, ids))))
 
   server.registerTool('list_versions', {
     title: 'List versions',
@@ -236,7 +236,7 @@ function registerOwnerTools(server: McpServer, event: H3Event, viewer: Viewer) {
     inputSchema: { id: uuid.describe('Id of the file.') },
     annotations: READ,
   }, ({ id }) => respond(async () => {
-    const file = await requireOwned(id)
+    const { resource: file } = await requireAccess(viewer, id, 'edit')
     if (file.type !== 'file') throw createError({ statusCode: 400, statusMessage: 'Folders have no versions.' })
     const history = await versionHistory(viewer, file)
     return json({
@@ -252,7 +252,7 @@ function registerOwnerTools(server: McpServer, event: H3Event, viewer: Viewer) {
     inputSchema: { id: uuid.describe('Id of the file.'), versionId: uuid.describe('Id of the version, from list_versions.') },
     annotations: { ...WRITE, destructiveHint: false, idempotentHint: false },
   }, ({ id, versionId }) => respond(async () => {
-    const file = await requireOwned(id)
+    const { resource: file } = await requireAccess(viewer, id, 'edit')
     const restored = await restoreVersion(file, await requireVersion(file, versionId))
     return json(describe(toItem(restored, { viewer })))
   }))
@@ -268,7 +268,7 @@ function registerOwnerTools(server: McpServer, event: H3Event, viewer: Viewer) {
     },
     annotations: READ,
   }, ({ id, filter, limit, before }) => respond(async () => {
-    const { events, next } = await listActivity({ resourceId: id, filter, limit, before })
+    const { events, next } = await listActivity(viewer, { resourceId: id, filter, limit, before })
     return json({ events: events.map(describeEvent), next })
   }))
 }

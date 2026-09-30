@@ -9,7 +9,6 @@ const FRAME_PURPOSE = 'usercontent'
 
 interface FrameClaims {
   r: string
-  o?: 1
   u?: string
   l?: string
   i?: string
@@ -20,8 +19,7 @@ export function frameTokenFor(viewer: Viewer, resourceId: string) {
   const claims: FrameClaims = {
     r: resourceId,
     e: Date.now() + FRAME_TOKEN_TTL_MS,
-    ...(viewer.ctx.isOwner ? { o: 1 as const } : {}),
-    ...(viewer.ctx.userId && !viewer.ctx.isOwner ? { u: viewer.ctx.userId } : {}),
+    ...(viewer.ctx.userId ? { u: viewer.ctx.userId } : {}),
     ...(viewer.ctx.linkRuleId ? { l: viewer.ctx.linkRuleId } : {}),
     ...(viewer.ctx.invitation ? { i: viewer.ctx.invitation.id } : {}),
   }
@@ -35,13 +33,11 @@ export async function contextFromFrameToken(token: string): Promise<{ resourceId
   const db = useDB()
   const { user, invitations } = tables
 
-  if (claims.o) {
-    const [owner] = await db.select().from(user).where(eq(user.role, 'owner')).limit(1)
-    return owner?.status === 'active' ? { resourceId: claims.r, ctx: { isOwner: true, userId: owner.id } } : null
-  }
   if (claims.u) {
-    const [reader] = await db.select().from(user).where(eq(user.id, claims.u)).limit(1)
-    return reader?.status === 'active' ? { resourceId: claims.r, ctx: { isOwner: false, userId: reader.id } } : null
+    const [person] = await db.select().from(user).where(eq(user.id, claims.u)).limit(1)
+    if (person?.status !== 'active') return null
+    const role = userRole(person.role)
+    return { resourceId: claims.r, ctx: { isOwner: role === 'owner', isMember: role !== 'reader', userId: person.id } }
   }
   if (claims.i) {
     const [invitation] = await db.select().from(invitations).where(eq(invitations.id, claims.i)).limit(1)

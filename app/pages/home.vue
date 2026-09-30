@@ -77,7 +77,7 @@ const upload = () => document.dispatchEvent(new CustomEvent('drive:upload'))
                     <p class="truncate text-sm text-ink-weak">{{ file.location }}</p>
                   </div>
                   <FilesAccessCell :access="file.access" compact class="max-sm:hidden" />
-                  <span class="w-20 shrink-0 text-right text-sm text-ink-weak tabular">{{ formatShortDate(file.ownerOpenedAt && file.ownerOpenedAt > file.updatedAt ? file.ownerOpenedAt : file.updatedAt) }}</span>
+                  <span class="w-20 shrink-0 text-right text-sm text-ink-weak tabular">{{ formatShortDate(file.openedAt && file.openedAt > file.updatedAt ? file.openedAt : file.updatedAt) }}</span>
                 </NuxtLink>
               </li>
             </ul>

@@ -153,8 +153,8 @@ async function main() {
   await owner.request('POST', `/api/resources/${await folder('Clients/ACME')}/access`, { json: { email: 'jeanne@acme.example', name: 'Jeanne (ACME)', notify: false } })
   const camp = await folder('Camp 2026')
   const link = await owner.request('PUT', `/api/resources/${camp}/link`, { json: { enabled: true, allowDownload: true } })
-  await owner.request('PATCH', `/api/resources/${devis.id}`, { json: { starred: true } })
-  await owner.request('PATCH', `/api/resources/${await folder('Photos/Vacances été 2025')}`, { json: { starred: true } })
+  await owner.request('PUT', `/api/resources/${devis.id}/star`, { json: { starred: true } })
+  await owner.request('PUT', `/api/resources/${await folder('Photos/Vacances été 2025')}/star`, { json: { starred: true } })
 
   const paul = client()
   await paul.request('POST', '/api/auth/sign-in/email', { json: { email: 'paul.martin@example.com', password: 'paul-password-1' } })

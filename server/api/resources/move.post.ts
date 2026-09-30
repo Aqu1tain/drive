@@ -7,7 +7,7 @@ const bodySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
+  const viewer = await requireViewer(event)
   const body = await readValidatedBody(event, bodySchema.parse)
-  return moveResources(body.ids, body.targetId, body.conflict)
+  return moveResources(viewer, body.ids, body.targetId, body.conflict)
 })

@@ -4,10 +4,14 @@ export interface AccessNode {
   deletedAt: Date | null
 }
 
+/** What a share lets someone do: read, also change the contents, or also decide who has access. */
+export type ShareRole = 'viewer' | 'editor' | 'manager'
+
 export interface AccessRuleLike {
   id: string
   resourceId: string
   kind: 'user' | 'invitation' | 'link'
+  role: ShareRole
   userId: string | null
   invitationId: string | null
   allowDownload: boolean
@@ -23,6 +27,8 @@ export interface InvitationLike {
 
 export interface AccessContext {
   isOwner: boolean
+  /** Owners and members of the organization: the only people a share can let edit or manage. */
+  isMember?: boolean
   userId?: string
   invitation?: InvitationLike
   linkRuleId?: string
@@ -31,12 +37,13 @@ export interface AccessContext {
 export interface Access {
   read: boolean
   download: boolean
+  edit: boolean
   manage: boolean
   grants: AccessRuleLike[]
 }
 
-export const NO_ACCESS: Access = Object.freeze({ read: false, download: false, manage: false, grants: [] })
-const OWNER_ACCESS: Access = Object.freeze({ read: true, download: true, manage: true, grants: [] })
+export const NO_ACCESS: Access = Object.freeze({ read: false, download: false, edit: false, manage: false, grants: [] })
+const OWNER_ACCESS: Access = Object.freeze({ read: true, download: true, edit: true, manage: true, grants: [] })
 
 export const ANONYMOUS: AccessContext = Object.freeze({ isOwner: false })
 
@@ -68,20 +75,28 @@ export function effectiveRules<R extends AccessRuleLike>(chain: AccessNode[], ru
   return result
 }
 
-function accessFromGrants(grants: AccessRuleLike[]): Access {
+/** Links, invitations and readers only ever read, whatever a rule says: editing is for members of the organization. */
+export const grantedRole = (ctx: AccessContext, rule: AccessRuleLike): ShareRole => ctx.isMember && rule.kind === 'user' ? rule.role : 'viewer'
+
+function accessFromGrants(ctx: AccessContext, grants: AccessRuleLike[]): Access {
   if (grants.length === 0) return NO_ACCESS
-  return { read: true, download: grants.some(g => g.allowDownload), manage: false, grants }
+  const roles = grants.map(grant => grantedRole(ctx, grant))
+  const edit = roles.some(role => role !== 'viewer')
+  return { read: true, download: edit || grants.some(g => g.allowDownload), edit, manage: roles.includes('manager'), grants }
 }
 
-export function resolveAccess(ctx: AccessContext, chain: AccessNode[], rules: AccessRuleLike[], now = new Date()): Access {
+/** `trashed` lets those who can edit something still reach it in the trash, to restore or delete it. */
+export function resolveAccess(ctx: AccessContext, chain: AccessNode[], rules: AccessRuleLike[], now = new Date(), options: { trashed?: boolean } = {}): Access {
   if (chain.length === 0) return NO_ACCESS
   if (ctx.isOwner) return OWNER_ACCESS
-  if (chain.some(node => node.deletedAt)) return NO_ACCESS
+  const trashed = chain.some(node => node.deletedAt)
+  if (trashed && !options.trashed) return NO_ACCESS
 
   const grants = effectiveRules(chain, rules)
     .map(({ rule }) => rule)
     .filter(rule => ruleMatches(ctx, rule, now))
-  return accessFromGrants(grants)
+  const access = accessFromGrants(ctx, grants)
+  return trashed && !access.edit ? NO_ACCESS : access
 }
 
 /** Access of a direct child when the parent's access is already known: avoids reloading the chain for every row of a listing. */
@@ -91,9 +106,6 @@ export function resolveChildAccess(ctx: AccessContext, parentAccess: Access, chi
 
   const own = childRules.filter(rule => rule.resourceId === child.id && ruleMatches(ctx, rule, now))
   const inherited = child.inheritAccess ? parentAccess.grants : []
-  return accessFromGrants([...own, ...inherited])
+  return accessFromGrants(ctx, [...own, ...inherited])
 }
 
-export const canRead = (access: Access) => access.read
-export const canDownload = (access: Access) => access.download
-export const canManage = (access: Access) => access.manage

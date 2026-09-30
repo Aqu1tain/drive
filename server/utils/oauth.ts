@@ -35,7 +35,7 @@ export async function authenticateMcp(event: H3Event, resource: string): Promise
   if (!row.token.resources?.includes(resource) || row.client.disabled || row.user.status !== 'active') return null
   if (!(await isSenderBound(event, row.token.confirmation, authorization, resource))) return null
 
-  const person = { id: row.user.id, name: row.user.name, email: row.user.email, role: row.user.role === 'owner' ? 'owner' as const : 'reader' as const }
+  const person = { id: row.user.id, name: row.user.name, email: row.user.email, role: userRole(row.user.role) }
   return { ...viewerFor(person), via: row.client.name?.trim().slice(0, CLIENT_LABEL_LENGTH) || tr('labels.aiAssistant') }
 }
 

@@ -11,5 +11,5 @@ export default defineEventHandler(async (event) => {
   const shared = items
     .map(item => toItem(item, { viewer, summary: summaries.get(item.id), location: locations.get(item.id) }))
     .filter(item => item.access?.level !== 'private' || !item.access.inherited)
-  return { items: await withFolderPreviews(viewer, shared) }
+  return { items: await withFolderPreviews(viewer, await withFavorites(viewer, shared)) }
 })

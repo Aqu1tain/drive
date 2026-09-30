@@ -97,11 +97,11 @@ export function toAccessNode(resource: Resource): AccessNode {
   return { id: resource.id, inheritAccess: resource.inheritAccess, deletedAt: resource.deletedAt }
 }
 
-export async function accessOf(viewer: Viewer, resource: Resource): Promise<{ access: Access, chain: Resource[] }> {
+export async function accessOf(viewer: Viewer, resource: Resource, options: { trashed?: boolean } = {}): Promise<{ access: Access, chain: Resource[] }> {
   const chain = await loadChain(resource)
   if (viewer.ctx.isOwner) return { access: resolveAccess(viewer.ctx, chain.map(toAccessNode), []), chain }
   const rules = await loadRules(chain.map(r => r.id))
-  return { access: resolveAccess(viewer.ctx, chain.map(toAccessNode), rules), chain }
+  return { access: resolveAccess(viewer.ctx, chain.map(toAccessNode), rules, new Date(), options), chain }
 }
 
 /** Effective rule rows of a resource: own rules, then inherited ones until inheritance is broken. */
@@ -181,12 +181,10 @@ export function toItem(resource: Resource, options: { viewer: Viewer, access?: A
 
   return {
     ...item,
-    starred: resource.starred,
     tagIds: resource.tagIds,
     allowScripts: resource.allowScripts,
     access: options.summary,
     lastExternalViewAt: resource.lastExternalViewAt?.toISOString() ?? null,
-    ownerOpenedAt: resource.ownerOpenedAt?.toISOString() ?? null,
     deletedAt: resource.deletedAt?.toISOString() ?? null,
   }
 }
@@ -208,16 +206,24 @@ export const notInTrash = sql`${resources.deletedAt} is null and not exists (
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const isUuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value)
 
-export async function requireReadable(viewer: Viewer, id: string) {
+export type Need = 'read' | 'edit' | 'manage'
+
+const REFUSALS = { read: 'errors.noAccessItem', edit: 'errors.cannotEdit', manage: 'errors.cannotManage' } as const
+
+/** Every read or change of a resource goes through here: `trashed` also reaches what sits in the trash, for those who can edit it. */
+export async function requireAccess(viewer: Viewer, id: string, need: Need = 'read', options: { trashed?: boolean } = {}) {
   const resource = await findResource(id)
   if (!resource) throw createError({ statusCode: 404, statusMessage: tr('errors.itemNotFound') })
-  const { access, chain } = await accessOf(viewer, resource)
+  const { access, chain } = await accessOf(viewer, resource, options)
   if (!access.read) throw createError({ statusCode: 403, statusMessage: tr('errors.noAccessItem') })
+  if (!access[need]) throw createError({ statusCode: 403, statusMessage: tr(REFUSALS[need]) })
   return { resource, access, chain }
 }
 
-export async function requireOwned(id: string) {
-  const resource = await findResource(id)
-  if (!resource) throw createError({ statusCode: 404, statusMessage: tr('errors.itemNotFound') })
-  return resource
+export const requireReadable = (viewer: Viewer, id: string) => requireAccess(viewer, id, 'read')
+
+export async function requireAll(viewer: Viewer, ids: string[], need: Need, options: { trashed?: boolean } = {}) {
+  const found = []
+  for (const id of new Set(ids)) found.push((await requireAccess(viewer, id, need, options)).resource)
+  return found
 }

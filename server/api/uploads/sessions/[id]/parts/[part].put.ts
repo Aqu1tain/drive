@@ -2,8 +2,8 @@ import { buffer } from 'node:stream/consumers'
 
 /** One part, buffered (8 MiB at most) so that a dropped connection never corrupts the running checksum. */
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
-  const session = requireSession(getRouterParam(event, 'id')!)
+  const viewer = await requireViewer(event)
+  const session = requireSession(viewer, getRouterParam(event, 'id')!)
   const partNumber = Number(getRouterParam(event, 'part'))
   if (!Number.isInteger(partNumber) || partNumber < 1) throw createError({ statusCode: 400, statusMessage: tr('errors.partNumberInvalid') })
   const declared = Number(getRequestHeader(event, 'content-length'))

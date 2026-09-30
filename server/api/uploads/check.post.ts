@@ -6,9 +6,9 @@ const bodySchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  await requireOwner(event)
+  const viewer = await requireViewer(event)
   const body = await readValidatedBody(event, bodySchema.parse)
-  const parent = await requireFolder(body.parentId)
+  const parent = await requireFolder(viewer, body.parentId)
   const siblings = await childrenOf(parent?.id ?? null)
   const byName = new Map(siblings.map(s => [s.nameLower, s]))
   const conflicts = body.names.flatMap((name) => {
