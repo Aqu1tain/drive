@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { File, FileArchive, FileCode, FileImage, FileMusic, FileSpreadsheet, FileText, FileVideoCamera, Folder, Globe, Presentation } from '@lucide/vue'
+import { BookOpen, File, FileArchive, FileCode, FileImage, FileMusic, FileSpreadsheet, FileText, FileVideoCamera, Folder, Globe, Presentation } from '@lucide/vue'
 import type { FileKind } from '#shared/utils/search'
 
 const props = withDefaults(defineProps<{ kind: FileKind, size?: 'sm' | 'md' | 'lg' | 'xl' }>(), { size: 'md' })
 
 const ICONS = {
   folder: Folder, pdf: FileText, image: FileImage, video: FileVideoCamera, audio: FileMusic, document: FileText,
-  spreadsheet: FileSpreadsheet, presentation: Presentation, text: FileCode, html: Globe, archive: FileArchive, other: File,
+  spreadsheet: FileSpreadsheet, presentation: Presentation, ebook: BookOpen, text: FileCode, html: Globe, archive: FileArchive, other: File,
 }
 
 /** One hue per family, tuned to stay readable on both themes. */
@@ -19,6 +19,7 @@ const COLORS: Record<FileKind, string> = {
   document: 'text-[oklch(0.55_0.16_250)] dark:text-[oklch(0.72_0.13_250)]',
   spreadsheet: 'text-[oklch(0.55_0.13_150)] dark:text-[oklch(0.72_0.13_150)]',
   presentation: 'text-[oklch(0.62_0.17_45)] dark:text-[oklch(0.75_0.14_45)]',
+  ebook: 'text-[oklch(0.52_0.12_200)] dark:text-[oklch(0.72_0.11_200)]',
   text: 'text-ink-weak',
   html: 'text-[oklch(0.55_0.17_285)] dark:text-[oklch(0.74_0.13_285)]',
   archive: 'text-[oklch(0.55_0.06_60)] dark:text-[oklch(0.72_0.06_60)]',

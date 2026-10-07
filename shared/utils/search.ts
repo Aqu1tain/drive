@@ -1,4 +1,4 @@
-export const FILE_KINDS = ['folder', 'pdf', 'image', 'video', 'audio', 'document', 'spreadsheet', 'presentation', 'text', 'html', 'archive'] as const
+export const FILE_KINDS = ['folder', 'pdf', 'image', 'video', 'audio', 'document', 'spreadsheet', 'presentation', 'ebook', 'text', 'html', 'archive'] as const
 export type FileKind = typeof FILE_KINDS[number] | 'other'
 
 export const ACCESS_FILTERS = ['private', 'shared', 'public'] as const
@@ -35,6 +35,7 @@ const TYPE_ALIASES: Record<string, FileKind> = {
   slides: 'presentation', presentation: 'presentation', présentation: 'presentation',
   text: 'text', texte: 'text', markdown: 'text',
   html: 'html', web: 'html', page: 'html',
+  ebook: 'ebook', epub: 'ebook', book: 'ebook', livre: 'ebook',
   zip: 'archive', archive: 'archive',
 }
 
@@ -83,6 +84,7 @@ const MIME_KINDS: Array<[RegExp, FileKind]> = [
   [/wordprocessingml|msword|opendocument\.text|rtf/, 'document'],
   [/spreadsheetml|ms-excel|opendocument\.spreadsheet|text\/csv/, 'spreadsheet'],
   [/presentationml|ms-powerpoint|opendocument\.presentation/, 'presentation'],
+  [/^application\/epub\+zip$/, 'ebook'],
   [/zip|x-tar|gzip|x-7z|x-rar|x-bzip/, 'archive'],
   [/^text\/|json$|xml$|yaml$|javascript$/, 'text'],
 ]
