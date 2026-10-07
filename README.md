@@ -22,7 +22,7 @@ Drive separates the people who manage files from the people who read them. On yo
 - **Share** a file or a folder with a person (reader account), an invitation, a personal link or a public link. Downloads allowed or not, expiry, instant revocation.
 - **Know who viewed** what and when: a readable activity log, honest about what it knows (a public link stays anonymous).
 - **Publish HTML pages or whole websites** (uploaded as a ZIP) safely: they are displayed on an isolated origin, full screen if you like.
-- **Find** a file by its name, its tags or its content: text from PDFs, Word documents, Excel spreadsheets and PowerPoint presentations. These documents also open in a preview, with nothing to install.
+- **Find** a file by its name, its tags or its content: text from PDFs, Word documents, Excel spreadsheets, PowerPoint presentations and e-books. These documents also open in a preview, with nothing to install, and e-books show their cover and read like a book.
 - **Go back in time**: turn on version history for a folder, and every file replaced in it keeps its earlier versions, to preview, name or restore without losing anything.
 - **Let your AI assistant in**: Claude, Cursor or any MCP client can browse, search, read and, for you, organize your Drive after you sign in and allow it. It acts with your rights, never more, and you can disconnect it at any time ([guide](docs/mcp.md)).
 - **Work as a team** with Drive for Organizations: each member gets a folder of their own and a role on every folder shared with them (view, edit or manage), while owners see everything and manage people and seats ([guide](docs/organizations.md)).

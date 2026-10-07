@@ -33,7 +33,7 @@ function close() {
     <li v-for="item in sorted" :key="item.id" class="group flex items-center">
       <button type="button" class="flex min-w-0 flex-1 items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-hover focus-visible:bg-hover focus-visible:outline-none" @click="open(item)">
         <span class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-subtle">
-          <img v-if="item.thumbnailUrl" :src="item.thumbnailUrl" alt="" loading="lazy" class="size-full object-cover" :class="{ 'object-top': item.kind === 'pdf' }">
+          <img v-if="item.thumbnailUrl" :src="item.thumbnailUrl" alt="" loading="lazy" class="size-full object-cover" :class="{ 'object-top': item.kind === 'pdf' || item.kind === 'ebook' }">
           <FilesFileIcon v-else :kind="item.kind" :size="item.type === 'folder' ? 'md' : 'md'" />
         </span>
         <span class="min-w-0 flex-1">

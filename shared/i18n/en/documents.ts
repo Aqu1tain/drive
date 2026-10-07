@@ -1,4 +1,6 @@
 export default {
+  contents: 'Contents',
+  emptyBook: 'This book has no readable chapter.',
   emptySheet: 'Empty sheet',
   emptyWorkbook: 'Empty workbook',
   truncatedRows: 'Only the first {count} rows are shown.',

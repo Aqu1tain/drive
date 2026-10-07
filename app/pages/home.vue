@@ -69,7 +69,7 @@ const upload = () => document.dispatchEvent(new CustomEvent('drive:upload'))
               <li v-for="file in data?.files" :key="file.id">
                 <NuxtLink :to="`/open/${file.id}`" class="-mx-2 flex h-14 items-center gap-3 rounded-md px-2 transition-colors hover:bg-hover">
                   <span class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-subtle">
-                    <img v-if="file.thumbnailUrl" :src="file.thumbnailUrl" alt="" loading="lazy" class="size-full object-cover" :class="{ 'object-top': file.kind === 'pdf' }">
+                    <img v-if="file.thumbnailUrl" :src="file.thumbnailUrl" alt="" loading="lazy" class="size-full object-cover" :class="{ 'object-top': file.kind === 'pdf' || file.kind === 'ebook' }">
                     <FilesFileIcon v-else :kind="file.kind" />
                   </span>
                   <div class="min-w-0 flex-1">

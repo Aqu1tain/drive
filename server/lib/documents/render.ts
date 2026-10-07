@@ -1,5 +1,6 @@
 import { DEFAULT_LOCALE, translate, type Locale } from '../../../shared/i18n'
 import { escapeHtml } from './text'
+import type { Book } from './epub'
 import type { Sheet } from './xlsx'
 
 const STYLE = `
@@ -28,6 +29,23 @@ nav a:hover { background: var(--head) }
 .slide h2 { margin: 0 0 16px; font-size: 28px; line-height: 1.25 }
 .slide p { margin: 0 0 8px; font-size: 18px }
 .slide .number { position: absolute; right: 16px; bottom: 12px; color: var(--weak); font-size: 12px }
+.book { max-width: 680px; margin: 0 auto; padding: 32px 24px 96px; font: 18px/1.7 Charter, "Iowan Old Style", Georgia, Cambria, serif }
+.book header { text-align: center; margin: 24px 0 40px }
+.book header img { width: 180px; border-radius: 4px; box-shadow: 0 4px 16px rgb(0 0 0 / .2) }
+.book header h1 { margin: 24px 0 4px; font-size: 30px; line-height: 1.2 }
+.book header p { margin: 0; color: var(--weak); font: 15px/1.5 system-ui, sans-serif }
+.toc { margin: 0 0 48px; padding: 12px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; font: 15px/1.5 system-ui, sans-serif }
+.toc summary { cursor: pointer; font-weight: 600 }
+.toc ol { margin: 8px 0 0; padding-left: 20px }
+.toc a { color: var(--ink); text-decoration: none }
+.toc a:hover { color: var(--accent) }
+.chapter { padding-bottom: 32px; margin-bottom: 32px; border-bottom: 1px solid var(--line) }
+.chapter:last-child { border-bottom: 0 }
+.chapter h1, .chapter h2, .chapter h3 { line-height: 1.25 }
+.chapter img { display: block; max-height: 80vh; width: auto; margin: 16px auto }
+.chapter table { border-collapse: collapse }
+.chapter td, .chapter th { border: 1px solid var(--line); padding: 4px 8px }
+@media (max-width: 640px) { .book { padding: 16px 16px 64px; font-size: 17px } }
 @media (max-width: 640px) { .paper { margin: 0; padding: 24px 16px; border-radius: 0 } .slide { aspect-ratio: auto; margin: 12px; padding: 24px } .slide h2 { font-size: 20px } .slide p { font-size: 15px } }
 `
 
@@ -64,4 +82,14 @@ export function slidesHtml(title: string, slides: string[][], locale: Locale = D
     ? `<h2>${multiline(heading)}</h2>${rest.map(p => `<p>${multiline(p)}</p>`).join('')}`
     : `<p class="empty">${translate(locale, 'documents.emptySlide')}</p>`}<span class="number">${i + 1} / ${slides.length}</span></section>`).join('')
   return page(title, note + sections, locale)
+}
+
+export function bookHtml(title: string, book: Book, locale: Locale = DEFAULT_LOCALE) {
+  const cover = book.cover ? `<img src="data:image/webp;base64,${book.cover.toString('base64')}" alt="">` : ''
+  const heading = `<header>${cover}<h1>${escapeHtml(book.title || title)}</h1>${book.author ? `<p>${escapeHtml(book.author)}</p>` : ''}</header>`
+  const toc = book.toc.length > 1
+    ? `<details class="toc"><summary>${translate(locale, 'documents.contents')}</summary><ol>${book.toc.map(entry => `<li><a href="${escapeHtml(entry.href)}" target="_self">${escapeHtml(entry.label)}</a></li>`).join('')}</ol></details>`
+    : ''
+  const chapters = book.chapters.map(chapter => `<section class="chapter" id="${chapter.id}">${chapter.html}</section>`).join('')
+  return page(book.title || title, `<main class="book">${heading}${toc}${chapters || `<p class="empty">${translate(locale, 'documents.emptyBook')}</p>`}</main>`, locale)
 }

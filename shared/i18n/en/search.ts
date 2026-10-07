@@ -28,6 +28,7 @@ export default {
     document: 'Documents',
     spreadsheet: 'Spreadsheets',
     presentation: 'Presentations',
+    ebook: 'E-books',
     text: 'Text files',
     html: 'Web pages',
     archive: 'Archives',

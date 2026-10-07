@@ -14,6 +14,7 @@ export default {
     document: 'Document',
     spreadsheet: 'Spreadsheet',
     presentation: 'Presentation',
+    ebook: 'E-book',
     text: 'Text',
     html: 'Web page',
     archive: 'Archive',

@@ -31,6 +31,7 @@ export default {
     document: 'Documents',
     spreadsheet: 'Tableurs',
     presentation: 'Présentations',
+    ebook: 'Livres numériques',
     text: 'Textes',
     html: 'Pages web',
     archive: 'Archives',
