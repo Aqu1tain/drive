@@ -37,7 +37,7 @@ export function createMcpServer(event: H3Event, viewer: Viewer) {
   return server
 }
 
-const ITEMS = 'Every item has a type, file or folder, and a kind that says what it is: folder, pdf, image, video, audio, document, spreadsheet, presentation, text, html, archive or other. '
+const ITEMS = 'Every item has a type, file or folder, and a kind that says what it is: folder, pdf, image, video, audio, document, spreadsheet, presentation, ebook, text, html, archive or other. '
   + 'Long lists come in pages: pass the returned nextCursor to get the next one.'
 
 function instructionsFor(viewer: Viewer, appName: string) {
@@ -79,7 +79,7 @@ function registerReadTools(server: McpServer, event: H3Event, viewer: Viewer) {
     description: [
       'Finds files and folders by name, by the name of an enclosing folder and by the text inside files (PDF, Word, Excel, PowerPoint, HTML and text).',
       'Every word must match; in the text of files a word matches the start of a word: "factur" finds "factures".',
-      'Filters, alone or with words: type:folder|pdf|image|video|audio|document|spreadsheet|presentation|text|html|archive, after:YYYY-MM-DD and before:YYYY-MM-DD (last change), in:<folderId> (with words or another filter).',
+      'Filters, alone or with words: type:folder|pdf|image|video|audio|document|spreadsheet|presentation|ebook|text|html|archive, after:YYYY-MM-DD and before:YYYY-MM-DD (last change), in:<folderId> (with words or another filter).',
       owner ? 'Owner filters: access:private|shared|public, shared:<name or email of someone with access>, tag:<tag> (quote a tag with spaces: tag:"to review"). A word also matches the people an item is shared with.' : '',
     ].join(' ').trim(),
     inputSchema: {

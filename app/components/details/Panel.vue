@@ -88,7 +88,7 @@ function linkTerms(link: { allowDownload: boolean, expiresAt: string | null }) {
 
       <TabsContent value="details" class="min-h-0 flex-1 overflow-y-auto p-4 focus:outline-none">
         <div class="mb-4 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-lg bg-subtle">
-          <img v-if="current.thumbnailUrl" :src="current.thumbnailUrl" alt="" class="size-full object-cover" :class="{ 'object-top': current.kind === 'pdf' }">
+          <img v-if="current.thumbnailUrl" :src="current.thumbnailUrl" alt="" class="size-full object-cover" :class="{ 'object-top': current.kind === 'pdf' || current.kind === 'ebook' }">
           <FilesFolderMosaic v-else-if="current.previews?.length" :urls="current.previews" />
           <FilesFileIcon v-else :kind="current.kind" size="xl" />
         </div>

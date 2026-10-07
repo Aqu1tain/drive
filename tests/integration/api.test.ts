@@ -1,7 +1,7 @@
 import { unzipSync } from 'fflate'
 import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { docx, pack, pdf } from '../fixtures'
+import { docx, epub, pack, pdf } from '../fixtures'
 import { Client, USERCONTENT_URL, memberClient, ownerClient, readerClient, unique } from './client'
 
 let owner: Client
@@ -282,6 +282,21 @@ describe('file processing', () => {
     expect(policy).not.toContain('allow-scripts')
     expect(policy).toContain("default-src 'none'; img-src data:;")
     expect(await searchIds(owner, secret)).toContain(file.id)
+  })
+
+  it('reads e-books on the isolated origin, with their cover as thumbnail', async () => {
+    const cover = await sharp({ create: { width: 300, height: 450, channels: 3, background: '#aa5533' } }).png().toBuffer()
+    const file = (await owner.upload(root, `${unique('voyage')}.epub`, await epub(cover))).body
+    expect(file.kind).toBe('ebook')
+    const info = await eventually(async () => (await owner.post(`/api/resources/${file.id}/open`)).body, body => !!body.frameUrl)
+    expect(info.item.thumbnailUrl).toBeTruthy()
+    expect((await owner.get(info.item.thumbnailUrl)).headers.get('content-type')).toBe('image/webp')
+
+    const frame = await new Client().get(new URL(info.frameUrl).pathname, { base: USERCONTENT_URL })
+    expect(frame.body).toContain('Il était une fois une lanterne.')
+    expect(frame.body).not.toContain('alert(1)')
+    expect(frame.headers.get('content-security-policy')).not.toContain('allow-scripts')
+    expect(await searchIds(owner, 'lanterne type:ebook')).toContain(file.id)
   })
 
   it('never lets readers find text in files they cannot open', async () => {

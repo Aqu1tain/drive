@@ -85,6 +85,13 @@
       "when": 1790770635301,
       "tag": "0011_several_owners",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791369587634,
+      "tag": "0012_epub_books",
+      "breakpoints": true
     }
   ]
 }

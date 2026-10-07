@@ -3,7 +3,7 @@ import { buffer } from 'node:stream/consumers'
 import { and, eq, sql } from 'drizzle-orm'
 import sharp from 'sharp'
 import { searchWordsOf } from '#shared/utils/names'
-import { deriveDocument, readsContent, type Derived } from '../lib/documents'
+import { EPUB, deriveDocument, readsContent, type Derived } from '../lib/documents'
 import type { Resource } from '../database/schema'
 
 /** SVG is deliberately absent: its loader can reach external resources, so it is blocked entirely. */
@@ -26,7 +26,7 @@ const queue = new Set<string>()
 let running = 0
 
 export const canThumbnail = (mimeType: string | null, size: number) =>
-  !!mimeType && (IMAGE.test(mimeType) || mimeType === 'application/pdf') && size <= MAX_INPUT_BYTES
+  !!mimeType && (IMAGE.test(mimeType) || mimeType === 'application/pdf' || mimeType === EPUB) && size <= MAX_INPUT_BYTES
 
 /** Thumbnails, search text and document previews are derived in the background, once per file version. */
 export function enqueueProcessing(resourceId: string) {

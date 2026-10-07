@@ -47,7 +47,7 @@ const failed = ref(false)
         decoding="async"
         draggable="false"
         class="size-full object-cover"
-        :class="{ 'object-top': item.kind === 'pdf' }"
+        :class="{ 'object-top': item.kind === 'pdf' || item.kind === 'ebook' }"
         @error="failed = true"
       >
       <FilesFolderMosaic v-else-if="item.previews?.length" :urls="item.previews" />
